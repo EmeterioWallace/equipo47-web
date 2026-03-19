@@ -1,0 +1,200 @@
+═══════════════════════════════════════════════════════════════
+   GUÍA PASO A PASO - CALENDARIO DE EVENTOS CON GOOGLE SHEETS
+═══════════════════════════════════════════════════════════════
+
+✨ Esta guía te enseñará a configurar tu calendario de eventos en 3 pasos simples.
+   ¡No necesitas saber programación!
+
+═══════════════════════════════════════════════════════════════
+PASO 1: CREAR Y CONFIGURAR TU GOOGLE SHEET
+═══════════════════════════════════════════════════════════════
+
+1. Ve a Google Drive (drive.google.com)
+
+2. Crea una carpeta llamada "Equipo 47 - Web"
+
+3. Dentro de esa carpeta, crea otra llamada "Contenido"
+
+4. Importa la plantilla Excel que te he dado:
+   - Clic derecho en la carpeta "Contenido"
+   - "Subir archivos"
+   - Selecciona "plantilla-eventos-calendario.xlsx"
+   - Una vez subido, clic derecho → "Abrir con" → "Google Sheets"
+   - Se convertirá automáticamente
+
+5. Renombra el archivo a "Eventos-Calendario"
+
+6. ¡Ya tienes tu Google Sheet lista! 🎉
+
+═══════════════════════════════════════════════════════════════
+PASO 2: HACER EL GOOGLE SHEET PÚBLICO (SOLO LECTURA)
+═══════════════════════════════════════════════════════════════
+
+Para que tu web pueda leer los eventos, necesitas hacer el Sheet público:
+
+1. En el Google Sheet, haz clic en el botón "Compartir" (arriba a la derecha)
+
+2. En "Acceso general", cambia de "Restringido" a:
+   ✅ "Cualquier persona con el enlace"
+
+3. IMPORTANTE: Asegúrate que el rol sea "Lector" (no Editor)
+   - Esto permite que la web LEA los datos
+   - Pero nadie puede editarlos sin tu permiso
+
+4. Clic en "Copiar enlace"
+
+5. Pega el enlace en un bloc de notas, se verá así:
+   https://docs.google.com/spreadsheets/d/1ABC123XYZ456.../edit?usp=sharing
+
+6. COPIA SOLO LA PARTE DEL ID (la parte entre "/d/" y "/edit"):
+   Ejemplo: 1ABC123XYZ456...
+   
+   ⚠️ GUARDA ESTE ID - Lo necesitarás en el siguiente paso
+
+═══════════════════════════════════════════════════════════════
+PASO 3: CONECTAR EL GOOGLE SHEET A TU WEB
+═══════════════════════════════════════════════════════════════
+
+1. Abre el archivo "calendario.js" (que está en la carpeta js/)
+
+2. En la línea 7, verás esto:
+   const SHEET_ID = 'TU_SHEET_ID_AQUI';
+
+3. Reemplaza 'TU_SHEET_ID_AQUI' con el ID que copiaste en el paso anterior:
+   const SHEET_ID = '1ABC123XYZ456...';
+
+4. Guarda el archivo
+
+5. Sube los archivos a tu servidor web:
+   - calendario.html (en la carpeta raíz)
+   - js/calendario.js (en la carpeta js/)
+
+6. ¡Listo! 🚀
+
+═══════════════════════════════════════════════════════════════
+CÓMO AÑADIR UN EVENTO NUEVO
+═══════════════════════════════════════════════════════════════
+
+1. Abre tu Google Sheet "Eventos-Calendario"
+
+2. Ve a la pestaña "EVENTOS"
+
+3. Añade una nueva fila con los datos del evento:
+
+   Columna A - ID: Un número único (1, 2, 3...)
+   Columna B - Nombre: "Maratón Madrid 2025"
+   Columna C - Fecha: 15/03/2025 (formato DD/MM/YYYY)
+   Columna D - Hora: "09:00"
+   Columna E - Ubicación: "Paseo del Prado"
+   Columna F - Provincia: "Madrid"
+   Columna G - Categoría: "Running" (usa las de la pestaña CATEGORÍAS)
+   Columna H - Descripción: "La mayor maratón de España..."
+   Columna I - Distancias: "42K, 21K, 10K"
+   Columna J - Precios: "30€, 25€, 20€"
+   Columna K - Estado: "Abierto" (opciones: Abierto / Últimas plazas / Agotado / Finalizado)
+   Columna L - URL Inscripción: "https://..."
+   Columna M - Imagen URL: "https://drive.google.com/uc?id=..."
+   Columna N - Organizador: "Equipo 47"
+   Columna O - Email: "info@equipo47.com"
+   Columna P - Teléfono: "600123456"
+
+4. Guarda (automático)
+
+5. ¡El evento aparecerá en la web en 1-2 minutos! ✨
+
+═══════════════════════════════════════════════════════════════
+CÓMO AÑADIR IMÁGENES A LOS EVENTOS
+═══════════════════════════════════════════════════════════════
+
+OPCIÓN A - USAR GOOGLE DRIVE (RECOMENDADO):
+
+1. En tu Google Drive, crea la carpeta: "Equipo 47 - Web/Imágenes/Eventos"
+
+2. Sube la imagen del evento (JPG o PNG)
+
+3. Clic derecho en la imagen → "Compartir"
+
+4. Cambia a "Cualquier persona con el enlace" → "Lector"
+
+5. Copia el enlace, se verá así:
+   https://drive.google.com/file/d/1XYZ789ABC/view?usp=sharing
+
+6. Extrae el ID (la parte entre "/d/" y "/view"):
+   1XYZ789ABC
+
+7. Convierte a URL pública:
+   https://drive.google.com/uc?id=1XYZ789ABC
+
+8. Pega esta URL en la columna M (Imagen URL) del Google Sheet
+
+OPCIÓN B - USAR TU SERVIDOR WEB:
+
+1. Sube la imagen a tu servidor: www.equipo47.com/images/eventos/maraton-madrid.jpg
+
+2. Usa la URL completa en el Google Sheet:
+   https://www.equipo47.com/images/eventos/maraton-madrid.jpg
+
+═══════════════════════════════════════════════════════════════
+ESTRUCTURA DE CARPETAS EN GOOGLE DRIVE
+═══════════════════════════════════════════════════════════════
+
+📁 Equipo 47 - Web
+│
+├── 📁 Contenido
+│   └── 📊 Eventos-Calendario (tu Google Sheet)
+│
+├── 📁 Imágenes
+│   └── 📁 Eventos
+│       ├── maraton-madrid-2025.jpg
+│       ├── trail-guadarrama.jpg
+│       └── carrera-mujer.jpg
+│
+└── 📁 Documentos
+    └── guia-estilo.html
+
+═══════════════════════════════════════════════════════════════
+CONSEJOS Y TIPS
+═══════════════════════════════════════════════════════════════
+
+✅ Usa SIEMPRE las categorías definidas en la pestaña "CATEGORÍAS"
+✅ Las fechas deben estar en formato DD/MM/YYYY o YYYY-MM-DD
+✅ Para eventos pasados, cambia el estado a "Finalizado"
+✅ Puedes editar el Sheet desde tu móvil con la app de Google Sheets
+✅ Los cambios se reflejan en la web en 1-2 minutos automáticamente
+✅ Si añades una nueva categoría, actualiza también los filtros en calendario.html
+
+═══════════════════════════════════════════════════════════════
+SOLUCIÓN DE PROBLEMAS
+═══════════════════════════════════════════════════════════════
+
+❌ "No se cargan los eventos en la web"
+✅ Verifica que el Google Sheet sea público (Cualquier persona con el enlace)
+✅ Verifica que el SHEET_ID en calendario.js sea correcto
+✅ Abre la consola del navegador (F12) y busca errores
+
+❌ "Las imágenes no se ven"
+✅ Verifica que las imágenes en Drive sean públicas
+✅ Usa el formato correcto: https://drive.google.com/uc?id=ID_AQUI
+
+❌ "Las fechas se ven raras"
+✅ Usa formato DD/MM/YYYY en el Google Sheet
+✅ Ejemplo: 15/03/2025
+
+═══════════════════════════════════════════════════════════════
+¿NECESITAS AYUDA?
+═══════════════════════════════════════════════════════════════
+
+Si tienes problemas, revisa:
+1. Que el Google Sheet sea público (paso 2)
+2. Que el SHEET_ID esté bien en calendario.js (paso 3)
+3. Que las fechas tengan formato correcto
+4. La consola del navegador (F12) para ver errores específicos
+
+═══════════════════════════════════════════════════════════════
+
+¡Eso es todo! Tu calendario está listo para usar. 🎉
+
+Ahora simplemente añade eventos a tu Google Sheet y aparecerán
+automáticamente en tu web. ¡Súper fácil!
+
+═══════════════════════════════════════════════════════════════

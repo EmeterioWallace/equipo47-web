@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Eventos Deportivos - Equipo 47</title>
+    <meta name="description" content="Organizamos carreras, maratones y eventos deportivos. Más de 50 eventos y 15,000 participantes. Únete como voluntario.">
+    <link rel="icon" type="image/png" href="images/brand/logo.png">
+    <link rel="apple-touch-icon" href="images/brand/logo.png">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <a href="index.html" style="text-decoration: none;">
+                    <img src="images/brand/logo.png" alt="Equipo 47" style="height: 55px; width: auto; display: block;">
+                </a>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="eventos.html" class="active">Eventos</a></li>
+                <li><a href="calendario.html">Calendario</a></li>
+                <li><a href="tienda.html">Tienda</a></li>
+                <li><a href="#contact" class="nav-cta">Contacto</a></li>
+            </ul>
+            <div class="nav-toggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero eventos-hero">
+        <div class="hero-background"></div>
+        <div class="hero-content">
+            <div class="hero-text">
+                <h1 class="hero-title">
+                    <span class="hero-title-line" data-delay="0">Eventos</span>
+                    <span class="hero-title-line" data-delay="1">Deportivos</span>
+                </h1>
+                <p class="hero-subtitle" data-delay="2">
+                    Organizamos carreras, maratones y eventos deportivos<br>
+                    con más de 17 años de experiencia
+                </p>
+                <div class="hero-cta" data-delay="3">
+                    <a href="#que-organizamos" class="btn btn-primary">¿Qué Organizamos?</a>
+                    <a href="voluntarios.html" class="btn btn-secondary">Ser Voluntario</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- What We Organize Section -->
+    <section id="que-organizamos" class="eventos-section" style="padding: 80px 20px; background: #f8f9fa;">
+        <div class="eventos-header" style="text-align: center; margin-bottom: 60px;">
+            <h2 class="section-title" style="font-size: 2.5rem; margin-bottom: 1rem; font-weight: 700;">¿Qué Organizamos?</h2>
+            <p class="section-subtitle" style="font-size: 1.2rem; color: #666;">Eventos deportivos a medida con gestión integral</p>
+        </div>
+
+        <div class="eventos-grid" style="max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 30px;">
+            <div class="evento-card" style="background: #fff; border-radius: 12px; padding: 35px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+                <div class="evento-icon" style="width: 70px; height: 70px; background: linear-gradient(135deg, #FF6B35 0%, #FF8C42 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; font-size: 2rem;">
+                    🏃‍♂️
+                </div>
+                <h3 style="font-size: 1.6rem; margin-bottom: 15px; font-weight: 700;">Carreras Populares</h3>
+                <p style="font-size: 1rem; line-height: 1.6; color: #666; margin-bottom: 20px;">Desde 5K hasta maratones completos. Gestionamos todo: inscripciones online, cronometraje chip, avituallamientos, clasificaciones en tiempo real y entrega de dorsales.</p>
+                <ul class="evento-features" style="list-style: none; padding: 0;">
+                    <li style="padding: 6px 0; color: #333; font-size: 0.95rem;">✓ Cronometraje electrónico</li>
+                    <li style="padding: 6px 0; color: #333; font-size: 0.95rem;">✓ Plataforma de inscripciones</li>
+                    <li style="padding: 6px 0; color: #333; font-size: 0.95rem;">✓ Avituallamientos</li>
+                    <li style="padding: 6px 0; color: #333; font-size: 0.95rem;">✓ Clasificaciones en vivo</li>
+                </ul>
+            </div>
+
+            <div class="evento-card" style="background: #fff; border-radius: 12px; padding: 35px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+                <div class="evento-icon" style="width: 70px; height: 70px; background: linear-gradient(135deg, #2C3E50 0%, #34495E 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; font-size: 2rem;">
+                    🏢
+                </div>
+                <h3 style="font-size: 1.6rem; margin-bottom: 15px; font-weight: 700;">Eventos Corporativos</h3>
+                <p style="font-size: 1rem; line-height: 1.6; color: #666; margin-bottom: 20px;">Team building deportivo para empresas. Carreras corporativas, challenges y eventos personalizados que fortalecen el equipo y promueven hábitos saludables.</p>
+                <ul class="evento-features" style="list-style: none; padding: 0;">
+                    <li style="padding: 6px 0; color: #333; font-size: 0.95rem;">✓ Diseño personalizado</li>
+                    <li style="padding: 6px 0; color: #333; font-size: 0.95rem;">✓ Branding corporativo</li>
+                    <li style="padding: 6px 0; color: #333; font-size: 0.95rem;">✓ Equipación incluida</li>
+                    <li style="padding: 6px 0; color: #333; font-size: 0.95rem;">✓ Fotografía profesional</li>
+                </ul>
+            </div>
+
+            <div class="evento-card" style="background: #fff; border-radius: 12px; padding: 35px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+                <div class="evento-icon" style="width: 70px; height: 70px; background: linear-gradient(135deg, #27AE60 0%, #2ECC71 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; font-size: 2rem;">
+                    ❤️
+                </div>
+                <h3 style="font-size: 1.6rem; margin-bottom: 15px; font-weight: 700;">Eventos Benéficos</h3>
+                <p style="font-size: 1rem; line-height: 1.6; color: #666; margin-bottom: 20px;">Carreras solidarias y eventos deportivos con causa. Ayudamos a organizaciones sin ánimo de lucro a recaudar fondos a través del deporte.</p>
+                <ul class="evento-features" style="list-style: none; padding: 0;">
+                    <li style="padding: 6px 0; color: #333; font-size: 0.95rem;">✓ Gestión de donaciones</li>
+                    <li style="padding: 6px 0; color: #333; font-size: 0.95rem;">✓ Difusión de la causa</li>
+                    <li style="padding: 6px 0; color: #333; font-size: 0.95rem;">✓ Transparencia total</li>
+                    <li style="padding: 6px 0; color: #333; font-size: 0.95rem;">✓ Maximizar recaudación</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- Services Section -->
+    <section class="servicios-eventos" style="padding: 80px 20px; background: #fff;">
+        <div class="servicios-header" style="text-align: center; margin-bottom: 50px;">
+            <h2 class="section-title" style="font-size: 2.5rem; margin-bottom: 1rem; font-weight: 700;">Servicios Incluidos</h2>
+            <p class="section-subtitle" style="font-size: 1.2rem; color: #666;">Gestión integral de principio a fin</p>
+        </div>
+
+        <div class="servicios-grid" style="max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 30px;">
+            <div class="servicio-item" style="text-align: center; padding: 25px; background: #f8f9fa; border-radius: 10px;">
+                <div style="font-size: 2.5rem; margin-bottom: 15px;">⏱️</div>
+                <h4 style="font-size: 1.2rem; margin-bottom: 10px; font-weight: 600;">Cronometraje</h4>
+                <p style="font-size: 0.95rem; color: #666;">Sistema chip profesional con resultados en tiempo real</p>
+            </div>
+
+            <div class="servicio-item" style="text-align: center; padding: 25px; background: #f8f9fa; border-radius: 10px;">
+                <div style="font-size: 2.5rem; margin-bottom: 15px;">📝</div>
+                <h4 style="font-size: 1.2rem; margin-bottom: 10px; font-weight: 600;">Inscripciones</h4>
+                <p style="font-size: 0.95rem; color: #666;">Plataforma online con pasarela de pago integrada</p>
+            </div>
+
+            <div class="servicio-item" style="text-align: center; padding: 25px; background: #f8f9fa; border-radius: 10px;">
+                <div style="font-size: 2.5rem; margin-bottom: 15px;">👥</div>
+                <h4 style="font-size: 1.2rem; margin-bottom: 10px; font-weight: 600;">Staff</h4>
+                <p style="font-size: 0.95rem; color: #666;">Equipo profesional y voluntarios formados</p>
+            </div>
+
+            <div class="servicio-item" style="text-align: center; padding: 25px; background: #f8f9fa; border-radius: 10px;">
+                <div style="font-size: 2.5rem; margin-bottom: 15px;">📄</div>
+                <h4 style="font-size: 1.2rem; margin-bottom: 10px; font-weight: 600;">Permisos</h4>
+                <p style="font-size: 0.95rem; color: #666;">Gestión de licencias, seguros y permisos</p>
+            </div>
+
+            <div class="servicio-item" style="text-align: center; padding: 25px; background: #f8f9fa; border-radius: 10px;">
+                <div style="font-size: 2.5rem; margin-bottom: 15px;">🏷️</div>
+                <h4 style="font-size: 1.2rem; margin-bottom: 10px; font-weight: 600;">Dorsales</h4>
+                <p style="font-size: 0.95rem; color: #666;">Diseño, impresión y entrega personalizada</p>
+            </div>
+
+            <div class="servicio-item" style="text-align: center; padding: 25px; background: #f8f9fa; border-radius: 10px;">
+                <div style="font-size: 2.5rem; margin-bottom: 15px;">💧</div>
+                <h4 style="font-size: 1.2rem; margin-bottom: 10px; font-weight: 600;">Avituallamientos</h4>
+                <p style="font-size: 0.95rem; color: #666;">Puntos de hidratación y alimentación</p>
+            </div>
+
+            <div class="servicio-item" style="text-align: center; padding: 25px; background: #f8f9fa; border-radius: 10px;">
+                <div style="font-size: 2.5rem; margin-bottom: 15px;">📸</div>
+                <h4 style="font-size: 1.2rem; margin-bottom: 10px; font-weight: 600;">Fotografía</h4>
+                <p style="font-size: 0.95rem; color: #666;">Cobertura fotográfica profesional del evento</p>
+            </div>
+
+            <div class="servicio-item" style="text-align: center; padding: 25px; background: #f8f9fa; border-radius: 10px;">
+                <div style="font-size: 2.5rem; margin-bottom: 15px;">📢</div>
+                <h4 style="font-size: 1.2rem; margin-bottom: 10px; font-weight: 600;">Comunicación</h4>
+                <p style="font-size: 0.95rem; color: #666;">Difusión en redes y medios locales</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats-section" style="padding: 80px 20px; background: linear-gradient(135deg, #2C3E50 0%, #34495E 100%);">
+        <div class="stats-container" style="max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 40px; text-align: center;">
+            <div class="stat-box" style="padding: 30px; background: rgba(255,255,255,0.1); border-radius: 12px; backdrop-filter: blur(10px);">
+                <span class="stat-big" style="display: block; font-size: 3.5rem; font-weight: 700; color: #FF6B35; margin-bottom: 8px;">150+</span>
+                <span class="stat-label" style="display: block; font-size: 1rem; color: #fff; text-transform: uppercase; letter-spacing: 1px;">Eventos Organizados</span>
+            </div>
+            <div class="stat-box" style="padding: 30px; background: rgba(255,255,255,0.1); border-radius: 12px; backdrop-filter: blur(10px);">
+                <span class="stat-big" style="display: block; font-size: 3.5rem; font-weight: 700; color: #FF6B35; margin-bottom: 8px;">50K+</span>
+                <span class="stat-label" style="display: block; font-size: 1rem; color: #fff; text-transform: uppercase; letter-spacing: 1px;">Participantes</span>
+            </div>
+            <div class="stat-box" style="padding: 30px; background: rgba(255,255,255,0.1); border-radius: 12px; backdrop-filter: blur(10px);">
+                <span class="stat-big" style="display: block; font-size: 3.5rem; font-weight: 700; color: #FF6B35; margin-bottom: 8px;">17+</span>
+                <span class="stat-label" style="display: block; font-size: 1rem; color: #fff; text-transform: uppercase; letter-spacing: 1px;">Años de Experiencia</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Eventos + Voluntarios -->
+    <section class="cta-eventos-voluntarios" style="padding: 80px 20px; background: #f8f9fa;">
+        <div class="cta-dual-container" style="max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 40px;">
+            <!-- Organiza tu Evento -->
+            <div class="cta-box cta-organiza" style="background: linear-gradient(135deg, #FF6B35 0%, #FF8C42 100%); border-radius: 16px; padding: 50px 40px; text-align: center; color: white; box-shadow: 0 10px 30px rgba(255, 107, 53, 0.3);">
+                <div class="cta-icon" style="width: 80px; height: 80px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 25px; font-size: 2.5rem;">
+                    🏃‍♂️
+                </div>
+                <h3 style="font-size: 2rem; margin-bottom: 15px; font-weight: 700;">¿Organizas un Evento?</h3>
+                <p style="font-size: 1.1rem; margin-bottom: 30px; opacity: 0.95;">Cuéntanos tu idea y te ayudamos a hacerla realidad. Presupuesto sin compromiso.</p>
+                <a href="#contact" class="btn btn-primary" style="display: inline-block; padding: 16px 40px; background: white; color: #FF6B35; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 1.05rem; transition: all 0.3s ease;">Solicitar Presupuesto</a>
+            </div>
+
+            <!-- Voluntarios -->
+            <div class="cta-box cta-voluntarios" style="background: linear-gradient(135deg, #2C3E50 0%, #34495E 100%); border-radius: 16px; padding: 50px 40px; text-align: center; color: white; box-shadow: 0 10px 30px rgba(44, 62, 80, 0.3);">
+                <div class="cta-icon" style="width: 80px; height: 80px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 25px; font-size: 2.5rem;">
+                    🙋‍♂️
+                </div>
+                <h3 style="font-size: 2rem; margin-bottom: 15px; font-weight: 700;">Únete como Voluntario</h3>
+                <p style="font-size: 1.1rem; margin-bottom: 30px; opacity: 0.95;">Vive la experiencia de organizar eventos deportivos desde dentro. Aprende, colabora y disfruta.</p>
+                <a href="voluntarios.html" class="btn btn-secondary" style="display: inline-block; padding: 16px 40px; background: white; color: #2C3E50; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 1.05rem; transition: all 0.3s ease;">Quiero Ser Voluntario</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="contact">
+        <div class="contact-container">
+            <div class="contact-info">
+                <h2 class="section-title">Hablemos de tu Evento</h2>
+                <p>¿Quieres organizar una carrera, un evento corporativo o benéfico? Cuéntanos tu idea y te ayudamos a hacerla realidad.</p>
+                
+                <div class="contact-details">
+                    <div class="contact-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                        </svg>
+                        <div>
+                            <strong>Teléfono</strong>
+                            <p><a href="#" onclick="window.location.href='tel:+3468722' + '5647'; return false;" style="color: inherit; text-decoration: none;">&#43;&#51;&#52;&#32;&#54;&#56;&#55;&#32;&#50;&#50;&#53;&#32;&#54;&#52;&#55;</a></p>
+                        </div>
+                    </div>
+
+                    <div class="contact-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                            <polyline points="22,6 12,13 2,6"/>
+                        </svg>
+                        <div>
+                            <strong>Email</strong>
+                            <p><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="acc9dac9c2d8c3dfecc9ddd9c5dcc3989b82cfc3c1">[email&#160;protected]</a></p>
+                        </div>
+                    </div>
+
+                    <div class="contact-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                        <div>
+                            <strong>Horario</strong>
+                            <p>Lun - Vie: 9:00 - 18:00</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="contact-form-container">
+                <form class="contact-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Nombre</label>
+                            <input type="text" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input type="email" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Teléfono</label>
+                            <input type="tel">
+                        </div>
+                        <div class="form-group">
+                            <label>Tipo de Evento</label>
+                            <select>
+                                <option>Carrera Popular</option>
+                                <option>Evento Corporativo</option>
+                                <option>Evento Benéfico</option>
+                                <option>Otro</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Fecha aproximada</label>
+                        <input type="date">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Cuéntanos sobre tu evento</label>
+                        <textarea rows="5" required></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Enviar Solicitud</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-brand">
+                <span class="logo-text">EQUIPO <strong>47</strong></span>
+                <p>Organizamos eventos deportivos y fabricamos ropa personalizada con más de 17 años de experiencia.</p>
+            </div>
+            <div class="footer-links">
+                <h4>Enlaces Rápidos</h4>
+                <ul>
+                    <li><a href="index.html">Inicio</a></li>
+                    <li><a href="eventos.html">Eventos</a></li>
+                    <li><a href="tienda.html">Tienda</a></li>
+                    <li><a href="voluntarios.html">Ser Voluntario</a></li>
+                </ul>
+            </div>
+            <div class="footer-legal">
+                <h4>Legal</h4>
+                <ul>
+                    <li><a href="#">Política de Privacidad</a></li>
+                    <li><a href="#">Términos y Condiciones</a></li>
+                    <li><a href="#">Cookies</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2024 Equipo 47. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="js/main.js"></script>
+</body>
+</html>

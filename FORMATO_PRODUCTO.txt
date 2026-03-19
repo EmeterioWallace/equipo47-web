@@ -1,0 +1,23 @@
+PRODUCTO: [Nombre - Género]
+GÉNERO: Hombre/Mujer/Unisex
+CATEGORÍA: Camisetas/Chaquetas/Mallas/Accesorios
+DEPORTE: Running/Fútbol/Ciclismo/etc
+DESCRIPCIÓN: [texto marketing]
+
+ESPECIFICACIONES:
+- [característica técnica 1]
+- [característica técnica 2]
+- [etc.]
+
+DETALLES:
+- Tallas disponibles: XS - 3XL
+- Colores base: Consultar disponibilidad
+- Mínimo: Consultar según personalización
+
+COLORES:
+- Negro: imagen-negra.jpg
+- Blanco: imagen-blanca.jpg
+(O "sin colores" si es personalizable)
+
+IMAGEN: [archivo principal si no hay colores]
+OPCIONES: Sublimación completa, Serigrafía, Bordado, Transfer
