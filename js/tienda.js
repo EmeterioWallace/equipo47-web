@@ -1399,26 +1399,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ===== FIX: Prevenir scroll al cambiar de campo en formularios =====
 document.addEventListener('DOMContentLoaded', function() {
-    // Seleccionar todos los inputs, selects y textareas de formularios
     const formFields = document.querySelectorAll('input, select, textarea');
     
     formFields.forEach(field => {
-        field.addEventListener('focus', function(e) {
-            // Prevenir comportamiento por defecto que causa scroll
+        // Prevenir que el blur cause scroll
+        field.addEventListener('blur', function(e) {
             e.preventDefault();
+        });
+        
+        // Mantener la posición de scroll al hacer focus
+        field.addEventListener('focus', function(e) {
+            const scrollY = window.scrollY;
+            const scrollX = window.scrollX;
             
-            // Hacer scroll suave al campo si es necesario
-            const rect = this.getBoundingClientRect();
-            const isVisible = (
-                rect.top >= 0 &&
-                rect.left >= 0 &&
-                rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
-                rect.right <= (window.innerWidth || document.documentElement.clientWidth)
-            );
-            
-            if (!isVisible) {
-                this.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
+            // Restaurar scroll después de que el navegador haga el suyo
+            setTimeout(() => {
+                window.scrollTo(scrollX, scrollY);
+            }, 0);
         });
     });
 });
