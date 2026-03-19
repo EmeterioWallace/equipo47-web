@@ -280,3 +280,31 @@ inputs.forEach(input => {
         }, 100);
     });
 });
+
+
+
+// ===== FIX: Prevenir scroll al cambiar de campo en formularios =====
+document.addEventListener('DOMContentLoaded', function() {
+    // Seleccionar todos los inputs, selects y textareas de formularios
+    const formFields = document.querySelectorAll('input, select, textarea');
+    
+    formFields.forEach(field => {
+        field.addEventListener('focus', function(e) {
+            // Prevenir comportamiento por defecto que causa scroll
+            e.preventDefault();
+            
+            // Hacer scroll suave al campo si es necesario
+            const rect = this.getBoundingClientRect();
+            const isVisible = (
+                rect.top >= 0 &&
+                rect.left >= 0 &&
+                rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+                rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+            );
+            
+            if (!isVisible) {
+                this.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        });
+    });
+});

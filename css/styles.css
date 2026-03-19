@@ -2528,3 +2528,120 @@ section {
         padding: 20px;
     }
 }
+
+
+/* ===== UX FIXES - March 2026 ===== */
+
+/* ===== FIX 1: Hero Stats - Mejor visibilidad ===== */
+.hero-stats .stat-label {
+    color: #ffffff !important;
+    text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.8);
+    font-weight: 500 !important;
+}
+
+.hero-stats .stat-number {
+    color: #ff6b35 !important;
+    text-shadow: 2px 2px 12px rgba(0, 0, 0, 0.9);
+}
+
+/* ===== FIX 2: Select fields - Texto visible cuando está seleccionado ===== */
+select option:checked,
+select option:focus,
+select option:hover {
+    background-color: #ff6b35 !important;
+    color: #ffffff !important;
+}
+
+select {
+    color: #1a1a1a !important;
+    background-color: #ffffff !important;
+}
+
+select:focus {
+    color: #1a1a1a !important;
+}
+
+/* Específico para "INTERESADO EN" */
+#interesado-en option {
+    background-color: #ffffff;
+    color: #1a1a1a;
+}
+
+#interesado-en option:checked {
+    background-color: #ff6b35;
+    color: #ffffff;
+}
+
+/* ===== FIX 3: Campo FECHA APROXIMADA - Mismo ancho que otros ===== */
+input[type="date"],
+input[name="fecha-aproximada"] {
+    max-width: 100% !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+/* ===== FIX 4: Móvil - Cuadros que se cortan por derecha ===== */
+@media (max-width: 768px) {
+    .cta-grid,
+    .event-cta-section .cta-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1.5rem !important;
+        padding: 0 1rem !important;
+    }
+    
+    .cta-card {
+        max-width: 100% !important;
+        margin: 0 auto !important;
+    }
+    
+    /* Asegurar que formularios no se salgan */
+    .contact-form,
+    .volunteer-form,
+    form {
+        max-width: 100% !important;
+        padding: 1.5rem 1rem !important;
+        box-sizing: border-box !important;
+    }
+    
+    .form-group {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    
+    input, select, textarea {
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+}
+
+/* ===== FIX: Centrar grid de características cuando hay 4 cards ===== */
+.why-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Cuando hay 4 elementos, centrar el último */
+.why-grid .why-card:nth-child(4):last-child {
+    grid-column: 2 / 3;
+}
+
+/* Responsive: En tablets, 2 columnas */
+@media (max-width: 992px) {
+    .why-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+    
+    .why-grid .why-card:nth-child(4):last-child {
+        grid-column: auto;
+    }
+}
+
+/* Responsive: En móviles, 1 columna */
+@media (max-width: 768px) {
+    .why-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
