@@ -2645,3 +2645,73 @@ input[name="fecha-aproximada"] {
         grid-template-columns: 1fr !important;
     }
 }
+
+/* ===== FIX: Cuadros CTA en móvil - evitar que se corten ===== */
+.cta-dual-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+    gap: 40px;
+}
+
+@media (max-width: 768px) {
+    .cta-dual-container {
+        grid-template-columns: 1fr !important;
+        gap: 30px !important;
+        padding: 0 20px !important;
+    }
+    
+    .cta-box {
+        margin: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .cta-dual-container {
+        padding: 0 15px !important;
+    }
+    
+    .cta-box {
+        padding: 40px 25px !important;
+    }
+    
+    .cta-box h3 {
+        font-size: 1.5rem !important;
+    }
+    
+    .cta-box p {
+        font-size: 1rem !important;
+    }
+}
+
+/* ===== FIX: Campo de edad sin borde visible ===== */
+.volunteer-form input[type="number"] {
+    width: 100% !important;
+    padding: 14px 18px !important;
+    font-size: 15px !important;
+    font-family: 'Work Sans', sans-serif !important;
+    background: white !important;
+    border: 2px solid #ddd !important;
+    border-radius: 4px !important;
+    transition: all 0.3s ease !important;
+    box-sizing: border-box !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: textfield !important;
+}
+
+.volunteer-form input[type="number"]:focus {
+    outline: none !important;
+    border-color: #FF4B1F !important;
+    box-shadow: 0 0 0 3px rgba(255, 75, 31, 0.1) !important;
+}
+
+/* Remover flechas de input number en Chrome, Safari, Edge */
+.volunteer-form input[type="number"]::-webkit-outer-spin-button,
+.volunteer-form input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
