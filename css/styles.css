@@ -322,7 +322,7 @@ section {
 
 .hero-title-line[data-delay="1"] { 
     animation-delay: 0.4s; 
-    color: #FF6B35;
+    color: #FF4B1F;
     text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
 }
 
@@ -2540,7 +2540,7 @@ section {
 }
 
 .hero-stats .stat-number {
-    color: #FF6B35 !important;
+    color: #FF4B1F !important;
     text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
 }
 
@@ -2548,7 +2548,7 @@ section {
 select option:checked,
 select option:focus,
 select option:hover {
-    background-color: #ff6b35 !important;
+    background-color: #FF4B1F !important;
     color: #ffffff !important;
 }
 
@@ -2568,7 +2568,7 @@ select:focus {
 }
 
 #interesado-en option:checked {
-    background-color: #ff6b35;
+    background-color: #FF4B1F;
     color: #ffffff;
 }
 

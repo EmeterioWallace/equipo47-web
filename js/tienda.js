@@ -797,7 +797,7 @@ function renderSubcategoryFilters(sport) {
         button.textContent = subcat.label;
         button.style.cssText = `
             padding: 10px 22px;
-            background: ${subcat.id === 'todas' ? '#FF6B35' : '#f5f5f5'};
+            background: ${subcat.id === 'todas' ? '#FF4B1F' : '#f5f5f5'};
             color: ${subcat.id === 'todas' ? 'white' : '#666'};
             border: none;
             border-radius: 20px;
@@ -818,7 +818,7 @@ function renderSubcategoryFilters(sport) {
             });
             
             button.classList.add('active');
-            button.style.background = '#FF6B35';
+            button.style.background = '#FF4B1F';
             button.style.color = 'white';
             
             // Renderizar productos
@@ -1007,7 +1007,7 @@ if (genderFilters.length > 0) {
                 btn.classList.remove('active');
             });
             button.style.color = '#2C3E50';
-            button.style.borderBottom = '3px solid #FF6B35';
+            button.style.borderBottom = '3px solid #FF4B1F';
             button.classList.add('active');
             
             currentGender = button.dataset.gender;
@@ -1030,7 +1030,7 @@ if (sportFilters.length > 0) {
                     btn.classList.remove('active');
                 }
             });
-            button.style.background = '#FF6B35';
+            button.style.background = '#FF4B1F';
             button.style.color = 'white';
             button.classList.add('active');
             
@@ -1055,7 +1055,7 @@ if (searchInput) {
     
     // Focus styles
     searchInput.addEventListener('focus', () => {
-        searchInput.style.borderColor = '#FF6B35';
+        searchInput.style.borderColor = '#FF4B1F';
     });
     
     searchInput.addEventListener('blur', () => {
