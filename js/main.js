@@ -66,25 +66,7 @@ if (navToggle && navMenu) {
 }
 
 // ===== FORM SUBMISSIONS =====
-const contactForms = document.querySelectorAll('.contact-form, .volunteer-form');
-
-contactForms.forEach(form => {
-    form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        
-        // Show success message
-        alert('¡Gracias por tu solicitud! Nos pondremos en contacto contigo lo antes posible.');
-        
-        // Reset form
-        form.reset();
-        
-        // Scroll to top
-        window.scrollTo({
-            top: 0,
-            behavior: 'smooth'
-        });
-    });
-});
+// Netlify handles form POST natively — browser validates required fields automatically
 
 // ===== INTERSECTION OBSERVER FOR SCROLL ANIMATIONS =====
 const observerOptions = {
