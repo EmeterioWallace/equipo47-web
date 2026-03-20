@@ -236,42 +236,47 @@
             </div>
 
             <div class="volunteer-form-container">
-                <form class="volunteer-form">
+                <form class="volunteer-form" name="voluntarios" method="POST" data-netlify="true" data-netlify-honeypot="bot-field">
+                    <input type="hidden" name="form-name" value="voluntarios">
+                    <p style="display: none;">
+                        <label>No llenes esto si eres humano: <input name="bot-field"></label>
+                    </p>
+                    
                     <div class="form-row">
                         <div class="form-group">
                             <label>Nombre Completo *</label>
-                            <input type="text" required>
+                            <input type="text" name="nombre" required>
                         </div>
                         <div class="form-group">
                             <label>Edad *</label>
-                            <input type="number" min="16" max="99" required>
+                            <input type="number" name="edad" min="16" max="99" required>
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
                             <label>Email *</label>
-                            <input type="email" required>
+                            <input type="email" name="email" required>
                         </div>
                         <div class="form-group">
                             <label>Teléfono *</label>
-                            <input type="tel" required>
+                            <input type="tel" name="telefono" required>
                         </div>
                     </div>
 
                     <div class="form-group">
                         <label>Ciudad</label>
-                        <input type="text">
+                        <input type="text" name="ciudad">
                     </div>
 
                     <div class="form-group">
                         <label>¿Por qué quieres ser voluntario? *</label>
-                        <textarea rows="4" required placeholder="Cuéntanos tu motivación..."></textarea>
+                        <textarea name="motivacion" rows="4" required placeholder="Cuéntanos tu motivación..."></textarea>
                     </div>
 
                     <div class="form-group">
                         <label>¿Has sido voluntario antes?</label>
-                        <select style="color: #333 !important; background: white !important;">
+                        <select name="experiencia-previa" style="color: #333 !important; background: white !important;">
                             <option value="" disabled selected style="color: #999 !important;">Selecciona una opción</option>
                             <option value="no" style="color: #333 !important; background: white !important;">No, es mi primera vez</option>
                             <option value="si-otros" style="color: #333 !important; background: white !important;">Sí, en otros eventos</option>
@@ -281,7 +286,7 @@
 
                     <div class="form-group">
                         <label>Disponibilidad *</label>
-                        <select required style="color: #333 !important; background: white !important;">
+                        <select name="disponibilidad" required style="color: #333 !important; background: white !important;">
                             <option value="" disabled selected style="color: #999 !important;">Selecciona...</option>
                             <option value="finde" style="color: #333 !important; background: white !important;">Fines de semana</option>
                             <option value="semana" style="color: #333 !important; background: white !important;">Entre semana</option>
@@ -292,7 +297,7 @@
 
                     <div class="form-group">
                         <label>¿En qué te gustaría colaborar? (opcional)</label>
-                        <select style="color: #333 !important; background: white !important;">
+                        <select name="rol-preferido" style="color: #333 !important; background: white !important;">
                             <option value="" style="color: #333 !important; background: white !important;">Cualquier rol</option>
                             <option value="avituallamientos" style="color: #333 !important; background: white !important;">Avituallamientos</option>
                             <option value="meta" style="color: #333 !important; background: white !important;">Meta y Llegada</option>
@@ -307,7 +312,7 @@
 
                     <div class="form-group checkbox-group">
                         <label>
-                            <input type="checkbox" required>
+                            <input type="checkbox" name="acepto-privacidad" required>
                             <span>He leído y acepto la <a href="privacidad.html" target="_blank">Política de Privacidad</a> y el <a href="terminos.html" target="_blank">Tratamiento de Datos</a></span>
                         </label>
                     </div>

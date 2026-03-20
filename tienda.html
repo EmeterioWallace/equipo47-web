@@ -348,26 +348,31 @@
             </div>
 
             <div class="contact-form-container">
-                <form class="contact-form">
+                <form class="contact-form" name="presupuesto-tienda" method="POST" data-netlify="true" data-netlify-honeypot="bot-field">
+                    <input type="hidden" name="form-name" value="presupuesto-tienda">
+                    <p style="display: none;">
+                        <label>No llenes esto si eres humano: <input name="bot-field"></label>
+                    </p>
+                    
                     <div class="form-row">
                         <div class="form-group">
                             <label>Nombre</label>
-                            <input type="text" required>
+                            <input type="text" name="nombre" required>
                         </div>
                         <div class="form-group">
                             <label>Email</label>
-                            <input type="email" required>
+                            <input type="email" name="email" required>
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
                             <label>Teléfono</label>
-                            <input type="tel">
+                            <input type="tel" name="telefono">
                         </div>
                         <div class="form-group">
                             <label>Tipo de Cliente</label>
-                            <select>
+                            <select name="tipo-cliente">
                                 <option>Club Deportivo</option>
                                 <option>Marca Nueva</option>
                                 <option>Evento</option>
@@ -379,7 +384,7 @@
 
                     <div class="form-group">
                         <label>Cantidad Aproximada</label>
-                        <select>
+                        <select name="cantidad">
                             <option>50-100 unidades</option>
                             <option>100-250 unidades</option>
                             <option>250-500 unidades</option>
@@ -390,7 +395,7 @@
 
                     <div class="form-group">
                         <label>Cuéntanos sobre tu proyecto</label>
-                        <textarea rows="5" required></textarea>
+                        <textarea name="mensaje" rows="5" required></textarea>
                     </div>
 
                     <button type="submit" class="btn btn-primary">Enviar Solicitud</button>
