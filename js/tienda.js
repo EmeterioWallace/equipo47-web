@@ -1274,14 +1274,7 @@ if (calcProduct && calcQuantity && calcCustomization) {
 }
 
 // ===== FORM SUBMISSION =====
-const contactForm = document.querySelector('.contact-form');
-if (contactForm) {
-    contactForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        alert('¡Gracias por tu interés! Nos pondremos en contacto contigo lo antes posible.');
-        contactForm.reset();
-    });
-}
+// Netlify handles form POST natively — browser validates required fields automatically
 
 // ===== INTERSECTION OBSERVER FOR SCROLL ANIMATIONS =====
 const observerOptions = {
