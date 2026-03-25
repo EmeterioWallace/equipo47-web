@@ -494,34 +494,41 @@
 
     <div class="campo-grid">
       <div class="campo" id="c-nombre">
-        <label>Nombre y apellidos <span>*</span></label>
-        <input type="text" id="nombre" placeholder="María García López" autocomplete="name">
-        <span class="err-msg">Introduce tu nombre completo</span>
+        <label>Nombre <span>*</span></label>
+        <input type="text" id="nombre" placeholder="María" autocomplete="given-name">
+        <span class="err-msg">Introduce tu nombre</span>
       </div>
+      <div class="campo" id="c-apellidos">
+        <label>Apellidos <span>*</span></label>
+        <input type="text" id="apellidos" placeholder="García López" autocomplete="family-name">
+        <span class="err-msg">Introduce tus apellidos</span>
+      </div>
+    </div>
+    <div class="campo-grid">
       <div class="campo" id="c-email">
         <label>Email <span>*</span></label>
         <input type="email" id="email" placeholder="tu@email.com" autocomplete="email">
         <span class="err-msg">Email no válido</span>
       </div>
-    </div>
-    <div class="campo-grid">
       <div class="campo" id="c-telefono">
         <label>Teléfono <span>*</span></label>
         <input type="tel" id="telefono" placeholder="600 000 000" autocomplete="tel">
         <span class="err-msg">Introduce un teléfono válido</span>
       </div>
+    </div>
+    <div class="campo-grid">
       <div class="campo" id="c-dni">
         <label>DNI / NIF <span>*</span></label>
         <input type="text" id="dni" placeholder="12345678A" maxlength="9">
         <span class="err-msg">Formato incorrecto</span>
       </div>
-    </div>
-    <div class="campo-grid">
       <div class="campo" id="c-fechaNac">
         <label>Fecha de nacimiento <span>*</span></label>
         <input type="date" id="fechaNac">
         <span class="err-msg">Introduce tu fecha de nacimiento</span>
       </div>
+    </div>
+    <div class="campo-grid uno">
       <div class="campo">
         <label>Club / Equipo</label>
         <input type="text" id="club" placeholder="Opcional">
@@ -698,7 +705,8 @@ function validar(n) {
 function validarDatos() {
   let ok = true;
   const reglas = [
-    { id: 'nombre',   wrap: 'c-nombre',  test: v => v.trim().length >= 3 },
+    { id: 'nombre',   wrap: 'c-nombre',   test: v => v.trim().length >= 2 },
+    { id: 'apellidos', wrap: 'c-apellidos', test: v => v.trim().length >= 2 },
     { id: 'email',    wrap: 'c-email',   test: v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) },
     { id: 'telefono', wrap: 'c-telefono',test: v => /^[\d\s+\-]{7,15}$/.test(v.trim()) },
     { id: 'dni',      wrap: 'c-dni',     test: v => /^[0-9]{7,8}[A-Za-z]$/.test(v.trim()) || /^[XYZxyz][0-9]{7}[A-Za-z]$/.test(v.trim()) },
@@ -741,7 +749,7 @@ async function cargarEventos() {
   const c = document.getElementById('eventos-contenedor');
   c.innerHTML = '<p class="loading-txt">Cargando eventos disponibles…</p>';
   try {
-    const r = await fetch(`${API}?action=getEventos`);
+    const r = await fetch(`${API}?action=getEventos`, { redirect: 'follow' });
     S.eventos = await r.json();
     renderEventos();
   } catch (e) {
@@ -812,7 +820,7 @@ async function cargarModelos() {
 
   try {
     const params = new URLSearchParams({ action: 'getModelos', eventoId: S.eventoSel.id, franja: S.franjaSel });
-    const r      = await fetch(`${API}?${params}`);
+    const r      = await fetch(`${API}?${params}`, { redirect: 'follow' });
     const modelos = await r.json();
     renderModelos(modelos);
   } catch (e) {
@@ -882,7 +890,7 @@ async function cargarTallas() {
       modelo:   S.modeloSel.nombre,
       genero:   S.generoSel || 'Unisex'
     });
-    const r      = await fetch(`${API}?${params}`);
+    const r      = await fetch(`${API}?${params}`, { redirect: 'follow' });
     const tallas = await r.json();
     renderTallas(tallas);
   } catch (e) {
@@ -922,7 +930,7 @@ function rellenarResumen() {
   const fnac = document.getElementById('fechaNac').value;
   const [y,m,d] = fnac ? fnac.split('-') : ['','',''];
 
-  v('r-nombre', document.getElementById('nombre').value);
+  v('r-nombre', document.getElementById('nombre').value + ' ' + document.getElementById('apellidos').value);
   v('r-email',  document.getElementById('email').value);
   v('r-tel',    document.getElementById('telefono').value);
   v('r-dni',    document.getElementById('dni').value.toUpperCase());
@@ -956,6 +964,7 @@ async function confirmar() {
 
   const datos = {
     nombre:        document.getElementById('nombre').value.trim(),
+    apellidos:     document.getElementById('apellidos').value.trim(),
     email:         document.getElementById('email').value.trim(),
     telefono:      document.getElementById('telefono').value.trim(),
     dni:           document.getElementById('dni').value.trim().toUpperCase(),
@@ -971,11 +980,8 @@ async function confirmar() {
   };
 
   try {
-    const r = await fetch(API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'reservarTalla', datos })
-    });
+    const params = new URLSearchParams({ action: 'reservarTalla', datos: JSON.stringify(datos) });
+    const r = await fetch(`${API}?${params}`, { redirect: 'follow' });
     const res = await r.json();
 
     if (res.ok) {
