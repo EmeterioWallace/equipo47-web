@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pruebas ASICS — Reserva tu zapatilla</title>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --azul:       #000066;
+      --azul-dark:  #00004d;
+      --azul-light: #e8e8f0;
+      --negro:      #111111;
+      --gris-osc:   #333333;
+      --gris-med:   #767676;
+      --gris-claro: #F4F4F4;
+      --borde:      #E0E0E0;
+      --blanco:     #FFFFFF;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Barlow', sans-serif;
+      background: var(--blanco);
+      color: var(--negro);
+      overflow-x: hidden;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+      background: var(--blanco);
+      border-bottom: 1px solid var(--borde);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2rem; height: 60px;
+    }
+    .nav-logo {
+      display: flex; align-items: center; gap: 1rem;
+    }
+    .nav-logo svg { height: 28px; width: auto; display: block; }
+    .nav-divider { width: 1px; height: 20px; background: var(--borde); }
+    .nav-subtitle {
+      font-size: 0.72rem; font-weight: 600; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--azul);
+    }
+    .nav-badge {
+      background: var(--azul); color: var(--blanco);
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase; padding: 0.4rem 1rem;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      background: var(--azul);
+      padding: 7rem 2rem 4rem;
+      text-align: center;
+    }
+    .hero-eyebrow {
+      font-size: 0.7rem; font-weight: 700; letter-spacing: 3px;
+      text-transform: uppercase; color: rgba(255,255,255,.55);
+      margin-bottom: 1rem;
+    }
+    .hero h1 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900; font-size: clamp(2.8rem, 7vw, 5.5rem);
+      text-transform: uppercase; line-height: .95;
+      color: var(--blanco); margin-bottom: 1rem;
+    }
+    .hero p {
+      font-size: 1rem; font-weight: 300; color: rgba(255,255,255,.7);
+      max-width: 480px; margin: 0 auto; line-height: 1.7;
+    }
+
+    /* ── BARRA PROGRESO ── */
+    .progreso-bar {
+      background: var(--blanco);
+      border-bottom: 1px solid var(--borde);
+      position: sticky; top: 60px; z-index: 100;
+    }
+    .progreso-inner {
+      max-width: 680px; margin: 0 auto;
+      display: flex;
+    }
+    .paso-tab {
+      flex: 1; text-align: center;
+      padding: 14px 8px 12px;
+      font-size: 0.68rem; font-weight: 700; letter-spacing: 1.5px;
+      text-transform: uppercase; color: #bbb;
+      border-bottom: 3px solid transparent;
+      transition: all .2s;
+    }
+    .paso-tab.activo  { color: var(--azul); border-color: var(--azul); }
+    .paso-tab.hecho   { color: var(--gris-med); border-color: #ccc; }
+    .paso-num {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: #eee; font-size: 10px; font-weight: 800;
+      margin-right: 5px; vertical-align: middle;
+      transition: all .2s;
+    }
+    .paso-tab.activo .paso-num { background: var(--azul); color: #fff; }
+    .paso-tab.hecho  .paso-num { background: var(--negro); color: #fff; }
+
+    /* ── CONTENIDO ── */
+    .contenido {
+      max-width: 680px; margin: 0 auto;
+      padding: 3rem 1.5rem 6rem;
+    }
+    .paso { display: none; }
+    .paso.activo { display: block; animation: fadeUp .25s ease both; }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── TÍTULOS ── */
+    .section-eyebrow {
+      font-size: 0.7rem; font-weight: 700; letter-spacing: 3px;
+      text-transform: uppercase; color: var(--azul);
+      margin-bottom: .6rem;
+    }
+    .section-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900; font-size: clamp(1.8rem, 4vw, 2.8rem);
+      text-transform: uppercase; line-height: 1;
+      margin-bottom: .6rem;
+    }
+    .section-desc {
+      font-size: 0.9rem; font-weight: 300; color: var(--gris-med);
+      margin-bottom: 2rem; line-height: 1.6;
+    }
+
+    /* ── CAMPOS ── */
+    .campo-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem 1.2rem;
+      margin-bottom: 1rem;
+    }
+    .campo-grid.uno { grid-template-columns: 1fr; }
+    @media (max-width: 520px) { .campo-grid { grid-template-columns: 1fr; } }
+
+    .campo { display: flex; flex-direction: column; gap: 6px; }
+    .campo label {
+      font-size: 0.68rem; font-weight: 700; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--gris-med);
+    }
+    .campo label span { color: var(--azul); }
+    .campo input, .campo select {
+      border: 1px solid var(--borde);
+      padding: 11px 14px;
+      font-family: 'Barlow', sans-serif;
+      font-size: 15px; color: var(--negro);
+      background: var(--blanco);
+      transition: border-color .15s;
+      appearance: none; -webkit-appearance: none;
+      width: 100%; border-radius: 0;
+    }
+    .campo input:focus, .campo select:focus {
+      outline: none; border-color: var(--azul);
+    }
+    .campo .err-msg { font-size: 12px; color: #c00; display: none; }
+    .campo.con-error .err-msg { display: block; }
+    .campo.con-error input,
+    .campo.con-error select { border-color: #c00; }
+
+    .select-wrap { position: relative; }
+    .select-wrap::after {
+      content: '▾'; position: absolute; right: 14px; top: 50%;
+      transform: translateY(-50%); pointer-events: none;
+      color: var(--gris-med); font-size: 13px;
+    }
+    .select-wrap select { padding-right: 32px; }
+
+    /* ── TARJETAS EVENTO ── */
+    .eventos-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1px; background: var(--borde);
+      border: 1px solid var(--borde);
+      margin-bottom: 2rem;
+    }
+    .evento-card {
+      background: var(--blanco);
+      padding: 1.4rem;
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .evento-card:hover { background: var(--gris-claro); }
+    .evento-card.sel { background: var(--azul); }
+    .evento-card .ev-tipo {
+      font-size: 0.65rem; font-weight: 700; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--azul);
+      margin-bottom: .4rem; transition: color .15s;
+    }
+    .evento-card.sel .ev-tipo { color: rgba(255,255,255,.6); }
+    .evento-card .ev-nombre {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 800; font-size: 1.15rem;
+      text-transform: uppercase; letter-spacing: .5px;
+      color: var(--negro); line-height: 1.1;
+      transition: color .15s;
+    }
+    .evento-card.sel .ev-nombre { color: var(--blanco); }
+    .evento-card .ev-fecha {
+      font-size: 0.8rem; color: var(--gris-med);
+      margin-top: .5rem; font-weight: 400;
+      transition: color .15s;
+    }
+    .evento-card.sel .ev-fecha { color: rgba(255,255,255,.6); }
+
+    /* ── FRANJAS ── */
+    .franjas-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 1px; background: var(--borde);
+      border: 1px solid var(--borde);
+      margin-bottom: 2rem;
+    }
+    .franja-btn {
+      background: var(--blanco);
+      padding: 1rem;
+      text-align: center;
+      cursor: pointer;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.1rem; font-weight: 700;
+      letter-spacing: 1px; color: var(--negro);
+      transition: background .15s, color .15s;
+      border: none;
+    }
+    .franja-btn:hover { background: var(--gris-claro); }
+    .franja-btn.sel { background: var(--azul); color: var(--blanco); }
+
+    /* ── TARJETAS MODELO ── */
+    .modelos-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 1px; background: var(--borde);
+      border: 1px solid var(--borde);
+      margin-bottom: 2rem;
+    }
+    .modelo-card {
+      background: var(--blanco);
+      padding: 1.4rem;
+      cursor: pointer;
+      transition: background .15s;
+      position: relative;
+    }
+    .modelo-card:hover { background: var(--gris-claro); }
+    .modelo-card.sel { background: var(--azul); }
+    .modelo-card .m-brand {
+      font-size: 0.65rem; font-weight: 700; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--azul);
+      margin-bottom: .3rem; transition: color .15s;
+    }
+    .modelo-card.sel .m-brand { color: rgba(255,255,255,.6); }
+    .modelo-card .m-nombre {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900; font-size: 1.3rem;
+      text-transform: uppercase; color: var(--negro);
+      transition: color .15s;
+    }
+    .modelo-card.sel .m-nombre { color: var(--blanco); }
+    .m-unisex {
+      display: inline-block;
+      font-size: 0.6rem; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase;
+      background: var(--negro); color: var(--blanco);
+      padding: 2px 6px; margin-top: .5rem;
+    }
+    .modelo-card.sel .m-unisex { background: rgba(255,255,255,.2); }
+
+    /* ── GÉNERO ── */
+    .genero-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 1px; background: var(--borde);
+      border: 1px solid var(--borde);
+      margin-bottom: 2rem;
+    }
+    .genero-btn {
+      background: var(--blanco); padding: 1.6rem;
+      text-align: center; cursor: pointer;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.5rem; font-weight: 800;
+      text-transform: uppercase; letter-spacing: 2px;
+      color: var(--negro); border: none;
+      transition: background .15s, color .15s;
+    }
+    .genero-btn:hover { background: var(--gris-claro); }
+    .genero-btn.sel { background: var(--azul); color: var(--blanco); }
+    .genero-btn .g-icon { font-size: 1.8rem; display: block; margin-bottom: .4rem; }
+
+    /* ── TALLAS ── */
+    .tallas-grid {
+      display: flex; flex-wrap: wrap; gap: 1px;
+      background: var(--borde);
+      border: 1px solid var(--borde);
+      margin-bottom: 2rem;
+    }
+    .talla-btn {
+      background: var(--blanco);
+      min-width: 64px; padding: 12px 8px;
+      text-align: center; cursor: pointer;
+      font-size: 1rem; font-weight: 600;
+      color: var(--negro); border: none;
+      transition: background .15s, color .15s;
+    }
+    .talla-btn:hover { background: var(--gris-claro); }
+    .talla-btn.sel { background: var(--azul); color: var(--blanco); }
+
+    /* ── RESUMEN ── */
+    .resumen {
+      border: 1px solid var(--borde);
+      margin-bottom: 2rem;
+    }
+    .resumen-head {
+      background: var(--azul); padding: 1rem 1.4rem;
+      font-size: 0.68rem; font-weight: 700; letter-spacing: 3px;
+      text-transform: uppercase; color: var(--blanco);
+    }
+    .resumen-fila {
+      display: flex; justify-content: space-between;
+      padding: 12px 1.4rem;
+      border-bottom: 1px solid var(--borde);
+      font-size: 14px;
+    }
+    .resumen-fila:last-child { border-bottom: none; }
+    .res-label { color: var(--gris-med); font-weight: 400; }
+    .res-val   { font-weight: 600; color: var(--negro); }
+
+    /* ── BOTONES ── */
+    .btn-row { display: flex; gap: 1rem; margin-top: 1rem; }
+    .btn {
+      flex: 1; padding: 1rem 1.5rem;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1rem; font-weight: 700;
+      letter-spacing: 2px; text-transform: uppercase;
+      cursor: pointer; border: none; transition: background .15s;
+    }
+    .btn-primario { background: var(--azul); color: var(--blanco); }
+    .btn-primario:hover { background: var(--azul-dark); }
+    .btn-primario:disabled { background: #aaa; cursor: not-allowed; }
+    .btn-secundario {
+      background: transparent; color: var(--negro);
+      border: 1px solid var(--borde);
+    }
+    .btn-secundario:hover { background: var(--gris-claro); }
+
+    /* ── ALERTA ERROR ── */
+    .alerta {
+      border-left: 3px solid #c00;
+      background: #fff5f5;
+      padding: 12px 16px;
+      font-size: 14px; color: #900;
+      margin-bottom: 1rem;
+      display: none;
+    }
+    .alerta.visible { display: block; }
+
+    /* ── LOADING ── */
+    .loading-txt {
+      font-size: 0.85rem; color: var(--gris-med);
+      padding: 1.5rem 0; font-weight: 300;
+    }
+
+    /* ── SPINNER ── */
+    .spinner {
+      display: inline-block; width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,.3);
+      border-top-color: #fff; border-radius: 50%;
+      animation: spin .6s linear infinite;
+      vertical-align: middle; margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── ÉXITO ── */
+    .exito {
+      display: none; text-align: center;
+      padding: 4rem 1.5rem;
+    }
+    .exito.visible { display: block; animation: fadeUp .3s ease both; }
+    .exito-mark {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 64px; height: 64px; background: var(--azul);
+      font-size: 1.8rem; margin-bottom: 1.5rem;
+    }
+    .exito h2 {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-weight: 900; font-size: 2.5rem;
+      text-transform: uppercase; margin-bottom: .8rem;
+    }
+    .exito p { font-size: 15px; color: var(--gris-med); line-height: 1.7; }
+    .exito-datos {
+      display: inline-flex; gap: 0;
+      border: 1px solid var(--borde);
+      margin-top: 2rem;
+    }
+    .exito-dato {
+      padding: 1.2rem 2rem;
+      border-right: 1px solid var(--borde);
+    }
+    .exito-dato:last-child { border-right: none; }
+    .exito-dato-label {
+      font-size: 0.65rem; font-weight: 700; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--gris-med);
+      margin-bottom: .3rem;
+    }
+    .exito-dato-val {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 1.4rem; font-weight: 900;
+      text-transform: uppercase; color: var(--negro);
+    }
+
+    /* ── DIVIDER ── */
+    hr { border: none; border-top: 1px solid var(--borde); margin: 2rem 0; }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--azul); padding: 1.5rem 2rem;
+      text-align: center;
+      font-size: 0.72rem; font-weight: 600; letter-spacing: 2px;
+      text-transform: uppercase; color: rgba(255,255,255,.45);
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">
+    <!-- Logo ASICS SVG -->
+    <svg viewBox="0 0 120 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <text x="0" y="22" font-family="'Barlow Condensed', sans-serif" font-weight="900" font-size="26" fill="#000066" letter-spacing="2">ASICS</text>
+    </svg>
+    <div class="nav-divider"></div>
+    <span class="nav-subtitle">Pruebas de zapatillas</span>
+  </div>
+  <span class="nav-badge">Equipo 47</span>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <p class="hero-eyebrow">Equipo 47 × ASICS</p>
+  <h1>Reserva tu<br>zapatilla</h1>
+  <p>Elige el evento, franja horaria, modelo y talla. Solo se muestran las plazas disponibles en tiempo real.</p>
+</div>
+
+<!-- BARRA PROGRESO -->
+<div class="progreso-bar">
+  <div class="progreso-inner" id="progreso">
+    <div class="paso-tab activo" data-paso="1"><span class="paso-num">1</span>Tus datos</div>
+    <div class="paso-tab" data-paso="2"><span class="paso-num">2</span>Evento</div>
+    <div class="paso-tab" data-paso="3"><span class="paso-num">3</span>Franja</div>
+    <div class="paso-tab" data-paso="4"><span class="paso-num">4</span>Zapatilla</div>
+    <div class="paso-tab" data-paso="5"><span class="paso-num">5</span>Confirmar</div>
+  </div>
+</div>
+
+<!-- ÉXITO (fuera del flujo de pasos) -->
+<div class="exito" id="exito">
+  <div class="exito-mark">✓</div>
+  <h2>¡Reserva confirmada!</h2>
+  <p>Hemos enviado los detalles a <strong id="exito-email"></strong><br>Recibirás un recordatorio unos días antes del evento.</p>
+  <div class="exito-datos">
+    <div class="exito-dato">
+      <div class="exito-dato-label">Evento</div>
+      <div class="exito-dato-val" id="exito-evento"></div>
+    </div>
+    <div class="exito-dato">
+      <div class="exito-dato-label">Franja</div>
+      <div class="exito-dato-val" id="exito-franja"></div>
+    </div>
+    <div class="exito-dato">
+      <div class="exito-dato-label">Zapatilla</div>
+      <div class="exito-dato-val" id="exito-modelo"></div>
+    </div>
+    <div class="exito-dato">
+      <div class="exito-dato-label">Talla</div>
+      <div class="exito-dato-val" id="exito-talla"></div>
+    </div>
+  </div>
+</div>
+
+<!-- CONTENIDO PASOS -->
+<div class="contenido" id="form-contenido">
+
+  <!-- PASO 1: Datos personales -->
+  <div class="paso activo" id="paso-1">
+    <p class="section-eyebrow">Paso 1 de 5</p>
+    <h2 class="section-title">Tus datos</h2>
+    <p class="section-desc">Necesitamos estos datos para gestionar tu inscripción y enviarte la confirmación.</p>
+
+    <div class="campo-grid">
+      <div class="campo" id="c-nombre">
+        <label>Nombre y apellidos <span>*</span></label>
+        <input type="text" id="nombre" placeholder="María García López" autocomplete="name">
+        <span class="err-msg">Introduce tu nombre completo</span>
+      </div>
+      <div class="campo" id="c-email">
+        <label>Email <span>*</span></label>
+        <input type="email" id="email" placeholder="tu@email.com" autocomplete="email">
+        <span class="err-msg">Email no válido</span>
+      </div>
+    </div>
+    <div class="campo-grid">
+      <div class="campo" id="c-telefono">
+        <label>Teléfono <span>*</span></label>
+        <input type="tel" id="telefono" placeholder="600 000 000" autocomplete="tel">
+        <span class="err-msg">Introduce un teléfono válido</span>
+      </div>
+      <div class="campo" id="c-dni">
+        <label>DNI / NIF <span>*</span></label>
+        <input type="text" id="dni" placeholder="12345678A" maxlength="9">
+        <span class="err-msg">Formato incorrecto</span>
+      </div>
+    </div>
+    <div class="campo-grid">
+      <div class="campo" id="c-fechaNac">
+        <label>Fecha de nacimiento <span>*</span></label>
+        <input type="date" id="fechaNac">
+        <span class="err-msg">Introduce tu fecha de nacimiento</span>
+      </div>
+      <div class="campo">
+        <label>Club / Equipo</label>
+        <input type="text" id="club" placeholder="Opcional">
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primario" onclick="irPaso(2)">Continuar →</button>
+    </div>
+  </div>
+
+  <!-- PASO 2: Evento -->
+  <div class="paso" id="paso-2">
+    <p class="section-eyebrow">Paso 2 de 5</p>
+    <h2 class="section-title">Elige el evento</h2>
+    <p class="section-desc">Solo se muestran los eventos actualmente abiertos.</p>
+
+    <div id="eventos-contenedor"><p class="loading-txt">Cargando eventos disponibles…</p></div>
+    <div class="alerta" id="err-evento">Selecciona un evento para continuar</div>
+
+    <div class="btn-row">
+      <button class="btn btn-secundario" onclick="irPaso(1)">← Volver</button>
+      <button class="btn btn-primario" onclick="irPaso(3)">Continuar →</button>
+    </div>
+  </div>
+
+  <!-- PASO 3: Franja horaria -->
+  <div class="paso" id="paso-3">
+    <p class="section-eyebrow">Paso 3 de 5</p>
+    <h2 class="section-title">Elige tu franja</h2>
+    <p class="section-desc">Selecciona la franja horaria en la que recogerás y probarás las zapatillas.</p>
+
+    <div id="franjas-contenedor"><p class="loading-txt">Cargando franjas…</p></div>
+    <div class="alerta" id="err-franja">Selecciona una franja horaria</div>
+
+    <div class="btn-row">
+      <button class="btn btn-secundario" onclick="irPaso(2)">← Volver</button>
+      <button class="btn btn-primario" onclick="irPaso(4)">Continuar →</button>
+    </div>
+  </div>
+
+  <!-- PASO 4: Zapatilla -->
+  <div class="paso" id="paso-4">
+    <p class="section-eyebrow">Paso 4 de 5</p>
+    <h2 class="section-title">Elige tu zapatilla</h2>
+    <p class="section-desc">Modelos disponibles para tu franja. Después podrás elegir la talla.</p>
+
+    <div id="modelos-contenedor"><p class="loading-txt">Cargando modelos…</p></div>
+
+    <!-- Género (aparece solo si el modelo no es unisex) -->
+    <div id="genero-seccion" style="display:none">
+      <hr>
+      <p class="section-eyebrow">Versión</p>
+      <h3 style="font-family:'Barlow Condensed',sans-serif;font-size:1.6rem;font-weight:900;text-transform:uppercase;margin-bottom:.5rem;">¿Hombre o Mujer?</h3>
+      <p class="section-desc">Este modelo tiene versión diferenciada por género.</p>
+      <div class="genero-grid">
+        <button class="genero-btn" onclick="selGenero('Hombre')">
+          <span class="g-icon">♂</span>Hombre
+        </button>
+        <button class="genero-btn" onclick="selGenero('Mujer')">
+          <span class="g-icon">♀</span>Mujer
+        </button>
+      </div>
+    </div>
+
+    <!-- Tallas (aparece al seleccionar modelo + género) -->
+    <div id="tallas-seccion" style="display:none">
+      <hr>
+      <p class="section-eyebrow">Talla</p>
+      <h3 style="font-family:'Barlow Condensed',sans-serif;font-size:1.6rem;font-weight:900;text-transform:uppercase;margin-bottom:.5rem;">Elige tu talla</h3>
+      <p class="section-desc">Solo aparecen las tallas disponibles en tu franja.</p>
+      <div id="tallas-contenedor"><p class="loading-txt">Cargando tallas…</p></div>
+    </div>
+
+    <div class="alerta" id="err-zapatilla">Selecciona modelo, versión y talla para continuar</div>
+
+    <div class="btn-row">
+      <button class="btn btn-secundario" onclick="irPaso(3)">← Volver</button>
+      <button class="btn btn-primario" onclick="irPaso(5)">Continuar →</button>
+    </div>
+  </div>
+
+  <!-- PASO 5: Confirmar -->
+  <div class="paso" id="paso-5">
+    <p class="section-eyebrow">Paso 5 de 5</p>
+    <h2 class="section-title">Confirma tu reserva</h2>
+    <p class="section-desc">Revisa todos los datos antes de confirmar. Una vez enviado recibirás un email de confirmación.</p>
+
+    <div class="resumen">
+      <div class="resumen-head">Resumen de inscripción</div>
+      <div class="resumen-fila"><span class="res-label">Nombre</span><span class="res-val" id="r-nombre">—</span></div>
+      <div class="resumen-fila"><span class="res-label">Email</span><span class="res-val" id="r-email">—</span></div>
+      <div class="resumen-fila"><span class="res-label">Teléfono</span><span class="res-val" id="r-tel">—</span></div>
+      <div class="resumen-fila"><span class="res-label">DNI / NIF</span><span class="res-val" id="r-dni">—</span></div>
+      <div class="resumen-fila"><span class="res-label">Fecha nacimiento</span><span class="res-val" id="r-fnac">—</span></div>
+      <div class="resumen-fila" id="r-fila-club" style="display:none"><span class="res-label">Club / Equipo</span><span class="res-val" id="r-club">—</span></div>
+      <div class="resumen-fila"><span class="res-label">Evento</span><span class="res-val" id="r-evento">—</span></div>
+      <div class="resumen-fila"><span class="res-label">Fecha</span><span class="res-val" id="r-fecha">—</span></div>
+      <div class="resumen-fila"><span class="res-label">Franja horaria</span><span class="res-val" id="r-franja">—</span></div>
+      <div class="resumen-fila"><span class="res-label">Zapatilla</span><span class="res-val" id="r-modelo">—</span></div>
+      <div class="resumen-fila" id="r-fila-genero"><span class="res-label">Versión</span><span class="res-val" id="r-genero">—</span></div>
+      <div class="resumen-fila"><span class="res-label">Talla</span><span class="res-val" id="r-talla">—</span></div>
+    </div>
+
+    <div class="alerta" id="err-confirmar"></div>
+
+    <div class="btn-row">
+      <button class="btn btn-secundario" onclick="irPaso(4)">← Volver</button>
+      <button class="btn btn-primario" id="btn-confirmar" onclick="confirmar()">Confirmar inscripción</button>
+    </div>
+  </div>
+
+</div><!-- /contenido -->
+
+<footer>ASICS × Equipo 47 · Pruebas de zapatillas</footer>
+
+<script>
+// ─────────────────────────────────────────────────────────────
+//  ⚙️  CONFIGURACIÓN — cambia esta URL por la de tu Apps Script
+// ─────────────────────────────────────────────────────────────
+const API = 'https://script.google.com/a/macros/equipo47.com/s/AKfycbwtEL8QsIV9j3hB2ae6l3R1XLc4F_K7LeyGsFWel3KQ2v2qinb2BetVgEruSZs-8yIB/exec';
+
+// ─────────────────────────────────────────────────────────────
+//  ESTADO
+// ─────────────────────────────────────────────────────────────
+const S = {
+  paso: 1,
+  eventos: null,
+  eventoSel: null,      // { id, nombre, tipo, fecha, franjas }
+  franjaSel: null,
+  modeloSel: null,      // { nombre, unisex }
+  generoSel: null,
+  tallaSel: null,
+};
+
+// ─────────────────────────────────────────────────────────────
+//  NAVEGACIÓN
+// ─────────────────────────────────────────────────────────────
+async function irPaso(n) {
+  if (n > S.paso && !validar(S.paso)) return;
+
+  // Acciones al entrar
+  if (n === 2 && !S.eventos) await cargarEventos();
+  if (n === 3) renderFranjas();
+  if (n === 4) await cargarModelos();
+  if (n === 5) rellenarResumen();
+
+  document.getElementById(`paso-${S.paso}`).classList.remove('activo');
+  document.getElementById(`paso-${n}`)?.classList.add('activo');
+  S.paso = n;
+  actualizarProgreso();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function actualizarProgreso() {
+  document.querySelectorAll('.paso-tab').forEach(t => {
+    const n = parseInt(t.dataset.paso);
+    t.classList.toggle('activo', n === S.paso);
+    t.classList.toggle('hecho',  n < S.paso);
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+//  VALIDACIONES
+// ─────────────────────────────────────────────────────────────
+function validar(n) {
+  if (n === 1) return validarDatos();
+  if (n === 2) return validarEvento();
+  if (n === 3) return validarFranja();
+  if (n === 4) return validarZapatilla();
+  return true;
+}
+
+function validarDatos() {
+  let ok = true;
+  const reglas = [
+    { id: 'nombre',   wrap: 'c-nombre',  test: v => v.trim().length >= 3 },
+    { id: 'email',    wrap: 'c-email',   test: v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) },
+    { id: 'telefono', wrap: 'c-telefono',test: v => /^[\d\s+\-]{7,15}$/.test(v.trim()) },
+    { id: 'dni',      wrap: 'c-dni',     test: v => /^[0-9]{7,8}[A-Za-z]$/.test(v.trim()) || /^[XYZxyz][0-9]{7}[A-Za-z]$/.test(v.trim()) },
+    { id: 'fechaNac', wrap: 'c-fechaNac',test: v => v !== '' },
+  ];
+  reglas.forEach(({ id, wrap, test }) => {
+    const el = document.getElementById(id);
+    const w  = document.getElementById(wrap);
+    const valido = test(el.value);
+    w.classList.toggle('con-error', !valido);
+    if (!valido) ok = false;
+  });
+  return ok;
+}
+
+function validarEvento() {
+  const err = document.getElementById('err-evento');
+  if (!S.eventoSel) { err.classList.add('visible'); return false; }
+  err.classList.remove('visible'); return true;
+}
+
+function validarFranja() {
+  const err = document.getElementById('err-franja');
+  if (!S.franjaSel) { err.classList.add('visible'); return false; }
+  err.classList.remove('visible'); return true;
+}
+
+function validarZapatilla() {
+  const err = document.getElementById('err-zapatilla');
+  if (!S.modeloSel) { err.textContent = 'Selecciona un modelo'; err.classList.add('visible'); return false; }
+  if (!S.modeloSel.unisex && !S.generoSel) { err.textContent = 'Selecciona la versión (Hombre/Mujer)'; err.classList.add('visible'); return false; }
+  if (!S.tallaSel) { err.textContent = 'Selecciona una talla'; err.classList.add('visible'); return false; }
+  err.classList.remove('visible'); return true;
+}
+
+// ─────────────────────────────────────────────────────────────
+//  PASO 2 — EVENTOS
+// ─────────────────────────────────────────────────────────────
+async function cargarEventos() {
+  const c = document.getElementById('eventos-contenedor');
+  c.innerHTML = '<p class="loading-txt">Cargando eventos disponibles…</p>';
+  try {
+    const r = await fetch(`${API}?action=getEventos`);
+    S.eventos = await r.json();
+    renderEventos();
+  } catch (e) {
+    c.innerHTML = '<p class="loading-txt" style="color:#c00">Error al cargar. Recarga la página.</p>';
+  }
+}
+
+function renderEventos() {
+  const c = document.getElementById('eventos-contenedor');
+  if (!S.eventos.length) {
+    c.innerHTML = '<p class="loading-txt">No hay eventos disponibles en este momento.</p>';
+    return;
+  }
+  c.innerHTML = '';
+  const grid = document.createElement('div');
+  grid.className = 'eventos-grid';
+  S.eventos.forEach(ev => {
+    const card = document.createElement('div');
+    card.className = 'evento-card';
+    card.innerHTML = `<div class="ev-tipo">${ev.tipo}</div><div class="ev-nombre">${ev.nombre}</div><div class="ev-fecha">${ev.fecha}</div>`;
+    card.addEventListener('click', () => {
+      document.querySelectorAll('.evento-card').forEach(c => c.classList.remove('sel'));
+      card.classList.add('sel');
+      S.eventoSel = ev;
+      S.franjaSel = null; S.modeloSel = null; S.generoSel = null; S.tallaSel = null;
+      document.getElementById('err-evento').classList.remove('visible');
+    });
+    grid.appendChild(card);
+  });
+  c.appendChild(grid);
+}
+
+// ─────────────────────────────────────────────────────────────
+//  PASO 3 — FRANJAS
+// ─────────────────────────────────────────────────────────────
+function renderFranjas() {
+  const c = document.getElementById('franjas-contenedor');
+  c.innerHTML = '';
+  const grid = document.createElement('div');
+  grid.className = 'franjas-grid';
+  S.eventoSel.franjas.forEach(f => {
+    const btn = document.createElement('button');
+    btn.className = 'franja-btn';
+    btn.textContent = f;
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.franja-btn').forEach(b => b.classList.remove('sel'));
+      btn.classList.add('sel');
+      S.franjaSel = f;
+      S.modeloSel = null; S.generoSel = null; S.tallaSel = null;
+      document.getElementById('err-franja').classList.remove('visible');
+    });
+    // Restaurar selección si ya había una
+    if (S.franjaSel === f) btn.classList.add('sel');
+    grid.appendChild(btn);
+  });
+  c.appendChild(grid);
+}
+
+// ─────────────────────────────────────────────────────────────
+//  PASO 4 — MODELOS
+// ─────────────────────────────────────────────────────────────
+async function cargarModelos() {
+  const c = document.getElementById('modelos-contenedor');
+  c.innerHTML = '<p class="loading-txt">Cargando modelos disponibles…</p>';
+  document.getElementById('genero-seccion').style.display = 'none';
+  document.getElementById('tallas-seccion').style.display = 'none';
+  S.modeloSel = null; S.generoSel = null; S.tallaSel = null;
+
+  try {
+    const params = new URLSearchParams({ action: 'getModelos', eventoId: S.eventoSel.id, franja: S.franjaSel });
+    const r      = await fetch(`${API}?${params}`);
+    const modelos = await r.json();
+    renderModelos(modelos);
+  } catch (e) {
+    c.innerHTML = '<p class="loading-txt" style="color:#c00">Error al cargar modelos.</p>';
+  }
+}
+
+function renderModelos(modelos) {
+  const c = document.getElementById('modelos-contenedor');
+  if (!modelos.length) {
+    c.innerHTML = '<p class="loading-txt">No hay modelos disponibles para esta franja.</p>';
+    return;
+  }
+  c.innerHTML = '';
+  const grid = document.createElement('div');
+  grid.className = 'modelos-grid';
+  modelos.forEach(m => {
+    const card = document.createElement('div');
+    card.className = 'modelo-card';
+    card.innerHTML = `
+      <div class="m-brand">ASICS</div>
+      <div class="m-nombre">${m.nombre}</div>
+      ${m.unisex ? '<span class="m-unisex">Unisex</span>' : ''}`;
+    card.addEventListener('click', () => {
+      document.querySelectorAll('.modelo-card').forEach(c => c.classList.remove('sel'));
+      card.classList.add('sel');
+      S.modeloSel = m;
+      S.generoSel = m.unisex ? 'Unisex' : null;
+      S.tallaSel  = null;
+      document.getElementById('err-zapatilla').classList.remove('visible');
+
+      const gs = document.getElementById('genero-seccion');
+      const ts = document.getElementById('tallas-seccion');
+      document.querySelectorAll('.genero-btn').forEach(b => b.classList.remove('sel'));
+
+      if (m.unisex) {
+        gs.style.display = 'none';
+        ts.style.display = 'block';
+        cargarTallas();
+      } else {
+        gs.style.display = 'block';
+        ts.style.display = 'none';
+      }
+    });
+    grid.appendChild(card);
+  });
+  c.appendChild(grid);
+}
+
+function selGenero(g) {
+  S.generoSel = g;
+  S.tallaSel  = null;
+  document.querySelectorAll('.genero-btn').forEach(b => b.classList.toggle('sel', b.textContent.trim() === g));
+  document.getElementById('tallas-seccion').style.display = 'block';
+  cargarTallas();
+}
+
+async function cargarTallas() {
+  const c = document.getElementById('tallas-contenedor');
+  c.innerHTML = '<p class="loading-txt">Cargando tallas…</p>';
+  S.tallaSel = null;
+  try {
+    const params = new URLSearchParams({
+      action: 'getTallas',
+      eventoId: S.eventoSel.id,
+      franja:   S.franjaSel,
+      modelo:   S.modeloSel.nombre,
+      genero:   S.generoSel || 'Unisex'
+    });
+    const r      = await fetch(`${API}?${params}`);
+    const tallas = await r.json();
+    renderTallas(tallas);
+  } catch (e) {
+    c.innerHTML = '<p class="loading-txt" style="color:#c00">Error al cargar tallas.</p>';
+  }
+}
+
+function renderTallas(tallas) {
+  const c = document.getElementById('tallas-contenedor');
+  if (!tallas.length) {
+    c.innerHTML = '<p class="loading-txt">No hay tallas disponibles. Elige otro modelo o franja.</p>';
+    return;
+  }
+  c.innerHTML = '';
+  const grid = document.createElement('div');
+  grid.className = 'tallas-grid';
+  tallas.forEach(t => {
+    const btn = document.createElement('button');
+    btn.className = 'talla-btn';
+    btn.textContent = t;
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.talla-btn').forEach(b => b.classList.remove('sel'));
+      btn.classList.add('sel');
+      S.tallaSel = t;
+      document.getElementById('err-zapatilla').classList.remove('visible');
+    });
+    grid.appendChild(btn);
+  });
+  c.appendChild(grid);
+}
+
+// ─────────────────────────────────────────────────────────────
+//  PASO 5 — RESUMEN
+// ─────────────────────────────────────────────────────────────
+function rellenarResumen() {
+  const v = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || '—'; };
+  const fnac = document.getElementById('fechaNac').value;
+  const [y,m,d] = fnac ? fnac.split('-') : ['','',''];
+
+  v('r-nombre', document.getElementById('nombre').value);
+  v('r-email',  document.getElementById('email').value);
+  v('r-tel',    document.getElementById('telefono').value);
+  v('r-dni',    document.getElementById('dni').value.toUpperCase());
+  v('r-fnac',   fnac ? `${d}/${m}/${y}` : '—');
+  v('r-evento', S.eventoSel.nombre);
+  v('r-fecha',  S.eventoSel.fecha);
+  v('r-franja', S.franjaSel);
+  v('r-modelo', `ASICS ${S.modeloSel.nombre}`);
+  v('r-talla',  S.tallaSel);
+
+  const club = document.getElementById('club').value.trim();
+  const fc   = document.getElementById('r-fila-club');
+  if (club) { v('r-club', club); fc.style.display = 'flex'; } else { fc.style.display = 'none'; }
+
+  const fg = document.getElementById('r-fila-genero');
+  if (S.modeloSel.unisex) { fg.style.display = 'none'; } else { fg.style.display = 'flex'; v('r-genero', S.generoSel); }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  CONFIRMAR
+// ─────────────────────────────────────────────────────────────
+async function confirmar() {
+  const btn = document.getElementById('btn-confirmar');
+  const err = document.getElementById('err-confirmar');
+  err.classList.remove('visible');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Procesando…';
+
+  const fnac = document.getElementById('fechaNac').value;
+  const [y,m,d] = fnac ? fnac.split('-') : ['','',''];
+
+  const datos = {
+    nombre:        document.getElementById('nombre').value.trim(),
+    email:         document.getElementById('email').value.trim(),
+    telefono:      document.getElementById('telefono').value.trim(),
+    dni:           document.getElementById('dni').value.trim().toUpperCase(),
+    fechaNacimiento: fnac ? `${d}/${m}/${y}` : '',
+    club:          document.getElementById('club').value.trim(),
+    eventoId:      S.eventoSel.id,
+    eventoNombre:  S.eventoSel.nombre,
+    fechaEvento:   S.eventoSel.fecha,
+    franja:        S.franjaSel,
+    modelo:        S.modeloSel.nombre,
+    genero:        S.generoSel || 'Unisex',
+    talla:         S.tallaSel,
+  };
+
+  try {
+    const r = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'reservarTalla', datos })
+    });
+    const res = await r.json();
+
+    if (res.ok) {
+      mostrarExito(datos);
+    } else {
+      err.textContent = res.error || 'Error al procesar. Inténtalo de nuevo.';
+      err.classList.add('visible');
+      btn.disabled = false;
+      btn.textContent = 'Confirmar inscripción';
+    }
+  } catch (e) {
+    err.textContent = 'Error de conexión. Comprueba tu internet e inténtalo de nuevo.';
+    err.classList.add('visible');
+    btn.disabled = false;
+    btn.textContent = 'Confirmar inscripción';
+  }
+}
+
+function mostrarExito(datos) {
+  document.getElementById('form-contenido').style.display = 'none';
+  document.getElementById('progreso').style.display = 'none';
+
+  document.getElementById('exito-email').textContent  = datos.email;
+  document.getElementById('exito-evento').textContent = datos.eventoNombre;
+  document.getElementById('exito-franja').textContent = datos.franja;
+  document.getElementById('exito-modelo').textContent = `ASICS ${datos.modelo}`;
+  document.getElementById('exito-talla').textContent  = datos.talla;
+
+  document.getElementById('exito').classList.add('visible');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ─────────────────────────────────────────────────────────────
+//  INIT
+// ─────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('fechaNac').max = new Date().toISOString().split('T')[0];
+});
+</script>
+</body>
+</html>
