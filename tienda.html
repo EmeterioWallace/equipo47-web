@@ -23,10 +23,9 @@
             </div>
             <ul class="nav-menu">
                 <li><a href="index.html">Inicio</a></li>
-                <li><a href="eventos.html">Eventos</a></li>
-                <li><a href="calendario.html">Calendario</a></li>
                 <li><a href="tienda.html" class="active">Tienda</a></li>
-                <li><a href="#contact" class="nav-cta">Contacto</a></li>
+                <li><a href="calendario.html">Calendario</a></li>
+                <li><a href="index.html#contact" class="nav-cta">Contacto</a></li>
             </ul>
             <div class="nav-toggle">
                 <span></span>
@@ -477,6 +476,141 @@
             <p>&copy; 2024 Equipo 47. Todos los derechos reservados.</p>
         </div>
     </footer>
+
+    <!-- Fixed Price Info Banner -->
+    <div id="price-info-banner" class="price-info-banner" style="display: none;">
+        <div class="banner-content">
+            <span class="banner-icon">ℹ️</span>
+            <span class="banner-text">Precios orientativos sin IVA · MOQ aplicable · Pedidos personalizados</span>
+            <button class="banner-close" onclick="closePriceBanner()" aria-label="Cerrar">✕</button>
+        </div>
+    </div>
+
+    <style>
+        .price-info-banner {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #f8f9fa;
+            border-top: 3px solid #FF4B1F;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            z-index: 9999;
+            animation: slideUp 0.4s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+            }
+            to {
+                transform: translateY(0);
+            }
+        }
+
+        .banner-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            position: relative;
+        }
+
+        .banner-icon {
+            font-size: 1.2rem;
+        }
+
+        .banner-text {
+            font-size: 0.95rem;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .banner-close {
+            position: absolute;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 1.4rem;
+            color: #666;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .banner-close:hover {
+            background: rgba(0,0,0,0.05);
+            color: #FF4B1F;
+        }
+
+        @media (max-width: 768px) {
+            .banner-content {
+                padding: 12px 15px;
+                gap: 8px;
+            }
+
+            .banner-text {
+                font-size: 0.85rem;
+            }
+
+            .banner-close {
+                right: 10px;
+                width: 25px;
+                height: 25px;
+                font-size: 1.2rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .banner-text {
+                font-size: 0.8rem;
+                line-height: 1.3;
+            }
+        }
+    </style>
+
+    <script>
+        // Mostrar banner si no se ha cerrado antes
+        window.addEventListener('DOMContentLoaded', function() {
+            const bannerClosed = localStorage.getItem('priceBannerClosed');
+            if (!bannerClosed) {
+                document.getElementById('price-info-banner').style.display = 'block';
+            }
+        });
+
+        // Cerrar banner y guardar en localStorage
+        function closePriceBanner() {
+            const banner = document.getElementById('price-info-banner');
+            banner.style.animation = 'slideDown 0.3s ease-out';
+            setTimeout(() => {
+                banner.style.display = 'none';
+                localStorage.setItem('priceBannerClosed', 'true');
+            }, 300);
+        }
+
+        // Animación de cierre
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideDown {
+                from {
+                    transform: translateY(0);
+                }
+                to {
+                    transform: translateY(100%);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
 
     <!-- Scripts -->
     <script data-cfasync="false" src="js/productImages.js"></script>

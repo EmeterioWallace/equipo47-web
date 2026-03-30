@@ -69,6 +69,8 @@ const products = [
     {
         id: 'product1',
         title: 'E47 Running Tank - Hombre',
+        price: '7,70 €',
+        moq: 100,
         description: 'Camiseta de running sin mangas ligera y transpirable con tejido de secado rápido.',
         sport: 'running',
         subcategory: 'camisetas',
@@ -90,6 +92,8 @@ const products = [
     {
         id: 'product2',
         title: 'E47 Running Tank - Mujer',
+        price: '7,70 €',
+        moq: 100,
         description: 'Camiseta de running sin mangas ligera y transpirable con tejido de secado rápido.',
         sport: 'running',
         subcategory: 'camisetas',
@@ -111,6 +115,8 @@ const products = [
     {
         id: 'product3',
         title: 'E47 Running Tee Sublimación - Hombre',
+        price: '7,70 €',
+        moq: 100,
         description: 'Camiseta técnica de running de manga corta con tejido ligero y transpirable que ofrece secado rápido.',
         sport: 'running',
         subcategory: 'camisetas',
@@ -132,6 +138,8 @@ const products = [
     {
         id: 'product4',
         title: 'E47 Running Tee Sublimación - Mujer',
+        price: '7,70 €',
+        moq: 100,
         description: 'Camiseta técnica de running de manga corta con tejido ligero y transpirable que ofrece secado rápido.',
         sport: 'running',
         subcategory: 'camisetas',
@@ -153,6 +161,8 @@ const products = [
     {
         id: 'product5',
         title: 'E47 Running Long Sleeve - Hombre',
+        price: '8,15 €',
+        moq: 100,
         description: 'Camiseta técnica de running de manga larga con tejido ligero y transpirable que ofrece secado rápido.',
         sport: 'running',
         subcategory: 'camisetas',
@@ -174,6 +184,8 @@ const products = [
     {
         id: 'product6',
         title: 'E47 Running Long Sleeve - Mujer',
+        price: '8,15 €',
+        moq: 100,
         description: 'Camiseta técnica de running de manga larga con tejido ligero y transpirable que ofrece secado rápido.',
         sport: 'running',
         subcategory: 'camisetas',
@@ -195,6 +207,8 @@ const products = [
     {
         id: 'product7',
         title: 'E47 Running Windbreaker',
+        price: '16,65 €',
+        moq: 100,
         description: 'Chaqueta técnica de running ligera con capucha diseñada para ofrecer protección contra el viento y comodidad.',
         sport: 'running',
         subcategory: 'chaquetas',
@@ -216,6 +230,8 @@ const products = [
     {
         id: 'product8',
         title: 'E47 Running Rain Jacket',
+        price: '10,60 €',
+        moq: 100,
         description: 'Chubasquero ligero diseñado para ofrecer protección contra la lluvia y comodidad durante entrenamiento.',
         sport: 'running',
         subcategory: 'chaquetas',
@@ -236,6 +252,8 @@ const products = [
     {
         id: 'product9',
         title: 'E47 Running Cap Personalizable',
+        price: '5,80 €',
+        moq: 100,
         description: 'Gorra técnica ligera y transpirable con tejido de secado rápido y resistente al agua para mayor comodidad.',
         sport: 'running',
         subcategory: 'accesorios-running',
@@ -257,6 +275,8 @@ const products = [
     {
         id: 'product10',
         title: 'E47 Winter Running Beanie',
+        price: '6,30 €',
+        moq: 100,
         description: 'Gorro técnico ligero y transpirable con tejido de secado rápido diseñado para entrenamientos en clima frío.',
         sport: 'running',
         subcategory: 'accesorios-running',
@@ -278,6 +298,8 @@ const products = [
     {
         id: 'product11',
         title: 'E47 Performance Gloves',
+        price: '4,80 €',
+        moq: 500,
         description: 'Guantes técnicos cálidos y elásticos diseñados para ofrecer comodidad en entrenamientos en clima frío.',
         sport: 'running',
         subcategory: 'accesorios-running',
@@ -299,6 +321,8 @@ const products = [
     {
         id: 'product12',
         title: 'E47 Expandable Running Belt',
+        price: '2,55 €',
+        moq: 1000,
         description: 'Riñonera técnica ligera y expansible con banda reflectante diseñada para transportar objetos esenciales.',
         sport: 'running',
         subcategory: 'accesorios-running',
@@ -320,6 +344,8 @@ const products = [
     {
         id: 'product13',
         title: 'E47 Running Bandana',
+        price: '2,99 €',
+        moq: 100,
         description: 'Bandana técnica de microfibra de poliéster ligera y transpirable diseñada para ofrecer comodidad y versatilidad.',
         sport: 'running',
         subcategory: 'accesorios-running',
@@ -341,6 +367,8 @@ const products = [
     {
         id: 'product14',
         title: 'E47 Milk Silk Running Bandana',
+        price: '3,45 €',
+        moq: 100,
         description: 'Bandana técnica de poliéster elástico ligera y transpirable diseñada para ofrecer comodidad y versatilidad.',
         sport: 'running',
         subcategory: 'accesorios-running',
@@ -361,7 +389,9 @@ const products = [
     },
     {
         id: 'product15',
-        title: 'E47 Performance Running Socks',
+        title: 'E47 Performance Socks',
+        price: '7,60 €',
+        moq: 100,
         description: 'Calcetines técnicos de nylon ligeros y transpirables diseñados para ofrecer comodidad durante el entrenamiento.',
         sport: 'running',
         subcategory: 'accesorios-running',
@@ -381,7 +411,9 @@ const products = [
     },
     {
         id: 'product16',
-        title: 'E47 Performance Running Socks Terry',
+        title: 'E47 Performance Socks Terry',
+        price: '7,70 €',
+        moq: 100,
         description: 'Calcetines técnicos de running con tejido de nylon y rizo terry para ofrecer mayor amortiguación y comodidad.',
         sport: 'running',
         subcategory: 'accesorios-running',
@@ -403,6 +435,8 @@ const products = [
     {
         id: 'product17',
         title: 'E47 Cooling Towel',
+        price: '5,70 €',
+        moq: 100,
         description: 'Toalla de microfibra ligera y transpirable diseñada para mantener la frescura durante el entrenamiento.',
         sport: 'running',
         subcategory: 'accesorios-running',
@@ -424,6 +458,8 @@ const products = [
     {
         id: 'product18',
         title: 'E47 Running Armband',
+        price: '0,99 €',
+        moq: 1000,
         description: 'Brazalete para smartphone diseñado para transportar el móvil con comodidad durante entrenamientos y carreras.',
         sport: 'running',
         subcategory: 'accesorios-running',
@@ -445,6 +481,8 @@ const products = [
     {
         id: 'product19',
         title: 'E47 Everyday Tote',
+        price: '4,35 €',
+        moq: 100,
         description: 'Bolsa tote resistente diseñada para transportar cómodamente equipamiento deportivo y objetos del día a día.',
         sport: 'merchandising',
         subcategory: 'merchandising-bolsas',
@@ -464,6 +502,8 @@ const products = [
     {
         id: 'product20',
         title: 'E47 Everyday Tote Colors',
+        price: '4,50 €',
+        moq: 100,
         description: 'Bolsa tote resistente diseñada para transportar cómodamente equipamiento deportivo y objetos del día a día.',
         sport: 'merchandising',
         subcategory: 'merchandising-bolsas',
@@ -483,6 +523,7 @@ const products = [
     {
         id: 'product21',
         title: 'E47 Gymsac 210D Sublimación',
+        price: 'Consultar',
         description: 'Gymsac de poliéster ligero 210D y resistente para transportar equipamiento de forma cómoda y segura.',
         sport: 'running',
         subcategory: 'bolsas-running',
@@ -502,6 +543,7 @@ const products = [
     {
         id: 'product22',
         title: 'E47 Gymsac 420D Sublimación',
+        price: 'Consultar',
         description: 'Gymsac de poliéster ligero 420D y resistente para transportar equipamiento de forma cómoda y segura.',
         sport: 'running',
         subcategory: 'bolsas-running',
@@ -522,6 +564,8 @@ const products = [
     {
         id: 'product23',
         title: 'E47 Zip Gymsac 210D Sublimación',
+        price: 'Consultar',
+        moq: 500,
         description: 'Gymsac resistente con bolsillo con cremallera diseñado para transportar equipamiento de forma cómoda.',
         sport: 'running',
         subcategory: 'bolsas-running',
@@ -542,6 +586,8 @@ const products = [
     {
         id: 'product24',
         title: 'E47 Zip Gymsac 420D Sublimación',
+        price: 'Consultar',
+        moq: 500,
         description: 'Gymsac resistente con bolsillo con cremallera diseñado para transportar equipamiento con mayor durabilidad.',
         sport: 'running',
         subcategory: 'bolsas-running',
@@ -563,6 +609,8 @@ const products = [
     {
         id: 'product25',
         title: 'E47 Running Soft Flask 250 ml',
+        price: '4,20 €',
+        moq: 100,
         description: 'Botella flexible de hidratación de 250 ml fabricada en TPU libre de BPA, ligera y plegable.',
         sport: 'running',
         subcategory: 'hidratacion',
@@ -583,6 +631,8 @@ const products = [
     {
         id: 'product26',
         title: 'E47 Running Soft Flask 500 ml',
+        price: '4,55 €',
+        moq: 100,
         description: 'Botella flexible de hidratación de 500 ml fabricada en TPU libre de BPA, ligera y plegable.',
         sport: 'running',
         subcategory: 'hidratacion',
@@ -603,6 +653,8 @@ const products = [
     {
         id: 'product27',
         title: 'E47 Folding Cup 200 ml',
+        price: '3,80 €',
+        moq: 100,
         description: 'Vaso plegable de 200 ml fabricado en TPU libre de BPA, ligero y flexible.',
         sport: 'running',
         subcategory: 'hidratacion',
@@ -623,6 +675,7 @@ const products = [
     {
         id: 'product28',
         title: 'E47 LED Silicone Wristband',
+        price: 'Consultar',
         description: 'Pulsera con luz LED para eventos deportivos, promociones y mayor visibilidad en condiciones de poca luz.',
         sport: 'merchandising',
         subcategory: 'merchandising-pulseras',
@@ -642,6 +695,7 @@ const products = [
     {
         id: 'product29',
         title: 'E47 RGB LED Wristband',
+        price: 'Consultar',
         description: 'Pulsera con luz LED RGB para eventos deportivos y actividades nocturnas.',
         sport: 'merchandising',
         subcategory: 'merchandising-pulseras',
@@ -662,6 +716,7 @@ const products = [
     {
         id: 'product30',
         title: 'E47 Sync RGB LED Wristband',
+        price: 'Consultar',
         description: 'Pulsera con luz LED RGB sincronizable para eventos deportivos y actividades nocturnas.',
         sport: 'merchandising',
         subcategory: 'merchandising-pulseras',
@@ -683,6 +738,7 @@ const products = [
     {
         id: 'product31',
         title: 'E47 Race Bib Magnets',
+        price: 'Consultar',
         description: 'Imanes para dorsal diseñados para sujetar el número de carrera de forma segura sin necesidad de imperdibles.',
         sport: 'merchandising',
         subcategory: 'merchandising-eventos',
@@ -702,6 +758,7 @@ const products = [
     {
         id: 'product32',
         title: 'E47 Fabric Wristband',
+        price: 'Consultar',
         description: 'Pulsera de tela ligera y cómoda diseñada para eventos deportivos y promociones.',
         sport: 'merchandising',
         subcategory: 'merchandising-pulseras',
@@ -721,6 +778,7 @@ const products = [
     {
         id: 'product33',
         title: 'E47 Silicone Wristband',
+        price: 'Consultar',
         description: 'Pulsera de silicona flexible y resistente diseñada para eventos deportivos y promociones.',
         sport: 'merchandising',
         subcategory: 'merchandising-pulseras',
@@ -870,6 +928,27 @@ function createProductCard(product) {
         `;
     }
     
+    // Precio y MOQ HTML
+    let priceHTML = '';
+    if (product.price) {
+        const priceAmount = product.price === 'Consultar' ? 'A CONSULTAR' : product.price;
+        const moqText = product.moq ? `<div style="font-size: 0.85rem; color: #666; margin-top: 4px;">MOQ: ${product.moq} uds</div>` : '';
+        priceHTML = `
+            <div class="product-price">
+                <span class="price-from">Precio:</span>
+                <span class="price-amount">${priceAmount}</span>
+                ${moqText}
+            </div>
+        `;
+    } else {
+        priceHTML = `
+            <div class="product-price">
+                <span class="price-from">Precio:</span>
+                <span class="price-amount">A CONSULTAR</span>
+            </div>
+        `;
+    }
+    
     card.innerHTML = `
         ${badgeHTML}
         <div class="product-image">
@@ -883,10 +962,7 @@ function createProductCard(product) {
         <div class="product-info">
             <h3 class="product-name">${product.title}</h3>
             <p class="product-desc">${product.description}</p>
-            <div class="product-price">
-                <span class="price-from">Precio:</span>
-                <span class="price-amount">A CONSULTAR</span>
-            </div>
+            ${priceHTML}
             ${colorDotsHTML}
             ${optionsHTML}
         </div>
