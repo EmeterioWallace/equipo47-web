@@ -114,7 +114,7 @@ const products = [
     },
     {
         id: 'product3',
-        title: 'E47 Running Tee Sublimación - Hombre',
+        title: 'E47 Running Tee Sub - Hombre',
         price: '7,70 €',
         moq: 100,
         description: 'Camiseta técnica de running de manga corta con tejido ligero y transpirable que ofrece secado rápido.',
@@ -137,7 +137,7 @@ const products = [
     },
     {
         id: 'product4',
-        title: 'E47 Running Tee Sublimación - Mujer',
+        title: 'E47 Running Tee Sub - Mujer',
         price: '7,70 €',
         moq: 100,
         description: 'Camiseta técnica de running de manga corta con tejido ligero y transpirable que ofrece secado rápido.',
@@ -932,13 +932,13 @@ function createProductCard(product) {
     let priceHTML = '';
     if (product.price) {
         const priceAmount = product.price === 'Consultar' ? 'A CONSULTAR' : product.price;
-        const moqText = product.moq ? `<div style="font-size: 0.85rem; color: #666; margin-top: 4px;">MOQ: ${product.moq} uds</div>` : '';
+        const moqText = product.moq ? `<div style="font-size: 0.8rem; color: #999; margin-top: 8px; font-weight: 400;">Pedido mínimo: ${product.moq} unidades</div>` : '';
         priceHTML = `
             <div class="product-price">
                 <span class="price-from">Precio:</span>
                 <span class="price-amount">${priceAmount}</span>
-                ${moqText}
             </div>
+            ${moqText}
         `;
     } else {
         priceHTML = `
