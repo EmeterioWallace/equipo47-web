@@ -216,22 +216,12 @@
                 <div class="contact-details">
                     <div class="contact-item">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-                        </svg>
-                        <div>
-                            <strong>Teléfono</strong>
-                            <p><a href="#" onclick="window.location.href='tel:+3468722' + '5647'; return false;" style="color: inherit; text-decoration: none;">&#43;&#51;&#52;&#32;&#54;&#56;&#55;&#32;&#50;&#50;&#53;&#32;&#54;&#52;&#55;</a></p>
-                        </div>
-                    </div>
-
-                    <div class="contact-item">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
                             <polyline points="22,6 12,13 2,6"/>
                         </svg>
                         <div>
                             <strong>Email</strong>
-                            <p><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="ec85828a83ac899d99859c83d8dbc28f8381">[email&#160;protected]</a></p>
+                            <p><span id="contact-email-display"></span></p>
                         </div>
                     </div>
 
@@ -288,10 +278,10 @@
                         <textarea name="mensaje" rows="5" required></textarea>
                     </div>
 
-                    <div class="form-group" style="margin-top: 20px;">
-                        <label style="display: flex; align-items: start; gap: 10px; font-size: 0.9rem; font-weight: 400; cursor: pointer;">
-                            <input type="checkbox" name="privacidad" required style="margin-top: 3px; cursor: pointer;">
-                            <span>He leído y acepto la <a href="privacidad.html" target="_blank" style="color: #FF4B1F; text-decoration: none;">política de privacidad</a></span>
+                    <div class="form-group">
+                        <label style="display: flex; align-items: flex-start; gap: 10px; font-size: 0.9rem; font-weight: 400; cursor: pointer; margin-bottom: 20px;">
+                            <input type="checkbox" name="privacidad" required style="margin-top: 3px; cursor: pointer; flex-shrink: 0; width: 16px; height: 16px;">
+                            <span style="flex: 1;">He leído y acepto la <a href="privacidad.html" target="_blank" style="color: #FF4B1F; text-decoration: none;">política de privacidad</a></span>
                         </label>
                     </div>
 
@@ -329,8 +319,8 @@
             <div class="footer-contact">
                 <h4>Contacto</h4>
                 <ul>
-                    <li>📧 administracion@equipo47.com</li>
-                    <li>📧 guillermomartinez@equipo47.com</li>
+                    <li>📧 <span id="footer-email1"></span></li>
+                    <li>📧 <span id="footer-email2"></span></li>
                 </ul>
             </div>
         </div>
@@ -338,6 +328,28 @@
             <p>&copy; 2024 Equipo 47. Todos los derechos reservados. · <a href="privacidad.html" style="color: #999; text-decoration: none;">Privacidad</a> · <a href="cookies.html" style="color: #999; text-decoration: none;">Cookies</a> · <a href="aviso-legal.html" style="color: #999; text-decoration: none;">Aviso Legal</a></p>
         </div>
     </footer>
+
+    <script>
+        // Ofuscación de emails (protección básica contra bots)
+        (function() {
+            // Email de contacto (sección contact)
+            const contactEmail = 'administracion' + '@' + 'equipo47' + '.com';
+            const contactDisplay = document.getElementById('contact-email-display');
+            if (contactDisplay) {
+                contactDisplay.textContent = contactEmail;
+            }
+            
+            // Emails del footer
+            const email1 = 'administracion' + '@' + 'equipo47' + '.com';
+            const email2 = 'guillermomartinez' + '@' + 'equipo47' + '.com';
+            
+            const footer1 = document.getElementById('footer-email1');
+            const footer2 = document.getElementById('footer-email2');
+            
+            if (footer1) footer1.textContent = email1;
+            if (footer2) footer2.textContent = email2;
+        })();
+    </script>
 
     <script src="js/main.js"></script>
 </body>

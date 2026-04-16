@@ -1,0 +1,34 @@
+# Robots.txt para Equipo 47
+# Permite crawlers buenos, bloquea malos
+
+# Permitir bots buenos (Google, Bing, etc.)
+User-agent: Googlebot
+User-agent: Bingbot
+User-agent: Slurp
+Allow: /
+
+# Bloquear bots scrapers y maliciosos comunes
+User-agent: AhrefsBot
+User-agent: SemrushBot
+User-agent: MJ12bot
+User-agent: DotBot
+User-agent: BLEXBot
+User-agent: DataForSeoBot
+Disallow: /
+
+# Bloquear todos los demás bots por defecto
+User-agent: *
+Disallow: /admin/
+Disallow: /wp-admin/
+Disallow: /wp-login.php
+Disallow: /.env
+Disallow: /config/
+
+# Permitir acceso a páginas públicas
+Allow: /
+Allow: /tienda
+Allow: /calendario
+Allow: /voluntarios
+
+# Sitemap (cuando lo tengas)
+# Sitemap: https://equipo47.com/sitemap.xml
