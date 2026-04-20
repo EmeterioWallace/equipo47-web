@@ -9,7 +9,7 @@
   Referrer-Policy: strict-origin-when-cross-origin
   
   # Content Security Policy (CSP) - Básica
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self';
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://docs.google.com https://sheets.googleapis.com;
   
   # Permissions Policy (antes Feature-Policy)
   Permissions-Policy: geolocation=(), microphone=(), camera=()
