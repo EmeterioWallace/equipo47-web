@@ -722,37 +722,46 @@
       descripcion: document.getElementById('mat-descripcion').value || null,
     };
 
-    let matId = document.getElementById('mat-id').value;
+    try {
+      let matId = document.getElementById('mat-id').value;
 
-    if (matId) {
-      await sb.from('material').update(payload).eq('id', matId);
-    } else {
-      const { data } = await sb.from('material').insert(payload).select().single();
-      matId = data.id;
-    }
-
-    // Guardar variantes
-    const rows = document.querySelectorAll('#variantes-container .variante-row');
-    for (const row of rows) {
-      const inputs = row.querySelectorAll('input');
-      const tipo = inputs[0].value.trim();
-      const valor = inputs[1].value.trim();
-      const stock = parseInt(inputs[2].value) || 0;
-      const varId = inputs[2].dataset.varid;
-
-      if (!tipo && !valor) continue;
-
-      if (varId) {
-        await sb.from('variantes').update({ tipo, valor, stock_total: stock }).eq('id', varId);
+      if (matId) {
+        const { error } = await sb.from('material').update(payload).eq('id', matId);
+        if (error) throw error;
       } else {
-        await sb.from('variantes').insert({ material_id: matId, tipo, valor, stock_total: stock });
+        const { data, error } = await sb.from('material').insert(payload).select().single();
+        if (error) throw error;
+        matId = data.id;
       }
-    }
 
-    closeModal('modal-material');
-    await cargarMaterial();
-    actualizarStats();
-    toast('Material guardado correctamente');
+      // Guardar variantes (solo las que tengan al menos tipo o valor relleno)
+      const rows = document.querySelectorAll('#variantes-container .variante-row');
+      for (const row of rows) {
+        const inputs = row.querySelectorAll('input');
+        const tipo = inputs[0].value.trim();
+        const valor = inputs[1].value.trim();
+        const stock = parseInt(inputs[2].value) || 0;
+        const varId = inputs[2].dataset.varid;
+
+        if (!tipo && !valor) continue; // fila vacía, se ignora
+
+        if (varId) {
+          const { error } = await sb.from('variantes').update({ tipo, valor, stock_total: stock }).eq('id', varId);
+          if (error) throw error;
+        } else {
+          const { error } = await sb.from('variantes').insert({ material_id: matId, tipo, valor, stock_total: stock });
+          if (error) throw error;
+        }
+      }
+
+      closeModal('modal-material');
+      await cargarMaterial();
+      actualizarStats();
+      toast('Material guardado correctamente');
+    } catch (e) {
+      console.error('Error al guardar:', e);
+      toast('Error al guardar: ' + (e.message || 'comprueba la consola'), 'error');
+    }
   }
 
   async function eliminarMaterial(id) {
