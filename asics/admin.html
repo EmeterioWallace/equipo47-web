@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Equipo 47 × ASICS</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --black: #0a0a0a;
+      --dark: #141414;
+      --card: #1c1c1c;
+      --border: #2a2a2a;
+      --asics-blue: #003DA5;
+      --asics-red: #E4002B;
+      --accent: #4FC3F7;
+      --text: #f0f0f0;
+      --muted: #888;
+      --success: #4CAF50;
+      --warning: #FF9800;
+      --danger: #E4002B;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--black);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      position: fixed; top: 0; left: 0;
+      width: 240px; height: 100vh;
+      background: var(--dark);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      z-index: 100;
+    }
+    .sidebar-logo {
+      padding: 28px 24px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-logo .e47 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      letter-spacing: 2px;
+      color: white;
+    }
+    .sidebar-logo .x-asics {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+    .sidebar-logo .badge-admin {
+      display: inline-block;
+      margin-top: 8px;
+      background: var(--asics-blue);
+      color: white;
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      padding: 3px 8px;
+      border-radius: 2px;
+    }
+    .nav { padding: 16px 0; flex: 1; }
+    .nav-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 24px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+      transition: all 0.2s;
+      border-left: 3px solid transparent;
+    }
+    .nav-item:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+    .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(79,195,247,0.05); }
+    .nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+    .sidebar-bottom {
+      padding: 20px 24px;
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    /* MAIN */
+    .main {
+      margin-left: 240px;
+      padding: 32px;
+      min-height: 100vh;
+    }
+    .page { display: none; }
+    .page.active { display: block; }
+
+    .page-header {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      margin-bottom: 32px;
+    }
+    .page-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 36px;
+      letter-spacing: 2px;
+      line-height: 1;
+    }
+    .page-subtitle { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+    /* STATS */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+    }
+    .stat-card .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+    .stat-card .value { font-family: 'Bebas Neue', sans-serif; font-size: 40px; margin-top: 4px; line-height: 1; }
+    .stat-card .value.blue { color: var(--accent); }
+    .stat-card .value.red { color: var(--asics-red); }
+    .stat-card .value.green { color: var(--success); }
+    .stat-card .value.orange { color: var(--warning); }
+
+    /* BUTTONS */
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn-primary { background: var(--asics-blue); color: white; }
+    .btn-primary:hover { background: #0052cc; }
+    .btn-danger { background: var(--asics-red); color: white; }
+    .btn-danger:hover { background: #c0001f; }
+    .btn-success { background: var(--success); color: white; }
+    .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+    .btn-ghost:hover { color: var(--text); border-color: var(--muted); }
+    .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+    /* TABLES */
+    .table-wrap {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .table-toolbar {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+    }
+    .table-toolbar h3 { font-size: 14px; font-weight: 600; }
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      background: rgba(255,255,255,0.02);
+      border-bottom: 1px solid var(--border);
+    }
+    tbody td {
+      padding: 14px 16px;
+      font-size: 13px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: rgba(255,255,255,0.02); }
+
+    /* BADGES */
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    .badge-pendiente { background: rgba(255,152,0,0.15); color: var(--warning); }
+    .badge-confirmada { background: rgba(76,175,80,0.15); color: var(--success); }
+    .badge-rechazada { background: rgba(228,0,43,0.15); color: var(--danger); }
+    .badge-entregada { background: rgba(79,195,247,0.15); color: var(--accent); }
+
+    /* FORMS */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .form-grid.full { grid-template-columns: 1fr; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      background: var(--black);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 6px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      transition: border-color 0.2s;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .form-group select option { background: var(--dark); }
+
+    /* MODAL */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.8);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--dark);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 600px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal-header {
+      padding: 24px 28px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .modal-header h2 { font-family: 'Bebas Neue', sans-serif; font-size: 24px; letter-spacing: 1px; }
+    .modal-close { background: none; border: none; color: var(--muted); font-size: 20px; cursor: pointer; padding: 4px 8px; }
+    .modal-close:hover { color: var(--text); }
+    .modal-body { padding: 24px 28px; }
+    .modal-footer { padding: 16px 28px 24px; display: flex; gap: 10px; justify-content: flex-end; }
+
+    /* VARIANTES */
+    .variante-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 80px 36px;
+      gap: 8px;
+      align-items: end;
+      margin-bottom: 8px;
+    }
+    .variante-row .btn-remove {
+      background: none; border: 1px solid var(--border);
+      color: var(--danger); border-radius: 6px;
+      padding: 10px; cursor: pointer; font-size: 14px;
+      transition: all 0.2s;
+    }
+    .variante-row .btn-remove:hover { background: rgba(228,0,43,0.1); }
+
+    /* SOLICITUD DETAIL */
+    .solicitud-info {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .info-block { background: var(--black); border-radius: 6px; padding: 14px 16px; }
+    .info-block .info-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+    .info-block .info-value { font-size: 14px; font-weight: 500; }
+
+    .items-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+    .item-row {
+      background: var(--black);
+      border-radius: 6px;
+      padding: 12px 16px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .item-row .item-name { font-size: 13px; font-weight: 500; }
+    .item-row .item-qty { font-family: 'Bebas Neue', sans-serif; font-size: 20px; color: var(--accent); }
+
+    /* CONFLICTO */
+    .conflict-alert {
+      background: rgba(228,0,43,0.1);
+      border: 1px solid rgba(228,0,43,0.3);
+      border-radius: 6px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      color: #ff6b6b;
+    }
+
+    /* SEARCH */
+    .search-input {
+      background: var(--black);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      width: 220px;
+    }
+    .search-input:focus { outline: none; border-color: var(--accent); }
+
+    /* TOAST */
+    .toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 20px;
+      font-size: 13px;
+      z-index: 9999;
+      display: none;
+      animation: slideUp 0.3s ease;
+      max-width: 300px;
+    }
+    .toast.show { display: block; }
+    .toast.success { border-left: 3px solid var(--success); }
+    .toast.error { border-left: 3px solid var(--danger); }
+    @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    /* EMPTY STATE */
+    .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+    .empty .icon { font-size: 40px; margin-bottom: 12px; }
+    .empty p { font-size: 14px; }
+
+    /* MOBILE */
+    @media (max-width: 768px) {
+      .sidebar { width: 200px; }
+      .main { margin-left: 200px; padding: 20px; }
+      .form-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <div class="e47">EQUIPO 47</div>
+    <div class="x-asics">× ASICS BCN</div>
+    <div class="badge-admin">ADMIN</div>
+  </div>
+  <nav class="nav">
+    <div class="nav-item active" onclick="showPage('dashboard')">
+      <span class="icon">▦</span> Dashboard
+    </div>
+    <div class="nav-item" onclick="showPage('material')">
+      <span class="icon">◈</span> Material
+    </div>
+    <div class="nav-item" onclick="showPage('solicitudes')">
+      <span class="icon">◎</span> Solicitudes
+    </div>
+  </nav>
+  <div class="sidebar-bottom">
+    Almacén Barcelona<br>equipo47.com
+  </div>
+</div>
+
+<main class="main">
+
+  <!-- DASHBOARD -->
+  <div id="page-dashboard" class="page active">
+    <div class="page-header">
+      <div>
+        <div class="page-title">DASHBOARD</div>
+        <div class="page-subtitle">Resumen del almacén ASICS Barcelona</div>
+      </div>
+    </div>
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="label">Referencias</div>
+        <div class="value blue" id="stat-material">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Pendientes</div>
+        <div class="value orange" id="stat-pendientes">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Confirmadas</div>
+        <div class="value green" id="stat-confirmadas">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Total solicitudes</div>
+        <div class="value" id="stat-total">—</div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <div class="table-toolbar">
+        <h3>Solicitudes pendientes de revisión</h3>
+        <button class="btn btn-ghost btn-sm" onclick="showPage('solicitudes')">Ver todas →</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Evento</th>
+            <th>Recogida</th>
+            <th>Fecha evento</th>
+            <th>Estado</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody id="dashboard-pendientes">
+          <tr><td colspan="5"><div class="empty"><div class="icon">◎</div><p>Sin solicitudes pendientes</p></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- MATERIAL -->
+  <div id="page-material" class="page">
+    <div class="page-header">
+      <div>
+        <div class="page-title">MATERIAL</div>
+        <div class="page-subtitle">Catálogo del almacén Barcelona</div>
+      </div>
+      <button class="btn btn-primary" onclick="openModalMaterial()">+ Añadir material</button>
+    </div>
+    <div class="table-wrap">
+      <div class="table-toolbar">
+        <h3>Catálogo completo</h3>
+        <input class="search-input" type="text" placeholder="Buscar material..." id="search-material" oninput="filtrarMaterial()">
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Categoría</th>
+            <th>Variantes</th>
+            <th>Stock total</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tabla-material"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SOLICITUDES -->
+  <div id="page-solicitudes" class="page">
+    <div class="page-header">
+      <div>
+        <div class="page-title">SOLICITUDES</div>
+        <div class="page-subtitle">Peticiones de material de ASICS</div>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <div class="table-toolbar">
+        <h3>Todas las solicitudes</h3>
+        <select id="filtro-estado" onchange="cargarSolicitudes()" style="background:var(--black);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:6px;font-size:13px;">
+          <option value="">Todas</option>
+          <option value="pendiente">Pendientes</option>
+          <option value="confirmada">Confirmadas</option>
+          <option value="rechazada">Rechazadas</option>
+          <option value="entregada">Entregadas</option>
+        </select>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Evento</th>
+            <th>Recogida</th>
+            <th>Fecha evento</th>
+            <th>Devolución</th>
+            <th>Estado</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody id="tabla-solicitudes"></tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<!-- MODAL MATERIAL -->
+<div class="modal-overlay" id="modal-material">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modal-material-title">AÑADIR MATERIAL</h2>
+      <button class="modal-close" onclick="closeModal('modal-material')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="mat-id">
+      <div class="form-grid" style="margin-bottom:16px;">
+        <div class="form-group">
+          <label>Nombre *</label>
+          <input type="text" id="mat-nombre" placeholder="Ej: Zapatilla Gel-Kayano">
+        </div>
+        <div class="form-group">
+          <label>Categoría</label>
+          <select id="mat-categoria">
+            <option value="">Sin categoría</option>
+            <option value="Zapatillas Trail">Zapatillas Trail</option>
+            <option value="Zapatillas Asfalto">Zapatillas Asfalto</option>
+            <option value="Ropa">Ropa</option>
+            <option value="Accesorios">Accesorios</option>
+            <option value="Carpas y Estructuras">Carpas y Estructuras</option>
+            <option value="Equipamiento Evento">Equipamiento Evento</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group form-grid full" style="margin-bottom:20px;">
+        <label>Descripción</label>
+        <textarea id="mat-descripcion" rows="2" placeholder="Descripción opcional..."></textarea>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Variantes (tallas, colores...)</label>
+        <button class="btn btn-ghost btn-sm" onclick="addVarianteRow()">+ Añadir variante</button>
+      </div>
+      <div id="variantes-container"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-material')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarMaterial()">Guardar material</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL SOLICITUD DETALLE -->
+<div class="modal-overlay" id="modal-solicitud">
+  <div class="modal" style="max-width:700px;">
+    <div class="modal-header">
+      <h2 id="modal-sol-title">SOLICITUD</h2>
+      <button class="modal-close" onclick="closeModal('modal-solicitud')">✕</button>
+    </div>
+    <div class="modal-body" id="modal-sol-body"></div>
+    <div class="modal-footer" id="modal-sol-footer"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+<script>
+  // ── STATE ──────────────────────────────────────────────
+  let materialData = [];
+  let variantesData = [];
+  let solicitudesData = [];
+  let editingMatId = null;
+  let varianteRows = [];
+
+  // ── INIT ───────────────────────────────────────────────
+  window.addEventListener('DOMContentLoaded', async () => {
+    await Promise.all([cargarMaterial(), cargarSolicitudes()]);
+    actualizarStats();
+  });
+
+  // ── NAVIGATION ─────────────────────────────────────────
+  function showPage(id) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('page-' + id).classList.add('active');
+    event.currentTarget.classList.add('active');
+    if (id === 'solicitudes') cargarSolicitudes();
+    if (id === 'material') renderMaterial();
+  }
+
+  // ── TOAST ──────────────────────────────────────────────
+  function toast(msg, type = 'success') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = `toast show ${type}`;
+    setTimeout(() => el.classList.remove('show'), 3000);
+  }
+
+  // ── MODALS ─────────────────────────────────────────────
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('open');
+  }
+
+  // ── STATS ──────────────────────────────────────────────
+  function actualizarStats() {
+    document.getElementById('stat-material').textContent = materialData.length;
+    const pend = solicitudesData.filter(s => s.estado === 'pendiente').length;
+    const conf = solicitudesData.filter(s => s.estado === 'confirmada').length;
+    document.getElementById('stat-pendientes').textContent = pend;
+    document.getElementById('stat-confirmadas').textContent = conf;
+    document.getElementById('stat-total').textContent = solicitudesData.length;
+
+    // Dashboard pendientes table
+    const tbody = document.getElementById('dashboard-pendientes');
+    const pendientes = solicitudesData.filter(s => s.estado === 'pendiente');
+    if (pendientes.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5"><div class="empty"><div class="icon">✓</div><p>Sin solicitudes pendientes</p></div></td></tr>`;
+      return;
+    }
+    tbody.innerHTML = pendientes.slice(0, 5).map(s => `
+      <tr>
+        <td><strong>${s.nombre_evento}</strong></td>
+        <td>${formatDate(s.fecha_recogida)}</td>
+        <td>${formatDate(s.fecha_evento)}</td>
+        <td><span class="badge badge-pendiente">Pendiente</span></td>
+        <td><button class="btn btn-primary btn-sm" onclick="verSolicitud('${s.id}')">Revisar</button></td>
+      </tr>
+    `).join('');
+  }
+
+  // ── MATERIAL ───────────────────────────────────────────
+  async function cargarMaterial() {
+    const { data: mats } = await sb.from('material').select('*').order('nombre');
+    const { data: vars } = await sb.from('variantes').select('*');
+    materialData = mats || [];
+    variantesData = vars || [];
+    renderMaterial();
+  }
+
+  function renderMaterial(filtro = '') {
+    const tbody = document.getElementById('tabla-material');
+    const lista = filtro
+      ? materialData.filter(m => m.nombre.toLowerCase().includes(filtro.toLowerCase()) || (m.categoria||'').toLowerCase().includes(filtro.toLowerCase()))
+      : materialData;
+
+    if (lista.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5"><div class="empty"><div class="icon">◈</div><p>Sin material en el catálogo</p></div></td></tr>`;
+      return;
+    }
+    tbody.innerHTML = lista.map(m => {
+      const vars = variantesData.filter(v => v.material_id === m.id);
+      const stock = vars.reduce((a, v) => a + (v.stock_total || 0), 0);
+      return `
+        <tr>
+          <td><strong>${m.nombre}</strong></td>
+          <td>${m.categoria || '<span style="color:var(--muted)">—</span>'}</td>
+          <td>${vars.length} variante${vars.length !== 1 ? 's' : ''}</td>
+          <td><span style="font-family:'Bebas Neue';font-size:18px;color:var(--accent)">${stock}</span></td>
+          <td style="display:flex;gap:8px;">
+            <button class="btn btn-ghost btn-sm" onclick="editarMaterial('${m.id}')">Editar</button>
+            <button class="btn btn-danger btn-sm" onclick="eliminarMaterial('${m.id}')">Eliminar</button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function filtrarMaterial() {
+    renderMaterial(document.getElementById('search-material').value);
+  }
+
+  function openModalMaterial(matId = null) {
+    editingMatId = matId;
+    varianteRows = [];
+    document.getElementById('mat-id').value = '';
+    document.getElementById('mat-nombre').value = '';
+    document.getElementById('mat-categoria').value = '';
+    document.getElementById('mat-descripcion').value = '';
+    document.getElementById('variantes-container').innerHTML = '';
+    document.getElementById('modal-material-title').textContent = matId ? 'EDITAR MATERIAL' : 'AÑADIR MATERIAL';
+
+    if (matId) {
+      const mat = materialData.find(m => m.id === matId);
+      if (mat) {
+        document.getElementById('mat-id').value = mat.id;
+        document.getElementById('mat-nombre').value = mat.nombre;
+        document.getElementById('mat-categoria').value = mat.categoria || '';
+        document.getElementById('mat-descripcion').value = mat.descripcion || '';
+      }
+      const vars = variantesData.filter(v => v.material_id === matId);
+      vars.forEach(v => addVarianteRow(v));
+    } else {
+      addVarianteRow();
+    }
+    document.getElementById('modal-material').classList.add('open');
+  }
+
+  function editarMaterial(id) { openModalMaterial(id); }
+
+  function addVarianteRow(v = null) {
+    const id = Date.now() + Math.random();
+    varianteRows.push(id);
+    const div = document.createElement('div');
+    div.className = 'variante-row';
+    div.id = `vrow-${id}`;
+    div.innerHTML = `
+      <div class="form-group">
+        <label>Tipo</label>
+        <input type="text" placeholder="Ej: Talla" value="${v ? v.tipo || '' : ''}">
+      </div>
+      <div class="form-group">
+        <label>Valor</label>
+        <input type="text" placeholder="Ej: 42" value="${v ? v.valor || '' : ''}">
+      </div>
+      <div class="form-group">
+        <label>Stock</label>
+        <input type="number" min="0" placeholder="0" value="${v ? v.stock_total || 0 : 0}" data-varid="${v ? v.id : ''}">
+      </div>
+      <button class="btn-remove" onclick="removeVarianteRow(${id})">✕</button>
+    `;
+    document.getElementById('variantes-container').appendChild(div);
+  }
+
+  function removeVarianteRow(id) {
+    document.getElementById(`vrow-${id}`)?.remove();
+    varianteRows = varianteRows.filter(r => r !== id);
+  }
+
+  async function guardarMaterial() {
+    const nombre = document.getElementById('mat-nombre').value.trim();
+    if (!nombre) { toast('El nombre es obligatorio', 'error'); return; }
+
+    const payload = {
+      nombre,
+      categoria: document.getElementById('mat-categoria').value || null,
+      descripcion: document.getElementById('mat-descripcion').value || null,
+    };
+
+    let matId = document.getElementById('mat-id').value;
+
+    if (matId) {
+      await sb.from('material').update(payload).eq('id', matId);
+    } else {
+      const { data } = await sb.from('material').insert(payload).select().single();
+      matId = data.id;
+    }
+
+    // Guardar variantes
+    const rows = document.querySelectorAll('#variantes-container .variante-row');
+    for (const row of rows) {
+      const inputs = row.querySelectorAll('input');
+      const tipo = inputs[0].value.trim();
+      const valor = inputs[1].value.trim();
+      const stock = parseInt(inputs[2].value) || 0;
+      const varId = inputs[2].dataset.varid;
+
+      if (!tipo && !valor) continue;
+
+      if (varId) {
+        await sb.from('variantes').update({ tipo, valor, stock_total: stock }).eq('id', varId);
+      } else {
+        await sb.from('variantes').insert({ material_id: matId, tipo, valor, stock_total: stock });
+      }
+    }
+
+    closeModal('modal-material');
+    await cargarMaterial();
+    actualizarStats();
+    toast('Material guardado correctamente');
+  }
+
+  async function eliminarMaterial(id) {
+    if (!confirm('¿Seguro que quieres eliminar este material? Se eliminarán también todas sus variantes.')) return;
+    await sb.from('material').delete().eq('id', id);
+    await cargarMaterial();
+    actualizarStats();
+    toast('Material eliminado');
+  }
+
+  // ── SOLICITUDES ────────────────────────────────────────
+  async function cargarSolicitudes() {
+    const filtro = document.getElementById('filtro-estado')?.value || '';
+    let q = sb.from('solicitudes').select('*').order('created_at', { ascending: false });
+    if (filtro) q = q.eq('estado', filtro);
+    const { data } = await q;
+    solicitudesData = data || [];
+    renderSolicitudes();
+    actualizarStats();
+  }
+
+  function renderSolicitudes() {
+    const tbody = document.getElementById('tabla-solicitudes');
+    if (solicitudesData.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6"><div class="empty"><div class="icon">◎</div><p>Sin solicitudes</p></div></td></tr>`;
+      return;
+    }
+    tbody.innerHTML = solicitudesData.map(s => `
+      <tr>
+        <td><strong>${s.nombre_evento}</strong></td>
+        <td>${formatDate(s.fecha_recogida)}</td>
+        <td>${formatDate(s.fecha_evento)}</td>
+        <td>${formatDate(s.fecha_devolucion)}</td>
+        <td><span class="badge badge-${s.estado}">${s.estado}</span></td>
+        <td><button class="btn btn-ghost btn-sm" onclick="verSolicitud('${s.id}')">Ver detalle</button></td>
+      </tr>
+    `).join('');
+  }
+
+  async function verSolicitud(id) {
+    const sol = solicitudesData.find(s => s.id === id) || (await sb.from('solicitudes').select('*').eq('id', id).single()).data;
+    const { data: items } = await sb.from('solicitud_items').select('*, variantes(tipo, valor, material_id, material:material(nombre))').eq('solicitud_id', id);
+
+    // Check conflicts
+    const conflictos = await checkConflictos(items || [], sol);
+
+    document.getElementById('modal-sol-title').textContent = sol.nombre_evento.toUpperCase();
+
+    let conflictoHtml = '';
+    if (conflictos.length > 0) {
+      conflictoHtml = `
+        <div class="conflict-alert">
+          ⚠️ <strong>Conflictos detectados:</strong><br>
+          ${conflictos.map(c => `• ${c}`).join('<br>')}
+        </div>
+      `;
+    }
+
+    document.getElementById('modal-sol-body').innerHTML = `
+      ${conflictoHtml}
+      <div class="solicitud-info">
+        <div class="info-block">
+          <div class="info-label">Fecha de recogida</div>
+          <div class="info-value">${formatDate(sol.fecha_recogida)}</div>
+        </div>
+        <div class="info-block">
+          <div class="info-label">Fecha del evento</div>
+          <div class="info-value">${formatDate(sol.fecha_evento)}</div>
+        </div>
+        <div class="info-block">
+          <div class="info-label">Fecha de devolución</div>
+          <div class="info-value">${formatDate(sol.fecha_devolucion)}</div>
+        </div>
+        <div class="info-block">
+          <div class="info-label">Estado</div>
+          <div class="info-value"><span class="badge badge-${sol.estado}">${sol.estado}</span></div>
+        </div>
+      </div>
+
+      <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Material solicitado</div>
+      <div class="items-list">
+        ${(items || []).map(item => `
+          <div class="item-row">
+            <div>
+              <div class="item-name">${item.variantes?.material?.nombre || '—'}</div>
+              <div style="font-size:11px;color:var(--muted)">${item.variantes?.tipo || ''} ${item.variantes?.valor || ''}</div>
+            </div>
+            <div class="item-qty">${item.cantidad}</div>
+          </div>
+        `).join('')}
+      </div>
+
+      ${sol.notas_asics ? `
+        <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Notas de ASICS</div>
+        <div style="background:var(--black);border-radius:6px;padding:14px;font-size:13px;margin-bottom:16px;">${sol.notas_asics}</div>
+      ` : ''}
+
+      <div class="form-group">
+        <label>Notas internas (opcional)</label>
+        <textarea id="notas-admin-input" rows="2" placeholder="Añade notas para tu equipo...">${sol.notas_admin || ''}</textarea>
+      </div>
+    `;
+
+    const footer = document.getElementById('modal-sol-footer');
+    if (sol.estado === 'pendiente') {
+      footer.innerHTML = `
+        <button class="btn btn-ghost" onclick="closeModal('modal-solicitud')">Cerrar</button>
+        <button class="btn btn-danger btn-sm" onclick="cambiarEstado('${sol.id}', 'rechazada')">Rechazar</button>
+        <button class="btn btn-success" onclick="cambiarEstado('${sol.id}', 'confirmada')">✓ Confirmar solicitud</button>
+      `;
+    } else if (sol.estado === 'confirmada') {
+      footer.innerHTML = `
+        <button class="btn btn-ghost" onclick="closeModal('modal-solicitud')">Cerrar</button>
+        <button class="btn btn-primary" onclick="cambiarEstado('${sol.id}', 'entregada')">Marcar como entregada</button>
+      `;
+    } else {
+      footer.innerHTML = `<button class="btn btn-ghost" onclick="closeModal('modal-solicitud')">Cerrar</button>`;
+    }
+
+    document.getElementById('modal-solicitud').classList.add('open');
+  }
+
+  async function checkConflictos(items, sol) {
+    const conflictos = [];
+    for (const item of items) {
+      const { data: reservas } = await sb.from('reservas')
+        .select('*, solicitudes(nombre_evento)')
+        .eq('variante_id', item.variante_id)
+        .eq('estado', 'activa')
+        .neq('solicitud_id', sol.id)
+        .lte('fecha_inicio', sol.fecha_devolucion)
+        .gte('fecha_fin', sol.fecha_recogida);
+
+      if (reservas && reservas.length > 0) {
+        const nombre = item.variantes?.material?.nombre || 'Material';
+        const variante = `${item.variantes?.tipo || ''} ${item.variantes?.valor || ''}`.trim();
+        reservas.forEach(r => {
+          conflictos.push(`${nombre} ${variante ? '(' + variante + ')' : ''} ya está reservado para "${r.solicitudes?.nombre_evento}" del ${formatDate(r.fecha_inicio)} al ${formatDate(r.fecha_fin)}`);
+        });
+      }
+
+      // Check plazo mínimo (48h)
+      const ahora = new Date();
+      const recogida = new Date(sol.fecha_recogida);
+      const diffHoras = (recogida - ahora) / (1000 * 60 * 60);
+      if (diffHoras < 48 && diffHoras > 0) {
+        conflictos.push(`⏱ La recogida está en menos de 48h — puede que no haya tiempo de preparar el pedido`);
+      }
+    }
+    return [...new Set(conflictos)];
+  }
+
+  async function cambiarEstado(id, nuevoEstado) {
+    const notasAdmin = document.getElementById('notas-admin-input')?.value || '';
+    await sb.from('solicitudes').update({ estado: nuevoEstado, notas_admin: notasAdmin }).eq('id', id);
+
+    if (nuevoEstado === 'confirmada') {
+      const { data: items } = await sb.from('solicitud_items').select('*').eq('solicitud_id', id);
+      const { data: sol } = await sb.from('solicitudes').select('*').eq('id', id).single();
+      for (const item of (items || [])) {
+        await sb.from('reservas').insert({
+          solicitud_id: id,
+          variante_id: item.variante_id,
+          cantidad: item.cantidad,
+          fecha_inicio: sol.fecha_recogida,
+          fecha_fin: sol.fecha_devolucion,
+          estado: 'activa'
+        });
+      }
+    }
+
+    if (nuevoEstado === 'entregada' || nuevoEstado === 'rechazada') {
+      await sb.from('reservas').update({ estado: 'inactiva' }).eq('solicitud_id', id);
+    }
+
+    closeModal('modal-solicitud');
+    await cargarSolicitudes();
+    toast(`Solicitud ${nuevoEstado} correctamente`);
+  }
+
+  // ── HELPERS ────────────────────────────────────────────
+  function formatDate(d) {
+    if (!d) return '—';
+    return new Date(d).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+</script>
+</body>
+</html>

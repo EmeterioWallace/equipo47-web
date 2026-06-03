@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Material ASICS — Equipo 47 Barcelona</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --white: #ffffff;
+      --off: #f5f5f5;
+      --light: #ebebeb;
+      --border: #ddd;
+      --text: #111;
+      --muted: #888;
+      --asics-blue: #003DA5;
+      --asics-red: #E4002B;
+      --accent: #003DA5;
+      --success: #1a7a3c;
+      --warning: #b35900;
+      --danger: #E4002B;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--white);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* HEADER */
+    header {
+      background: var(--asics-blue);
+      padding: 0 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .header-brand {
+      display: flex; align-items: center; gap: 16px;
+    }
+    .header-brand .e47 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 20px;
+      letter-spacing: 2px;
+      color: white;
+    }
+    .header-brand .sep { color: rgba(255,255,255,0.3); }
+    .header-brand .asics-tag {
+      font-size: 11px;
+      color: rgba(255,255,255,0.7);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+    .cart-btn {
+      background: white;
+      border: none;
+      color: var(--asics-blue);
+      padding: 8px 18px;
+      border-radius: 4px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 8px;
+      transition: all 0.2s;
+      letter-spacing: 0.5px;
+    }
+    .cart-btn:hover { background: #e8eeff; }
+    .cart-count {
+      background: var(--asics-red);
+      color: white;
+      border-radius: 50%;
+      width: 20px; height: 20px;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700;
+    }
+
+    /* HERO / EVENTO FORM */
+    .evento-bar {
+      background: var(--off);
+      border-bottom: 1px solid var(--border);
+      padding: 20px 32px;
+    }
+    .evento-bar h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 20px;
+      letter-spacing: 1px;
+      margin-bottom: 14px;
+      color: var(--text);
+    }
+    .evento-fields {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr auto;
+      gap: 12px;
+      align-items: end;
+    }
+    .field-group { display: flex; flex-direction: column; gap: 5px; }
+    .field-group label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .field-group input {
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      background: white;
+      transition: border-color 0.2s;
+    }
+    .field-group input:focus { outline: none; border-color: var(--asics-blue); }
+    .btn-buscar {
+      background: var(--asics-blue);
+      color: white;
+      border: none;
+      padding: 10px 24px;
+      border-radius: 6px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s;
+      height: 42px;
+    }
+    .btn-buscar:hover { background: #002d7a; }
+
+    /* ALERTA EVENTO */
+    .evento-alert {
+      margin: 0 32px 0;
+      padding: 0;
+      max-height: 0;
+      overflow: hidden;
+      transition: all 0.3s;
+    }
+    .evento-alert.show {
+      padding: 12px 16px;
+      margin: 16px 32px 0;
+      max-height: 100px;
+      border-radius: 6px;
+    }
+    .evento-alert.warning { background: #fff3e0; border-left: 3px solid var(--warning); color: var(--warning); font-size: 13px; }
+    .evento-alert.error { background: #ffeaea; border-left: 3px solid var(--danger); color: var(--danger); font-size: 13px; }
+    .evento-alert.ok { background: #e8f5e9; border-left: 3px solid var(--success); color: var(--success); font-size: 13px; }
+
+    /* CATALOG */
+    .catalog-section {
+      padding: 28px 32px;
+    }
+    .catalog-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 20px; flex-wrap: wrap; gap: 12px;
+    }
+    .catalog-header h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px; letter-spacing: 1px;
+    }
+    .cat-filters {
+      display: flex; gap: 8px; flex-wrap: wrap;
+    }
+    .cat-filter {
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      background: white;
+      transition: all 0.2s;
+    }
+    .cat-filter:hover, .cat-filter.active {
+      background: var(--asics-blue);
+      color: white;
+      border-color: var(--asics-blue);
+    }
+
+    /* PRODUCT GRID */
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+    }
+    .product-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      transition: box-shadow 0.2s;
+      background: white;
+    }
+    .product-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+    .product-card-header {
+      background: var(--off);
+      padding: 24px 20px;
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100px;
+    }
+    .product-icon {
+      font-size: 40px;
+      opacity: 0.6;
+    }
+    .product-card-body { padding: 16px; }
+    .product-name { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+    .product-cat { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+
+    /* VARIANTS */
+    .variants-list { display: flex; flex-direction: column; gap: 8px; }
+    .variant-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 10px;
+      background: var(--off);
+      border-radius: 6px;
+    }
+    .variant-info { font-size: 12px; }
+    .variant-label { font-weight: 600; }
+    .variant-stock {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .variant-stock.low { color: var(--warning); }
+    .variant-stock.out { color: var(--danger); }
+    .variant-controls {
+      display: flex; align-items: center; gap: 6px;
+    }
+    .qty-btn {
+      width: 26px; height: 26px;
+      border: 1px solid var(--border);
+      background: white;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+    }
+    .qty-btn:hover { background: var(--asics-blue); color: white; border-color: var(--asics-blue); }
+    .qty-display {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 18px;
+      min-width: 24px;
+      text-align: center;
+      color: var(--asics-blue);
+    }
+    .btn-add {
+      width: 100%;
+      margin-top: 12px;
+      padding: 10px;
+      background: var(--asics-blue);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-add:hover { background: #002d7a; }
+    .btn-add:disabled { background: var(--muted); cursor: not-allowed; }
+
+    /* AVAILABILITY TAG */
+    .avail-tag {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 3px;
+      margin-top: 3px;
+      display: inline-block;
+    }
+    .avail-ok { background: #e8f5e9; color: var(--success); }
+    .avail-conflict { background: #ffeaea; color: var(--danger); }
+
+    /* CART PANEL */
+    .cart-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 200;
+    }
+    .cart-overlay.open { display: block; }
+    .cart-panel {
+      position: fixed; top: 0; right: -440px;
+      width: 440px; height: 100vh;
+      background: white;
+      z-index: 201;
+      display: flex; flex-direction: column;
+      transition: right 0.3s ease;
+      box-shadow: -4px 0 30px rgba(0,0,0,0.15);
+    }
+    .cart-panel.open { right: 0; }
+    .cart-panel-header {
+      background: var(--asics-blue);
+      color: white;
+      padding: 20px 24px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .cart-panel-header h2 { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 1px; }
+    .cart-close {
+      background: none; border: none; color: white; font-size: 20px; cursor: pointer; padding: 4px;
+    }
+    .cart-evento-info {
+      padding: 14px 24px;
+      background: var(--off);
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+    }
+    .cart-evento-info strong { font-size: 14px; display: block; margin-bottom: 4px; }
+    .cart-evento-info span { color: var(--muted); }
+    .cart-items { flex: 1; overflow-y: auto; padding: 16px 24px; }
+    .cart-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .cart-item:last-child { border-bottom: none; }
+    .cart-item-name { font-size: 13px; font-weight: 600; }
+    .cart-item-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .cart-item-right { display: flex; align-items: center; gap: 10px; }
+    .cart-item-qty { font-family: 'Bebas Neue', sans-serif; font-size: 20px; color: var(--asics-blue); }
+    .cart-item-remove { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 16px; padding: 2px 6px; }
+    .cart-item-remove:hover { color: var(--danger); }
+    .cart-empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+    .cart-footer { padding: 20px 24px; border-top: 1px solid var(--border); }
+    .cart-notes { margin-bottom: 14px; }
+    .cart-notes label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 6px; }
+    .cart-notes textarea {
+      width: 100%; padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px; resize: none;
+    }
+    .cart-notes textarea:focus { outline: none; border-color: var(--asics-blue); }
+    .btn-enviar {
+      width: 100%;
+      padding: 14px;
+      background: var(--asics-red);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.5px;
+      transition: background 0.2s;
+    }
+    .btn-enviar:hover { background: #b5001e; }
+    .btn-enviar:disabled { background: var(--muted); cursor: not-allowed; }
+
+    /* CART CONFLICT WARNING */
+    .cart-conflict {
+      background: #ffeaea;
+      border: 1px solid #ffb3b3;
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-size: 12px;
+      color: var(--danger);
+      margin-bottom: 12px;
+    }
+
+    /* SUCCESS STATE */
+    .success-screen {
+      display: none;
+      position: fixed; inset: 0;
+      background: white;
+      z-index: 300;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 40px;
+    }
+    .success-screen.show { display: flex; }
+    .success-icon { font-size: 64px; margin-bottom: 24px; }
+    .success-screen h2 { font-family: 'Bebas Neue', sans-serif; font-size: 36px; letter-spacing: 2px; color: var(--asics-blue); margin-bottom: 12px; }
+    .success-screen p { font-size: 16px; color: var(--muted); max-width: 400px; line-height: 1.6; margin-bottom: 32px; }
+    .btn-nueva { background: var(--asics-blue); color: white; border: none; padding: 14px 32px; border-radius: 6px; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; }
+
+    /* LOADING */
+    .loading { text-align: center; padding: 60px; color: var(--muted); font-size: 14px; }
+
+    /* TOAST */
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: #111;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-size: 13px;
+      z-index: 9999;
+      display: none;
+      white-space: nowrap;
+    }
+    .toast.show { display: block; animation: fadeUp 0.3s ease; }
+    @keyframes fadeUp { from { transform: translateX(-50%) translateY(10px); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }
+
+    /* MOBILE */
+    @media (max-width: 640px) {
+      header { padding: 0 16px; }
+      .evento-bar { padding: 16px; }
+      .evento-fields { grid-template-columns: 1fr 1fr; }
+      .evento-fields .btn-buscar { grid-column: 1 / -1; }
+      .catalog-section { padding: 20px 16px; }
+      .cart-panel { width: 100%; right: -100%; }
+      .evento-alert { margin: 12px 16px 0; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-brand">
+    <span class="e47">EQUIPO 47</span>
+    <span class="sep">|</span>
+    <span class="asics-tag">Material ASICS · Barcelona</span>
+  </div>
+  <button class="cart-btn" onclick="toggleCart()">
+    🛒 Mi solicitud
+    <span class="cart-count" id="cart-count">0</span>
+  </button>
+</header>
+
+<div class="evento-bar">
+  <h2>¿PARA QUÉ EVENTO NECESITÁIS MATERIAL?</h2>
+  <div class="evento-fields">
+    <div class="field-group">
+      <label>Nombre del evento *</label>
+      <input type="text" id="ev-nombre" placeholder="Ej: Carrera Popular Valencia 2025">
+    </div>
+    <div class="field-group">
+      <label>Fecha del evento *</label>
+      <input type="date" id="ev-fecha">
+    </div>
+    <div class="field-group">
+      <label>Fecha de recogida *</label>
+      <input type="date" id="ev-recogida">
+    </div>
+    <div class="field-group">
+      <label>Fecha de devolución *</label>
+      <input type="date" id="ev-devolucion">
+    </div>
+    <button class="btn-buscar" onclick="confirmarEvento()">Confirmar evento →</button>
+  </div>
+</div>
+
+<div class="evento-alert" id="evento-alert"></div>
+
+<div class="catalog-section" id="catalog-section" style="display:none;">
+  <div class="catalog-header">
+    <h2>CATÁLOGO DISPONIBLE</h2>
+    <div class="cat-filters" id="cat-filters">
+      <div class="cat-filter active" onclick="filtrarCat('')" data-cat="">Todo</div>
+    </div>
+  </div>
+  <div id="product-grid" class="product-grid">
+    <div class="loading">Cargando catálogo...</div>
+  </div>
+</div>
+
+<!-- CART -->
+<div class="cart-overlay" id="cart-overlay" onclick="toggleCart()"></div>
+<div class="cart-panel" id="cart-panel">
+  <div class="cart-panel-header">
+    <h2>MI SOLICITUD</h2>
+    <button class="cart-close" onclick="toggleCart()">✕</button>
+  </div>
+  <div class="cart-evento-info" id="cart-evento-info">
+    <strong id="cart-evento-nombre">—</strong>
+    <span id="cart-evento-fechas">Completa los datos del evento primero</span>
+  </div>
+  <div class="cart-items" id="cart-items">
+    <div class="cart-empty">Aún no has añadido material</div>
+  </div>
+  <div class="cart-footer">
+    <div id="cart-conflicts"></div>
+    <div class="cart-notes">
+      <label>Notas adicionales (opcional)</label>
+      <textarea id="cart-notas" rows="3" placeholder="¿Algo que debamos saber? Ej: necesitamos tallas extra grandes..."></textarea>
+    </div>
+    <button class="btn-enviar" id="btn-enviar" onclick="enviarSolicitud()" disabled>Enviar solicitud →</button>
+  </div>
+</div>
+
+<!-- SUCCESS -->
+<div class="success-screen" id="success-screen">
+  <div class="success-icon">✅</div>
+  <h2>¡SOLICITUD ENVIADA!</h2>
+  <p>Hemos recibido vuestra solicitud. El equipo de Equipo 47 la revisará y os confirmará lo antes posible.</p>
+  <button class="btn-nueva" onclick="nuevaSolicitud()">Hacer otra solicitud</button>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase.js"></script>
+<script>
+  // ── STATE ──────────────────────────────────────────────
+  let materialData = [];
+  let variantesData = [];
+  let reservasData = [];
+  let cart = {}; // { varianteId: cantidad }
+  let eventoConfirmado = false;
+  let currentCat = '';
+  let catFilter = '';
+
+  // ── INIT ───────────────────────────────────────────────
+  window.addEventListener('DOMContentLoaded', () => {
+    const hoy = new Date().toISOString().split('T')[0];
+    document.getElementById('ev-fecha').min = hoy;
+    document.getElementById('ev-recogida').min = hoy;
+    document.getElementById('ev-devolucion').min = hoy;
+  });
+
+  // ── TOAST ──────────────────────────────────────────────
+  function toast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 2500);
+  }
+
+  // ── EVENTO ─────────────────────────────────────────────
+  async function confirmarEvento() {
+    const nombre = document.getElementById('ev-nombre').value.trim();
+    const fecha = document.getElementById('ev-fecha').value;
+    const recogida = document.getElementById('ev-recogida').value;
+    const devolucion = document.getElementById('ev-devolucion').value;
+    const alertEl = document.getElementById('evento-alert');
+
+    // Validaciones
+    if (!nombre || !fecha || !recogida || !devolucion) {
+      showAlert('Por favor, rellena todos los campos del evento.', 'error');
+      return;
+    }
+
+    const hoy = new Date(); hoy.setHours(0,0,0,0);
+    const dRecogida = new Date(recogida);
+    const dEvento = new Date(fecha);
+    const dDevolucion = new Date(devolucion);
+
+    if (dRecogida >= dEvento) {
+      showAlert('La fecha de recogida debe ser anterior a la fecha del evento.', 'error');
+      return;
+    }
+    if (dDevolucion <= dEvento) {
+      showAlert('La fecha de devolución debe ser posterior a la fecha del evento.', 'error');
+      return;
+    }
+    if (dRecogida < hoy) {
+      showAlert('La fecha de recogida no puede ser en el pasado.', 'error');
+      return;
+    }
+
+    // Aviso si menos de 48h para recogida
+    const diffHoras = (dRecogida - hoy) / (1000 * 60 * 60);
+    if (diffHoras < 48) {
+      showAlert('⚠️ La recogida es en menos de 48 horas. El equipo de Equipo 47 puede no tener tiempo suficiente para preparar el material. Aun así puedes enviar la solicitud.', 'warning');
+    } else {
+      showAlert('✓ Fechas correctas. Ahora selecciona el material que necesitáis.', 'ok');
+    }
+
+    // Cargar reservas activas en ese rango para mostrar disponibilidad
+    const { data: reservas } = await sb.from('reservas')
+      .select('*')
+      .eq('estado', 'activa')
+      .lte('fecha_inicio', devolucion)
+      .gte('fecha_fin', recogida);
+    reservasData = reservas || [];
+
+    eventoConfirmado = true;
+    cart = {};
+    await cargarCatalogo();
+    document.getElementById('catalog-section').style.display = 'block';
+    document.getElementById('catalog-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    actualizarCart();
+  }
+
+  function showAlert(msg, type) {
+    const el = document.getElementById('evento-alert');
+    el.className = `evento-alert show ${type}`;
+    el.textContent = msg;
+  }
+
+  // ── CATALOG ────────────────────────────────────────────
+  async function cargarCatalogo() {
+    const { data: mats } = await sb.from('material').select('*').order('nombre');
+    const { data: vars } = await sb.from('variantes').select('*');
+    materialData = mats || [];
+    variantesData = vars || [];
+
+    // Build category filters
+    const cats = [...new Set(materialData.map(m => m.categoria).filter(Boolean))];
+    const filterContainer = document.getElementById('cat-filters');
+    filterContainer.innerHTML = `<div class="cat-filter active" onclick="filtrarCat('')" data-cat="">Todo</div>`;
+    cats.forEach(cat => {
+      const div = document.createElement('div');
+      div.className = 'cat-filter';
+      div.dataset.cat = cat;
+      div.textContent = cat;
+      div.onclick = () => filtrarCat(cat);
+      filterContainer.appendChild(div);
+    });
+
+    renderCatalogo();
+  }
+
+  function filtrarCat(cat) {
+    catFilter = cat;
+    document.querySelectorAll('.cat-filter').forEach(f => {
+      f.classList.toggle('active', f.dataset.cat === cat);
+    });
+    renderCatalogo();
+  }
+
+  function renderCatalogo() {
+    const grid = document.getElementById('product-grid');
+    const lista = catFilter
+      ? materialData.filter(m => m.categoria === catFilter)
+      : materialData;
+
+    if (lista.length === 0) {
+      grid.innerHTML = `<div class="loading">Sin material en el catálogo todavía</div>`;
+      return;
+    }
+
+    const iconMap = {
+      'Zapatillas Trail': '👟',
+      'Zapatillas Asfalto': '👟',
+      'Ropa': '👕',
+      'Accesorios': '🎒',
+      'Carpas y Estructuras': '⛺',
+      'Equipamiento Evento': '🏁',
+    };
+
+    grid.innerHTML = lista.map(mat => {
+      const vars = variantesData.filter(v => v.material_id === mat.id);
+      const icon = iconMap[mat.categoria] || '📦';
+
+      return `
+        <div class="product-card">
+          <div class="product-card-header">
+            <div class="product-icon">${icon}</div>
+          </div>
+          <div class="product-card-body">
+            <div class="product-name">${mat.nombre}</div>
+            <div class="product-cat">${mat.categoria || 'Material'}</div>
+            <div class="variants-list">
+              ${vars.map(v => {
+                const reservado = reservasData.filter(r => r.variante_id === v.id).reduce((a, r) => a + r.cantidad, 0);
+                const disponible = Math.max(0, v.stock_total - reservado);
+                const enCart = cart[v.id] || 0;
+                const stockClass = disponible === 0 ? 'out' : disponible <= 5 ? 'low' : '';
+                const conflicto = reservasData.some(r => r.variante_id === v.id);
+
+                return `
+                  <div class="variant-row" id="vrow-${v.id}">
+                    <div class="variant-info">
+                      <div class="variant-label">${v.tipo ? v.tipo + ': ' : ''}${v.valor || 'Unidad'}</div>
+                      <div class="variant-stock ${stockClass}">
+                        ${disponible > 0 ? `${disponible} disponibles` : 'Sin stock'}
+                      </div>
+                      ${conflicto ? `<span class="avail-tag avail-conflict">Hay reservas en estas fechas</span>` : `<span class="avail-tag avail-ok">Disponible</span>`}
+                    </div>
+                    <div class="variant-controls">
+                      <button class="qty-btn" onclick="changeQty('${v.id}', -1, ${disponible})" ${enCart === 0 ? 'disabled style="opacity:0.3"' : ''}>−</button>
+                      <div class="qty-display" id="qty-${v.id}">${enCart}</div>
+                      <button class="qty-btn" onclick="changeQty('${v.id}', 1, ${disponible})" ${disponible === 0 ? 'disabled style="opacity:0.3"' : ''}>+</button>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+            <button class="btn-add" onclick="añadirAlCarrito('${mat.id}')">Añadir al carrito</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function changeQty(varId, delta, disponible) {
+    if (!eventoConfirmado) { toast('Primero confirma los datos del evento'); return; }
+    const current = cart[varId] || 0;
+    const newVal = Math.max(0, Math.min(disponible, current + delta));
+    if (newVal === 0) delete cart[varId];
+    else cart[varId] = newVal;
+    document.getElementById(`qty-${varId}`).textContent = newVal;
+    actualizarCart();
+  }
+
+  function añadirAlCarrito(matId) {
+    if (!eventoConfirmado) { toast('Primero confirma los datos del evento'); return; }
+    const vars = variantesData.filter(v => v.material_id === matId);
+    let añadidos = 0;
+    vars.forEach(v => {
+      if ((cart[v.id] || 0) > 0) añadidos++;
+    });
+    if (añadidos === 0) { toast('Selecciona al menos una cantidad'); return; }
+    toast(`✓ Material añadido a tu solicitud`);
+    actualizarCart();
+  }
+
+  // ── CART ───────────────────────────────────────────────
+  function toggleCart() {
+    document.getElementById('cart-panel').classList.toggle('open');
+    document.getElementById('cart-overlay').classList.toggle('open');
+  }
+
+  function actualizarCart() {
+    const total = Object.values(cart).reduce((a, b) => a + b, 0);
+    document.getElementById('cart-count').textContent = total;
+
+    const itemsEl = document.getElementById('cart-items');
+    const nombre = document.getElementById('ev-nombre').value;
+    const recogida = document.getElementById('ev-recogida').value;
+    const devolucion = document.getElementById('ev-devolucion').value;
+    const fecha = document.getElementById('ev-fecha').value;
+
+    document.getElementById('cart-evento-nombre').textContent = nombre || '—';
+    document.getElementById('cart-evento-fechas').textContent =
+      recogida && devolucion ? `Recogida: ${formatDate(recogida)} · Devolución: ${formatDate(devolucion)}` : '—';
+
+    if (total === 0) {
+      itemsEl.innerHTML = `<div class="cart-empty">Aún no has añadido material</div>`;
+      document.getElementById('btn-enviar').disabled = true;
+      document.getElementById('cart-conflicts').innerHTML = '';
+      return;
+    }
+
+    // Detectar conflictos en el carrito
+    let conflictosCart = [];
+    const cartItems = Object.entries(cart).map(([varId, qty]) => {
+      const v = variantesData.find(v => v.id === varId);
+      const mat = materialData.find(m => m.id === v?.material_id);
+      const reservado = reservasData.filter(r => r.variante_id === varId).reduce((a, r) => a + r.cantidad, 0);
+      const disponible = Math.max(0, (v?.stock_total || 0) - reservado);
+      if (qty > disponible) {
+        conflictosCart.push(`${mat?.nombre || ''} ${v?.valor || ''}: pedís ${qty} pero solo hay ${disponible} disponibles`);
+      }
+      return { varId, qty, v, mat, disponible };
+    });
+
+    itemsEl.innerHTML = cartItems.map(({ varId, qty, v, mat }) => `
+      <div class="cart-item">
+        <div>
+          <div class="cart-item-name">${mat?.nombre || '—'}</div>
+          <div class="cart-item-sub">${v?.tipo ? v.tipo + ': ' : ''}${v?.valor || ''}</div>
+        </div>
+        <div class="cart-item-right">
+          <div class="cart-item-qty">×${qty}</div>
+          <button class="cart-item-remove" onclick="eliminarDelCart('${varId}')">✕</button>
+        </div>
+      </div>
+    `).join('');
+
+    const conflEl = document.getElementById('cart-conflicts');
+    if (conflictosCart.length > 0) {
+      conflEl.innerHTML = `<div class="cart-conflict">⚠️ <strong>Atención:</strong><br>${conflictosCart.map(c => `• ${c}`).join('<br>')}</div>`;
+    } else {
+      conflEl.innerHTML = '';
+    }
+
+    document.getElementById('btn-enviar').disabled = !eventoConfirmado || total === 0;
+  }
+
+  function eliminarDelCart(varId) {
+    delete cart[varId];
+    document.getElementById(`qty-${varId}`).textContent = '0';
+    actualizarCart();
+  }
+
+  // ── ENVIAR ─────────────────────────────────────────────
+  async function enviarSolicitud() {
+    const nombre = document.getElementById('ev-nombre').value.trim();
+    const fecha = document.getElementById('ev-fecha').value;
+    const recogida = document.getElementById('ev-recogida').value;
+    const devolucion = document.getElementById('ev-devolucion').value;
+    const notas = document.getElementById('cart-notas').value.trim();
+
+    if (!nombre || !fecha || !recogida || !devolucion) {
+      toast('Faltan datos del evento'); return;
+    }
+    if (Object.keys(cart).length === 0) {
+      toast('El carrito está vacío'); return;
+    }
+
+    document.getElementById('btn-enviar').disabled = true;
+    document.getElementById('btn-enviar').textContent = 'Enviando...';
+
+    try {
+      // Crear solicitud
+      const { data: sol, error } = await sb.from('solicitudes').insert({
+        nombre_evento: nombre,
+        fecha_evento: fecha,
+        fecha_recogida: recogida,
+        fecha_devolucion: devolucion,
+        notas_asics: notas || null,
+        estado: 'pendiente'
+      }).select().single();
+
+      if (error) throw error;
+
+      // Insertar items
+      const items = Object.entries(cart).map(([variante_id, cantidad]) => ({
+        solicitud_id: sol.id,
+        variante_id,
+        cantidad
+      }));
+
+      await sb.from('solicitud_items').insert(items);
+
+      // Show success
+      document.getElementById('success-screen').classList.add('show');
+      toggleCart();
+    } catch (e) {
+      console.error(e);
+      toast('Error al enviar la solicitud. Inténtalo de nuevo.');
+      document.getElementById('btn-enviar').disabled = false;
+      document.getElementById('btn-enviar').textContent = 'Enviar solicitud →';
+    }
+  }
+
+  function nuevaSolicitud() {
+    document.getElementById('success-screen').classList.remove('show');
+    document.getElementById('ev-nombre').value = '';
+    document.getElementById('ev-fecha').value = '';
+    document.getElementById('ev-recogida').value = '';
+    document.getElementById('ev-devolucion').value = '';
+    document.getElementById('cart-notas').value = '';
+    cart = {};
+    eventoConfirmado = false;
+    document.getElementById('catalog-section').style.display = 'none';
+    document.getElementById('evento-alert').className = 'evento-alert';
+    actualizarCart();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ── HELPERS ────────────────────────────────────────────
+  function formatDate(d) {
+    if (!d) return '—';
+    return new Date(d + 'T12:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+</script>
+</body>
+</html>
