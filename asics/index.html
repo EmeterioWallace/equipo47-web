@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Material ASICS — Equipo 47 Barcelona</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet">
   <style>
@@ -413,6 +412,47 @@
       .cart-panel { width: 100%; right: -100%; }
       .evento-alert { margin: 12px 16px 0; }
     }
+
+    /* LOGIN */
+    .login-screen {
+      display: none;
+      position: fixed; inset: 0;
+      background: white;
+      z-index: 9999;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .login-screen.show { display: flex; }
+    .login-box {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 40px;
+      width: 100%;
+      max-width: 380px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.08);
+    }
+    .login-logo { text-align: center; margin-bottom: 32px; }
+    .login-logo .e47 { font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 3px; color: var(--asics-blue); }
+    .login-logo .sub { font-size: 11px; color: var(--muted); letter-spacing: 3px; text-transform: uppercase; margin-top: 4px; }
+    .login-box h2 { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 1px; margin-bottom: 24px; color: var(--text); }
+    .login-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+    .login-field label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+    .login-field input {
+      background: var(--off); border: 1px solid var(--border);
+      color: var(--text); padding: 12px 14px; border-radius: 6px;
+      font-family: 'DM Sans', sans-serif; font-size: 14px;
+    }
+    .login-field input:focus { outline: none; border-color: var(--asics-blue); }
+    .login-btn {
+      width: 100%; padding: 12px; background: var(--asics-blue); color: white;
+      border: none; border-radius: 6px; font-family: 'DM Sans', sans-serif;
+      font-size: 14px; font-weight: 700; cursor: pointer; margin-top: 8px;
+      transition: background 0.2s;
+    }
+    .login-btn:hover { background: #002d7a; }
+    .login-error { color: var(--danger); font-size: 12px; margin-top: 8px; display: none; }
   </style>
 </head>
 <body>
@@ -490,6 +530,27 @@
   </div>
 </div>
 
+<!-- LOGIN SCREEN -->
+<div class="login-screen show" id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="e47">EQUIPO 47</div>
+      <div class="sub">Material ASICS · Barcelona</div>
+    </div>
+    <h2>ACCESO PORTAL</h2>
+    <div class="login-field">
+      <label>Email</label>
+      <input type="email" id="login-email" placeholder="tu@email.com">
+    </div>
+    <div class="login-field">
+      <label>Contraseña</label>
+      <input type="password" id="login-password" placeholder="••••••••" onkeydown="if(event.key==='Enter') doLogin()">
+    </div>
+    <div class="login-error" id="login-error">Email o contraseña incorrectos</div>
+    <button class="login-btn" onclick="doLogin()">Entrar</button>
+  </div>
+</div>
+
 <!-- SUCCESS -->
 <div class="success-screen" id="success-screen">
   <div class="success-icon">✅</div>
@@ -502,8 +563,35 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/supabase.js"></script>
 <script>
+  const SUPABASE_URL = 'https://lbqkiejyigjypiamymwx.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxicWtpZWp5aWdqeXBpYW15bXd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NzM1MjQsImV4cCI6MjA5NjA0OTUyNH0.hFR2jU2WrULGZ9W9B6lz3fT8tc_NeQLxhgvDcdXJGrQ';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+</script>
+<script>
+  // ── AUTH ───────────────────────────────────────────────
+  async function checkAuth() {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) {
+      document.getElementById('login-screen').classList.remove('show');
+    } else {
+      document.getElementById('login-screen').classList.add('show');
+    }
+  }
+
+  async function doLogin() {
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
+    const errEl = document.getElementById('login-error');
+    errEl.style.display = 'none';
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) {
+      errEl.style.display = 'block';
+      return;
+    }
+    document.getElementById('login-screen').classList.remove('show');
+  }
+
   // ── STATE ──────────────────────────────────────────────
   let materialData = [];
   let variantesData = [];
@@ -515,7 +603,8 @@
   let catFilter = '';
 
   // ── INIT ───────────────────────────────────────────────
-  window.addEventListener('DOMContentLoaded', () => {
+  window.addEventListener('DOMContentLoaded', async () => {
+    await checkAuth();
     const hoy = new Date().toISOString().split('T')[0];
     document.getElementById('ev-fecha').min = hoy;
     document.getElementById('ev-recogida').min = hoy;
