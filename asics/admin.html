@@ -627,9 +627,10 @@
   // ── AUTH ───────────────────────────────────────────────
   async function checkAuth() {
     const { data: { session } } = await sb.auth.getSession();
-    if (session) {
+    if (session && session.user?.user_metadata?.rol === 'admin') {
       document.getElementById('login-screen').classList.remove('show');
     } else {
+      if (session) await sb.auth.signOut();
       document.getElementById('login-screen').classList.add('show');
     }
   }
@@ -640,9 +641,17 @@
     const errEl = document.getElementById('login-error');
     errEl.style.display = 'none';
 
-    const { error } = await sb.auth.signInWithPassword({ email, password });
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
     if (error) {
       errEl.style.display = 'block';
+      errEl.textContent = 'Email o contraseña incorrectos';
+      return;
+    }
+    const rol = data.user?.user_metadata?.rol;
+    if (rol !== 'admin') {
+      await sb.auth.signOut();
+      errEl.style.display = 'block';
+      errEl.textContent = 'No tienes acceso a esta sección';
       return;
     }
     document.getElementById('login-screen').classList.remove('show');
