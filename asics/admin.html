@@ -519,6 +519,12 @@
         <textarea id="mat-descripcion" rows="2" placeholder="Descripción opcional..."></textarea>
       </div>
 
+      <div class="form-group" style="margin-bottom:20px;">
+        <label>Stock general (si no tiene variantes)</label>
+        <input type="number" id="mat-stock" min="0" placeholder="0" style="width:160px;">
+        <small style="color:var(--muted);font-size:11px;margin-top:4px;display:block;">Si usas variantes (tallas, colores...) déjalo en 0.</small>
+      </div>
+
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
         <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Variantes (tallas, colores...)</label>
         <button class="btn btn-ghost btn-sm" onclick="addVarianteRow()">+ Añadir variante</button>
@@ -671,9 +677,12 @@
         document.getElementById('mat-nombre').value = mat.nombre;
         document.getElementById('mat-categoria').value = mat.categoria || '';
         document.getElementById('mat-descripcion').value = mat.descripcion || '';
+        document.getElementById('mat-stock').value = mat.stock_general || 0;
       }
       const vars = variantesData.filter(v => v.material_id === matId);
       vars.forEach(v => addVarianteRow(v));
+    } else {
+      addVarianteRow();
     }
     document.getElementById('modal-material').classList.add('open');
   }
