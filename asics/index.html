@@ -276,6 +276,7 @@
     }
     .avail-ok { background: #e8f5e9; color: var(--success); }
     .avail-conflict { background: #ffeaea; color: var(--danger); }
+    .avail-pending { background: #fff3e0; color: var(--warning); }
 
     /* CART PANEL */
     .cart-overlay {
@@ -509,6 +510,7 @@
   let reservasData = [];
   let cart = {}; // { varianteId: cantidad }
   let eventoConfirmado = false;
+  let pendientesItems = []; // items de solicitudes pendientes en estas fechas
   let currentCat = '';
   let catFilter = '';
 
@@ -575,6 +577,27 @@
       .lte('fecha_inicio', devolucion)
       .gte('fecha_fin', recogida);
     reservasData = reservas || [];
+
+    // Cargar también solicitudes PENDIENTES en fechas solapadas (para avisar)
+    const { data: solPendientes } = await sb.from('solicitudes')
+      .select('id, nombre_evento')
+      .eq('estado', 'pendiente')
+      .lte('fecha_recogida', devolucion)
+      .gte('fecha_devolucion', recogida);
+
+    if (solPendientes && solPendientes.length > 0) {
+      const ids = solPendientes.map(s => s.id);
+      const { data: pItems } = await sb.from('solicitud_items')
+        .select('variante_id, cantidad, solicitud_id')
+        .in('solicitud_id', ids);
+      // Enrich with evento name
+      pendientesItems = (pItems || []).map(item => ({
+        ...item,
+        nombre_evento: solPendientes.find(s => s.id === item.solicitud_id)?.nombre_evento || '—'
+      }));
+    } else {
+      pendientesItems = [];
+    }
 
     eventoConfirmado = true;
     cart = {};
@@ -659,7 +682,9 @@
                 const disponible = Math.max(0, v.stock_total - reservado);
                 const enCart = cart[v.id] || 0;
                 const stockClass = disponible === 0 ? 'out' : disponible <= 5 ? 'low' : '';
-                const conflicto = reservasData.some(r => r.variante_id === v.id);
+                const conflictoConfirmado = reservasData.some(r => r.variante_id === v.id);
+                const pendientesConflicto = pendientesItems.filter(p => p.variante_id === v.id);
+                const pendientesNombres = [...new Set(pendientesConflicto.map(p => p.nombre_evento))];
 
                 return `
                   <div class="variant-row" id="vrow-${v.id}">
@@ -668,7 +693,12 @@
                       <div class="variant-stock ${stockClass}">
                         ${disponible > 0 ? `${disponible} disponibles` : 'Sin stock'}
                       </div>
-                      ${conflicto ? `<span class="avail-tag avail-conflict">Hay reservas en estas fechas</span>` : `<span class="avail-tag avail-ok">Disponible</span>`}
+                      ${conflictoConfirmado
+                        ? `<span class="avail-tag avail-conflict">Reservado en estas fechas</span>`
+                        : pendientesNombres.length > 0
+                          ? `<span class="avail-tag avail-pending">⚠️ Pedido pendiente: ${pendientesNombres.join(', ')}</span>`
+                          : `<span class="avail-tag avail-ok">Disponible</span>`
+                      }
                     </div>
                     <div class="variant-controls">
                       <button class="qty-btn" onclick="changeQty('${v.id}', -1, ${disponible})" ${enCart === 0 ? 'disabled style="opacity:0.3"' : ''}>−</button>
