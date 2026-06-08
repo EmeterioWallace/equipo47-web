@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Almacén Madrid × Equipo 47</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../css/styles.css">
+  <style>
+    :root {
+      --black: #0a0a0a;
+      --dark: #141414;
+      --card: #1c1c1c;
+      --border: #2a2a2a;
+      --e47-blue: #003DA5;
+      --e47-red: #E4002B;
+      --accent: #4FC3F7;
+      --text: #f0f0f0;
+      --muted: #888;
+      --success: #4CAF50;
+      --warning: #FF9800;
+      --danger: #E4002B;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--black);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 240px;
+      height: 100vh;
+      background: var(--dark);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      z-index: 100;
+    }
+
+    .sidebar-logo {
+      padding: 28px 24px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .sidebar-logo .e47 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 18px;
+      letter-spacing: 2px;
+      color: white;
+    }
+
+    .sidebar-logo .admin-tag {
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-top: 4px;
+      display: block;
+    }
+
+    .sidebar-logo .badge-admin {
+      display: inline-block;
+      margin-top: 8px;
+      background: var(--e47-blue);
+      color: white;
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      padding: 3px 8px;
+      border-radius: 2px;
+    }
+
+    .nav {
+      padding: 16px 0;
+      flex: 1;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 24px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+      transition: all 0.2s;
+      border-left: 3px solid transparent;
+    }
+
+    .nav-item:hover {
+      color: var(--text);
+      background: rgba(255,255,255,0.03);
+    }
+
+    .nav-item.active {
+      color: var(--accent);
+      border-left-color: var(--accent);
+      background: rgba(79,195,247,0.05);
+    }
+
+    .nav-item .icon {
+      font-size: 16px;
+      width: 20px;
+      text-align: center;
+    }
+
+    .sidebar-bottom {
+      padding: 20px 24px;
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    /* MAIN */
+    .main {
+      margin-left: 240px;
+      padding: 32px;
+      min-height: 100vh;
+    }
+
+    .page {
+      display: none;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 32px;
+    }
+
+    .page-header h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 32px;
+      letter-spacing: 2px;
+      color: var(--accent);
+    }
+
+    .page-header p {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    /* GRID */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-bottom: 32px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+    }
+
+    .card h3 {
+      margin-bottom: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--accent);
+    }
+
+    .card p {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* TABLA */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th {
+      text-align: left;
+      padding: 12px 16px;
+      background: var(--card);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+
+    tr:hover {
+      background: rgba(79,195,247,0.05);
+    }
+
+    /* FORMULARIO */
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      color: var(--text);
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(79,195,247,0.1);
+    }
+
+    /* BOTONES */
+    .btn {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 4px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-primary {
+      background: var(--e47-blue);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #002d7a;
+    }
+
+    .btn-success {
+      background: var(--success);
+      color: white;
+    }
+
+    .btn-success:hover {
+      background: #155a2d;
+    }
+
+    .btn-danger {
+      background: var(--danger);
+      color: white;
+    }
+
+    .btn-danger:hover {
+      background: #b5001e;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--accent);
+      border: 1px solid var(--border);
+    }
+
+    .btn-ghost:hover {
+      background: rgba(79,195,247,0.05);
+      border-color: var(--accent);
+    }
+
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 11px;
+    }
+
+    /* MODALES */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 200;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.open {
+      display: flex;
+    }
+
+    .modal-content {
+      background: var(--dark);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      max-height: 90vh;
+      overflow-y: auto;
+      max-width: 600px;
+      width: 90%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+
+    .modal-header {
+      padding: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-header h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 24px;
+      letter-spacing: 1px;
+      color: var(--accent);
+    }
+
+    .modal-body {
+      padding: 24px;
+    }
+
+    .modal-footer {
+      padding: 20px 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+
+    /* EMPTY STATE */
+    .empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+
+    .empty-icon {
+      font-size: 40px;
+      margin-bottom: 12px;
+      opacity: 0.5;
+    }
+
+    /* BADGES */
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-success {
+      background: rgba(76,175,80,0.2);
+      color: var(--success);
+    }
+
+    .badge-warning {
+      background: rgba(255,152,0,0.2);
+      color: var(--warning);
+    }
+
+    .badge-danger {
+      background: rgba(228,0,43,0.2);
+      color: var(--danger);
+    }
+
+    /* RESPONSIVO */
+    @media (max-width: 768px) {
+      .sidebar {
+        width: 100%;
+        height: auto;
+        flex-direction: row;
+      }
+
+      .main {
+        margin-left: 0;
+        padding: 20px;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <span class="e47">EQUIPO 47</span>
+      <span class="admin-tag">Almacén Madrid</span>
+      <span class="badge-admin">ADMIN</span>
+    </div>
+    <nav class="nav">
+      <div class="nav-item active" onclick="mostrarPagina('dashboard')">
+        <span class="icon">📊</span>
+        <span>Dashboard</span>
+      </div>
+      <div class="nav-item" onclick="mostrarPagina('productos')">
+        <span class="icon">📦</span>
+        <span>Productos</span>
+      </div>
+      <div class="nav-item" onclick="mostrarPagina('importar')">
+        <span class="icon">📥</span>
+        <span>Importar datos</span>
+      </div>
+      <div class="nav-item" onclick="mostrarPagina('exportar')">
+        <span class="icon">📤</span>
+        <span>Exportar datos</span>
+      </div>
+      <div class="nav-item" onclick="mostrarPagina('configuracion')">
+        <span class="icon">⚙️</span>
+        <span>Configuración</span>
+      </div>
+    </nav>
+    <div class="sidebar-bottom">
+      <button class="btn btn-ghost btn-sm" onclick="cerrarSesion()" style="width: 100%; justify-content: center;">
+        🚪 Salir
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <!-- DASHBOARD -->
+    <section class="page active" id="dashboard-page">
+      <div class="page-header">
+        <div>
+          <h1>DASHBOARD</h1>
+          <p>Resumen del almacén</p>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <h3>📦 Productos</h3>
+          <p id="stat-productos" style="font-size: 32px; color: var(--accent); margin: 12px 0;">—</p>
+          <p>Total de productos en inventario</p>
+        </div>
+        <div class="card">
+          <h3>📫 Cajas</h3>
+          <p id="stat-cajas" style="font-size: 32px; color: var(--accent); margin: 12px 0;">—</p>
+          <p>Cajas registradas</p>
+        </div>
+        <div class="card">
+          <h3>🏛️ Palés</h3>
+          <p id="stat-pales" style="font-size: 32px; color: var(--accent); margin: 12px 0;">—</p>
+          <p>Palés en uso</p>
+        </div>
+        <div class="card">
+          <h3>📤 Salidas</h3>
+          <p id="stat-salidas" style="font-size: 32px; color: var(--accent); margin: 12px 0;">—</p>
+          <p>Salidas pendientes</p>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top: 20px;">
+        <h3>ℹ️ Información del sistema</h3>
+        <p>✓ Conexión a Supabase activa</p>
+        <p>✓ Almacén Madrid v2 funcionando</p>
+        <p id="db-status" style="color: var(--success);">Comprobando BD...</p>
+      </div>
+    </section>
+
+    <!-- PRODUCTOS -->
+    <section class="page" id="productos-page">
+      <div class="page-header">
+        <div>
+          <h1>PRODUCTOS</h1>
+          <p>Gestiona el catálogo de productos</p>
+        </div>
+        <button class="btn btn-primary" onclick="nuevoProducto()">➕ Nuevo producto</button>
+      </div>
+      <div id="productos-tabla" class="loading">Cargando...</div>
+    </section>
+
+    <!-- IMPORTAR DATOS -->
+    <section class="page" id="importar-page">
+      <div class="page-header">
+        <div>
+          <h1>IMPORTAR DATOS</h1>
+          <p>Migra datos desde la versión anterior (v1)</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>🔄 Migración de datos v1 → v2</h3>
+        <p style="margin: 12px 0;">Copia aquí el JSON exportado de la versión anterior (localStorage).</p>
+        
+        <div class="form-group">
+          <label>Datos JSON (v1)</label>
+          <textarea id="import-json" rows="10" placeholder='Pega aquí el JSON exportado de v1...'></textarea>
+        </div>
+
+        <button class="btn btn-primary" onclick="importarDatos()">📥 Importar datos</button>
+        <p style="font-size: 11px; color: var(--muted); margin-top: 12px;">
+          ⚠️ Esta acción es irreversible. Hacer backup antes de proceder.
+        </p>
+      </div>
+    </section>
+
+    <!-- EXPORTAR DATOS -->
+    <section class="page" id="exportar-page">
+      <div class="page-header">
+        <div>
+          <h1>EXPORTAR DATOS</h1>
+          <p>Descarga un backup de todos tus datos</p>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="card" onclick="exportarCSV('productos')" style="cursor: pointer;">
+          <h3>📦 Productos</h3>
+          <p>Exportar lista de productos</p>
+        </div>
+        <div class="card" onclick="exportarCSV('variantes')" style="cursor: pointer;">
+          <h3>🎨 Variantes</h3>
+          <p>Exportar variantes (tallas, colores, etc)</p>
+        </div>
+        <div class="card" onclick="exportarCSV('cajas')" style="cursor: pointer;">
+          <h3>📫 Cajas</h3>
+          <p>Exportar cajas y su ubicación</p>
+        </div>
+        <div class="card" onclick="exportarCSV('pales')" style="cursor: pointer;">
+          <h3>🏛️ Palés</h3>
+          <p>Exportar palés</p>
+        </div>
+        <div class="card" onclick="exportarCSV('salidas')" style="cursor: pointer;">
+          <h3>📤 Salidas</h3>
+          <p>Exportar historial de salidas</p>
+        </div>
+        <div class="card" onclick="exportarTodo()" style="cursor: pointer;">
+          <h3>📦 Todo</h3>
+          <p>Exportar backup completo (ZIP)</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONFIGURACIÓN -->
+    <section class="page" id="configuracion-page">
+      <div class="page-header">
+        <div>
+          <h1>CONFIGURACIÓN</h1>
+          <p>Opciones del sistema</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>🔐 Seguridad</h3>
+        <div class="form-group">
+          <label>Contraseña del almacén</label>
+          <input type="text" placeholder="E47almacen2024" readonly style="opacity: 0.5;">
+          <p style="font-size: 11px; color: var(--muted); margin-top: 6px;">
+            Edita esto en el código de utils.js (línea 162)
+          </p>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top: 20px;">
+        <h3>⚠️ Peligro</h3>
+        <button class="btn btn-danger btn-sm" onclick="resetearBD()">🗑️ Borrar toda la BD</button>
+        <p style="font-size: 11px; color: var(--danger); margin-top: 12px;">
+          ⚠️ Esta acción es irreversible. Solo para testing.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <!-- SCRIPTS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/utils.js"></script>
+  <script>
+    // ── NAVEGACIÓN ──────────────────────────
+    function mostrarPagina(pagina) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      
+      document.getElementById(`${pagina}-page`).classList.add('active');
+      document.querySelector(`[onclick="mostrarPagina('${pagina}')"]`).classList.add('active');
+      
+      if (pagina === 'dashboard') cargarDashboard();
+    }
+
+    // ── DASHBOARD ───────────────────────────
+    async function cargarDashboard() {
+      const productos = await obtenerProductos();
+      const cajas = await obtenerCajas();
+      const pales = await obtenerPales();
+      const salidas = await obtenerSalidas('pendiente');
+
+      document.getElementById('stat-productos').textContent = productos.length;
+      document.getElementById('stat-cajas').textContent = cajas.length;
+      document.getElementById('stat-pales').textContent = pales.length;
+      document.getElementById('stat-salidas').textContent = salidas.length;
+
+      const connected = await testConexionSupabase();
+      document.getElementById('db-status').textContent = 
+        connected ? '✓ Base de datos: OK' : '✗ Error de conexión';
+    }
+
+    // ── IMPORTAR ────────────────────────────
+    async function importarDatos() {
+      const json = document.getElementById('import-json').value;
+      if (!json) {
+        toast('Pega los datos JSON primero');
+        return;
+      }
+
+      if (!confirmar('⚠️ Esta acción importará datos. ¿Seguro?')) return;
+
+      try {
+        const datos = JSON.parse(json);
+        toast('✓ Datos importados (función a completar)');
+      } catch (e) {
+        toast('❌ JSON inválido');
+        console.error(e);
+      }
+    }
+
+    // ── EXPORTAR CSV ────────────────────────
+    async function exportarCSV(tabla) {
+      let datos = [];
+      switch(tabla) {
+        case 'productos': datos = await obtenerProductos(); break;
+        case 'variantes': datos = await obtenerVariantes(); break;
+        case 'cajas': datos = await obtenerCajas(); break;
+        case 'pales': datos = await obtenerPales(); break;
+        case 'salidas': datos = await obtenerSalidas(); break;
+      }
+      
+      if (datos.length === 0) {
+        toast(`No hay datos de ${tabla}`);
+        return;
+      }
+
+      exportarCSV(datos, tabla);
+    }
+
+    // ── RESET BD ────────────────────────────
+    async function resetearBD() {
+      if (!confirmar('⚠️ BORRAR TODA LA BD. Confirma con "OK"')) return;
+      const pass = prompt('Escribe "BORRAR" para confirmar:');
+      if (pass !== 'BORRAR') return;
+      
+      toast('Función de reset (a completar)');
+    }
+
+    // ── NUEVO PRODUCTO ──────────────────────
+    function nuevoProducto() {
+      toast('Panel de nuevo producto (a completar)');
+    }
+
+    // ── INIT ────────────────────────────────
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (!requiereAutenticacion()) return;
+      cargarDashboard();
+    });
+  </script>
+</body>
+</html>

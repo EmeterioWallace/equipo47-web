@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Almacén Madrid — Equipo 47</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../css/styles.css">
+  <style>
+    :root {
+      --white: #ffffff;
+      --off: #f5f5f5;
+      --light: #ebebeb;
+      --border: #ddd;
+      --text: #111;
+      --muted: #888;
+      --e47-blue: #003DA5;
+      --e47-red: #E4002B;
+      --accent: #003DA5;
+      --success: #1a7a3c;
+      --warning: #b35900;
+      --danger: #E4002B;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--white);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* HEADER */
+    header {
+      background: var(--e47-blue);
+      padding: 0 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .header-brand .e47 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 20px;
+      letter-spacing: 2px;
+      color: white;
+    }
+
+    .header-brand .sep {
+      color: rgba(255,255,255,0.3);
+    }
+
+    .header-brand .almacen-tag {
+      font-size: 11px;
+      color: rgba(255,255,255,0.7);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-header {
+      background: white;
+      border: none;
+      color: var(--e47-blue);
+      padding: 8px 18px;
+      border-radius: 4px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.5px;
+    }
+
+    .btn-header:hover {
+      background: #e8eeff;
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 64px;
+      width: 240px;
+      height: calc(100vh - 64px);
+      background: var(--off);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 20px 0;
+      z-index: 50;
+    }
+
+    .nav-item {
+      padding: 14px 24px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      border-left: 3px solid transparent;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .nav-item:hover {
+      background: rgba(0,61,165,0.05);
+      color: var(--e47-blue);
+    }
+
+    .nav-item.active {
+      background: rgba(0,61,165,0.1);
+      color: var(--e47-blue);
+      border-left-color: var(--e47-blue);
+    }
+
+    .nav-item .icon {
+      font-size: 16px;
+      width: 20px;
+      text-align: center;
+    }
+
+    /* MAIN */
+    .main {
+      margin-left: 240px;
+      margin-top: 64px;
+      padding: 32px;
+      min-height: calc(100vh - 64px);
+    }
+
+    .page {
+      display: none;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    .page-header {
+      margin-bottom: 32px;
+    }
+
+    .page-header h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+
+    .page-header p {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    /* GRID DE PRODUCTOS */
+    .productos-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .producto-card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      transition: all 0.2s;
+    }
+
+    .producto-card:hover {
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+      transform: translateY(-2px);
+    }
+
+    .producto-icon {
+      width: 100%;
+      height: 180px;
+      background: var(--off);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+    }
+
+    .producto-body {
+      padding: 16px;
+    }
+
+    .producto-nombre {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .producto-desc {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 12px;
+      line-height: 1.4;
+    }
+
+    .variantes-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 12px;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+
+    .variante-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 10px;
+      background: var(--off);
+      border-radius: 4px;
+      font-size: 12px;
+    }
+
+    .variante-stock {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .variante-stock.critical {
+      color: var(--danger);
+      font-weight: 600;
+    }
+
+    .variante-stock.warning {
+      color: var(--warning);
+      font-weight: 600;
+    }
+
+    .producto-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .btn-sm {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      background: white;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .btn-sm:hover {
+      background: var(--e47-blue);
+      color: white;
+      border-color: var(--e47-blue);
+    }
+
+    /* TABLA */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+
+    th {
+      text-align: left;
+      padding: 12px 16px;
+      background: var(--off);
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--light);
+      font-size: 13px;
+    }
+
+    tr:hover {
+      background: rgba(0,61,165,0.02);
+    }
+
+    /* BADGES */
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-success {
+      background: #e8f5e9;
+      color: var(--success);
+    }
+
+    .badge-warning {
+      background: #fff3e0;
+      color: var(--warning);
+    }
+
+    .badge-danger {
+      background: #ffeaea;
+      color: var(--danger);
+    }
+
+    /* MODALES */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 200;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.open {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 8px;
+      max-height: 90vh;
+      overflow-y: auto;
+      max-width: 600px;
+      width: 90%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+
+    .modal-header {
+      padding: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-header h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 24px;
+      letter-spacing: 1px;
+    }
+
+    .modal-body {
+      padding: 24px;
+    }
+
+    .modal-footer {
+      padding: 20px 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--e47-blue);
+      box-shadow: 0 0 0 3px rgba(0,61,165,0.1);
+    }
+
+    /* BOTONES */
+    .btn {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 4px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .btn-primary {
+      background: var(--e47-blue);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #002d7a;
+    }
+
+    .btn-success {
+      background: var(--success);
+      color: white;
+    }
+
+    .btn-success:hover {
+      background: #155a2d;
+    }
+
+    .btn-danger {
+      background: var(--danger);
+      color: white;
+    }
+
+    .btn-danger:hover {
+      background: #b5001e;
+    }
+
+    .btn-secondary {
+      background: var(--light);
+      color: var(--text);
+    }
+
+    .btn-secondary:hover {
+      background: var(--border);
+    }
+
+    /* EMPTY STATE */
+    .empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+
+    .empty-icon {
+      font-size: 40px;
+      margin-bottom: 12px;
+      opacity: 0.5;
+    }
+
+    /* LOADING */
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: var(--muted);
+    }
+
+    /* RESPONSIVO */
+    @media (max-width: 768px) {
+      .sidebar {
+        width: 100%;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        flex-direction: row;
+        overflow-x: auto;
+      }
+
+      .main {
+        margin-left: 0;
+        padding: 20px;
+      }
+
+      .productos-grid {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      }
+
+      header {
+        padding: 0 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- HEADER -->
+  <header>
+    <div class="header-brand">
+      <span class="e47">EQUIPO 47</span>
+      <span class="sep">×</span>
+      <span class="almacen-tag">ALMACÉN MADRID</span>
+    </div>
+    <div class="header-actions">
+      <button class="btn-header" onclick="irAdmin()">⚙️ Admin</button>
+      <button class="btn-header" onclick="cerrarSesion()">🚪 Salir</button>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="nav-item active" onclick="mostrarPagina('productos')">
+      <span class="icon">📦</span>
+      <span>Productos</span>
+    </div>
+    <div class="nav-item" onclick="mostrarPagina('cajas')">
+      <span class="icon">📫</span>
+      <span>Cajas</span>
+    </div>
+    <div class="nav-item" onclick="mostrarPagina('pales')">
+      <span class="icon">🏛️</span>
+      <span>Palés</span>
+    </div>
+    <div class="nav-item" onclick="mostrarPagina('salidas')">
+      <span class="icon">📤</span>
+      <span>Salidas</span>
+    </div>
+    <div class="nav-item" onclick="mostrarPagina('buscar')">
+      <span class="icon">🔍</span>
+      <span>Buscar</span>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <!-- PÁGINA: PRODUCTOS -->
+    <section class="page active" id="productos-page">
+      <div class="page-header">
+        <h1>PRODUCTOS</h1>
+        <p>Gestiona el inventario y stock de los productos</p>
+      </div>
+      <div id="productos-content" class="loading">Cargando...</div>
+    </section>
+
+    <!-- PÁGINA: CAJAS -->
+    <section class="page" id="cajas-page">
+      <div class="page-header">
+        <h1>CAJAS</h1>
+        <p>Gestiona las cajas de almacenamiento</p>
+      </div>
+      <div id="cajas-content" class="loading">Cargando...</div>
+    </section>
+
+    <!-- PÁGINA: PALÉS -->
+    <section class="page" id="pales-page">
+      <div class="page-header">
+        <h1>PALÉS</h1>
+        <p>Gestiona los palés y su ubicación</p>
+      </div>
+      <div id="pales-content" class="loading">Cargando...</div>
+    </section>
+
+    <!-- PÁGINA: SALIDAS -->
+    <section class="page" id="salidas-page">
+      <div class="page-header">
+        <h1>SALIDAS</h1>
+        <p>Registra y gestiona las salidas de material</p>
+      </div>
+      <div id="salidas-content" class="loading">Cargando...</div>
+    </section>
+
+    <!-- PÁGINA: BUSCAR -->
+    <section class="page" id="buscar-page">
+      <div class="page-header">
+        <h1>BUSCAR</h1>
+        <p>Busca material por código, nombre o variante</p>
+      </div>
+      <div class="form-group">
+        <label>Buscar...</label>
+        <input type="text" id="search-input" placeholder="Código, nombre, variante..." onkeyup="buscar()">
+      </div>
+      <div id="buscar-content"></div>
+    </section>
+  </main>
+
+  <!-- SCRIPTS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/utils.js"></script>
+  <script>
+    // ── NAVEGACIÓN ──────────────────────────
+    function mostrarPagina(pagina) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      
+      document.getElementById(`${pagina}-page`).classList.add('active');
+      document.querySelector(`[onclick="mostrarPagina('${pagina}')"]`).classList.add('active');
+      
+      cargarPagina(pagina);
+    }
+
+    function cargarPagina(pagina) {
+      switch(pagina) {
+        case 'productos':
+          cargarProductos();
+          break;
+        case 'cajas':
+          cargarCajas();
+          break;
+        case 'pales':
+          cargarPales();
+          break;
+        case 'salidas':
+          cargarSalidas();
+          break;
+      }
+    }
+
+    // ── CARGAR PRODUCTOS ────────────────────
+    async function cargarProductos() {
+      mostrarLoading('productos-content');
+      const productos = await obtenerProductos();
+      
+      if (productos.length === 0) {
+        document.getElementById('productos-content').innerHTML = `
+          <div class="empty">
+            <div class="empty-icon">📦</div>
+            <p>No hay productos aún</p>
+          </div>
+        `;
+        return;
+      }
+
+      const html = await Promise.all(productos.map(async (prod) => {
+        const variantes = await obtenerVariantes(prod.id);
+        return `
+          <div class="producto-card">
+            <div class="producto-icon">
+              ${prod.foto_url ? `<img src="${prod.foto_url}" style="width:100%;height:100%;object-fit:cover;">` : '📦'}
+            </div>
+            <div class="producto-body">
+              <div class="producto-nombre">${prod.nombre}</div>
+              <div class="producto-desc">${prod.descripcion || ''}</div>
+              <div class="variantes-list">
+                ${variantes.map(v => `
+                  <div class="variante-row">
+                    <span><strong>${v.tipo}:</strong> ${v.valor}</span>
+                    <span class="variante-stock ${v.stock_total === 0 ? 'critical' : v.stock_total < 10 ? 'warning' : ''}">
+                      ${v.stock_total} uds
+                    </span>
+                  </div>
+                `).join('')}
+              </div>
+              <div class="producto-actions">
+                <button class="btn-sm" onclick="editarProducto(${prod.id})">✏️ Editar</button>
+                <button class="btn-sm" onclick="verDetalles(${prod.id})">👁️ Detalles</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }));
+
+      document.getElementById('productos-content').innerHTML = `
+        <div class="productos-grid">${html.join('')}</div>
+      `;
+    }
+
+    // ── CARGAR CAJAS ────────────────────────
+    async function cargarCajas() {
+      mostrarLoading('cajas-content');
+      const cajas = await obtenerCajas();
+      
+      if (cajas.length === 0) {
+        document.getElementById('cajas-content').innerHTML = `
+          <div class="empty">
+            <div class="empty-icon">📫</div>
+            <p>No hay cajas registradas</p>
+          </div>
+        `;
+        return;
+      }
+
+      let html = `
+        <table>
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Variante</th>
+              <th>Cantidad</th>
+              <th>Palé</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      for (const caja of cajas) {
+        const variante = await sb.from('variantes').select('*').eq('id', caja.variante_id).single();
+        const pale = caja.pale_id ? await sb.from('pales').select('*').eq('id', caja.pale_id).single() : null;
+        
+        html += `
+          <tr>
+            <td><strong>${caja.codigo}</strong></td>
+            <td>${variante.data?.tipo}: ${variante.data?.valor}</td>
+            <td>${caja.cantidad} uds</td>
+            <td>${pale.data?.codigo || '—'}</td>
+            <td>
+              <button class="btn-sm" onclick="editarCaja(${caja.id})">✏️</button>
+              <button class="btn-sm" onclick="eliminarCaja(${caja.id})">🗑️</button>
+            </td>
+          </tr>
+        `;
+      }
+
+      html += `</tbody></table>`;
+      document.getElementById('cajas-content').innerHTML = html;
+    }
+
+    // ── CARGAR PALÉS ────────────────────────
+    async function cargarPales() {
+      mostrarLoading('pales-content');
+      const pales = await obtenerPales();
+      
+      if (pales.length === 0) {
+        document.getElementById('pales-content').innerHTML = `
+          <div class="empty">
+            <div class="empty-icon">🏛️</div>
+            <p>No hay palés registrados</p>
+          </div>
+        `;
+        return;
+      }
+
+      let html = `
+        <table>
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Ubicación</th>
+              <th>Cajas</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      for (const pale of pales) {
+        const cajas = await obtenerCajas();
+        const cajasPale = cajas.filter(c => c.pale_id === pale.id).length;
+        
+        html += `
+          <tr>
+            <td><strong>${pale.codigo}</strong></td>
+            <td>${pale.ubicacion || '—'}</td>
+            <td>${cajasPale}</td>
+            <td>
+              <button class="btn-sm" onclick="editarPale(${pale.id})">✏️</button>
+              <button class="btn-sm" onclick="eliminarPale(${pale.id})">🗑️</button>
+            </td>
+          </tr>
+        `;
+      }
+
+      html += `</tbody></table>`;
+      document.getElementById('pales-content').innerHTML = html;
+    }
+
+    // ── CARGAR SALIDAS ──────────────────────
+    async function cargarSalidas() {
+      mostrarLoading('salidas-content');
+      const salidas = await obtenerSalidas();
+      
+      if (salidas.length === 0) {
+        document.getElementById('salidas-content').innerHTML = `
+          <div class="empty">
+            <div class="empty-icon">📤</div>
+            <p>No hay salidas registradas</p>
+          </div>
+        `;
+        return;
+      }
+
+      let html = `
+        <table>
+          <thead>
+            <tr>
+              <th>Tipo</th>
+              <th>Destinatario</th>
+              <th>Fecha Salida</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      for (const salida of salidas) {
+        html += `
+          <tr>
+            <td><strong>${salida.tipo}</strong></td>
+            <td>${salida.destinatario}</td>
+            <td>${formatDate(salida.fecha_salida)}</td>
+            <td><span class="badge badge-${salida.estado === 'entregada' ? 'success' : salida.estado === 'rechazada' ? 'danger' : 'warning'}">${salida.estado}</span></td>
+            <td>
+              <button class="btn-sm" onclick="verSalida(${salida.id})">👁️</button>
+              <button class="btn-sm" onclick="eliminarSalida(${salida.id})">🗑️</button>
+            </td>
+          </tr>
+        `;
+      }
+
+      html += `</tbody></table>`;
+      document.getElementById('salidas-content').innerHTML = html;
+    }
+
+    // ── BUSCAR ──────────────────────────────
+    async function buscar() {
+      const query = document.getElementById('search-input').value.toLowerCase();
+      if (!query) {
+        document.getElementById('buscar-content').innerHTML = '';
+        return;
+      }
+
+      const productos = await obtenerProductos();
+      const cajas = await obtenerCajas();
+      
+      const results = [];
+
+      // Buscar en productos
+      productos.forEach(p => {
+        if (p.nombre.toLowerCase().includes(query)) {
+          results.push({ tipo: 'producto', datos: p });
+        }
+      });
+
+      // Buscar en cajas
+      cajas.forEach(c => {
+        if (c.codigo.toLowerCase().includes(query)) {
+          results.push({ tipo: 'caja', datos: c });
+        }
+      });
+
+      if (results.length === 0) {
+        document.getElementById('buscar-content').innerHTML = '<div class="empty"><p>No se encontraron resultados</p></div>';
+        return;
+      }
+
+      const html = results.map(r => `
+        <div style="padding: 12px; background: var(--off); border-radius: 4px; margin-bottom: 8px;">
+          <strong>${r.tipo === 'producto' ? '📦' : '📫'} ${r.tipo.toUpperCase()}</strong><br>
+          ${r.tipo === 'producto' ? r.datos.nombre : r.datos.codigo}
+        </div>
+      `).join('');
+
+      document.getElementById('buscar-content').innerHTML = html;
+    }
+
+    // ── INICIALIZACIÓN ──────────────────────
+    async function init() {
+      if (!requiereAutenticacion()) return;
+      await testConexionSupabase();
+      cargarProductos();
+    }
+
+    function irAdmin() {
+      window.location.href = 'admin.html';
+    }
+
+    // Cargar al iniciar
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
