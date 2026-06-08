@@ -649,7 +649,7 @@
       dbStatus.style.color = connected ? 'var(--success)' : 'var(--danger)';
     }
 
-    // ── IMPORTAR ────────────────────────────
+    // ── IMPORTAR / MIGRACIÓN v1 → v2 ────────
     async function importarDatos() {
       const json = document.getElementById('import-json').value;
       if (!json) {
@@ -657,15 +657,150 @@
         return;
       }
 
-      if (!confirmar('⚠️ Esta acción importará datos. ¿Seguro?')) return;
-
+      let datos;
       try {
-        const datos = JSON.parse(json);
-        toast('✓ Datos importados (función a completar)');
+        datos = JSON.parse(json);
       } catch (e) {
         toast('❌ JSON inválido');
         console.error(e);
+        return;
       }
+
+      if (!confirmar('⚠️ Esto importará los datos a Supabase. ¿Continuar?')) return;
+
+      const log = [];
+      const errores = [];
+
+      // Orden IMPORTANTE para respetar las relaciones (foreign keys):
+      // categorías → productos → variantes → palés → cajas → salidas → líneas
+
+      // 1. CATEGORÍAS (y subcategorías)
+      if (datos.categorias?.length) {
+        for (const cat of datos.categorias) {
+          const { error } = await sb.from('categorias').insert({
+            id: cat.id, nombre: cat.nombre
+          });
+          if (error) errores.push(`Categoría ${cat.nombre}: ${error.message}`);
+
+          if (Array.isArray(cat.subcategorias)) {
+            for (const sub of cat.subcategorias) {
+              const { error: eSub } = await sb.from('subcategorias').insert({
+                categoria_id: cat.id, nombre: sub.nombre
+              });
+              if (eSub) errores.push(`Subcategoría ${sub.nombre}: ${eSub.message}`);
+            }
+          }
+        }
+        log.push(`Categorías: ${datos.categorias.length}`);
+      }
+
+      // 2. PRODUCTOS
+      if (datos.productos?.length) {
+        for (const p of datos.productos) {
+          const { error } = await sb.from('productos').insert({
+            id: p.id,
+            nombre: p.nombre,
+            descripcion: p.descripcion || null,
+            categoria_id: p.categoriaId || null,
+            subcategoria_id: p.subcategoriaId || null,
+            foto_url: p.fotoUrl || null
+          });
+          if (error) errores.push(`Producto ${p.nombre}: ${error.message}`);
+        }
+        log.push(`Productos: ${datos.productos.length}`);
+      }
+
+      // 3. VARIANTES
+      if (datos.variantes?.length) {
+        for (const v of datos.variantes) {
+          const { error } = await sb.from('variantes').insert({
+            id: v.id,
+            producto_id: v.productoId,
+            tipo: v.tipo || null,
+            valor: v.valor || null,
+            stock_total: v.stockTotal || 0
+          });
+          if (error) errores.push(`Variante ${v.id}: ${error.message}`);
+        }
+        log.push(`Variantes: ${datos.variantes.length}`);
+      }
+
+      // 4. PALÉS (antes que cajas, porque las cajas los referencian)
+      if (datos.pales?.length) {
+        for (const pl of datos.pales) {
+          const { error } = await sb.from('pales').insert({
+            id: pl.id,
+            codigo: pl.codigo,
+            ubicacion: pl.ubicacion || null,
+            descripcion: pl.descripcion || null
+          });
+          if (error) errores.push(`Palé ${pl.codigo}: ${error.message}`);
+        }
+        log.push(`Palés: ${datos.pales.length}`);
+      }
+
+      // 5. CAJAS
+      if (datos.cajas?.length) {
+        for (const c of datos.cajas) {
+          const { error } = await sb.from('cajas').insert({
+            id: c.id,
+            variante_id: c.varianteId,
+            codigo: c.codigo,
+            cantidad: c.cantidad || 0,
+            pale_id: c.paleId || null,
+            es_suelto: c.esSuelto || false
+          });
+          if (error) errores.push(`Caja ${c.codigo}: ${error.message}`);
+        }
+        log.push(`Cajas: ${datos.cajas.length}`);
+      }
+
+      // 6. SALIDAS (+ líneas)
+      if (datos.salidas?.length) {
+        for (const s of datos.salidas) {
+          const { error } = await sb.from('salidas').insert({
+            id: s.id,
+            tipo: s.tipo || 'otro',
+            destinatario: s.destinatario || null,
+            fecha_salida: s.fechaSalida || null,
+            fecha_devolucion: s.fechaDevolucion || null,
+            estado: s.estado || 'pendiente',
+            notas: s.notas || null
+          });
+          if (error) {
+            errores.push(`Salida ${s.id}: ${error.message}`);
+            continue;
+          }
+
+          // Líneas: formato nuevo (lineas[]) o formato viejo (campos en raíz)
+          const lineas = Array.isArray(s.lineas)
+            ? s.lineas
+            : (s.varianteId ? [{ varianteId: s.varianteId, cantidad: s.cantidad }] : []);
+
+          for (const ln of lineas) {
+            const { error: eLn } = await sb.from('salida_lineas').insert({
+              salida_id: s.id,
+              variante_id: ln.varianteId || ln.productoId,
+              cantidad: ln.cantidad || 0
+            });
+            if (eLn) errores.push(`Línea de salida ${s.id}: ${eLn.message}`);
+          }
+        }
+        log.push(`Salidas: ${datos.salidas.length}`);
+      }
+
+      // RESUMEN
+      console.log('───── MIGRACIÓN COMPLETADA ─────');
+      log.forEach(l => console.log('✓ ' + l));
+      if (errores.length) {
+        console.warn(`⚠️ ${errores.length} errores:`);
+        errores.forEach(e => console.warn('  - ' + e));
+        toast(`Migración con ${errores.length} avisos (ver consola)`);
+      } else {
+        toast('✅ Migración completada sin errores');
+      }
+
+      setTimeout(() => location.reload(), 2500);
     }
 
     // ── EXPORTAR CSV ────────────────────────
