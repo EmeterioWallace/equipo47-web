@@ -561,12 +561,7 @@
         <textarea id="mat-descripcion" rows="2" placeholder="Descripción opcional..."></textarea>
       </div>
 
-      <div class="form-group" style="margin-bottom:20px;">
-        <label>Stock (si no tiene variantes)</label>
-        <input type="number" id="mat-stock" min="0" placeholder="0" style="width:160px;">
-        <small style="color:var(--muted);font-size:11px;margin-top:4px;display:block;">Si usas variantes (tallas, colores...) déjalo en 0 y usa la sección de abajo.</small>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
         <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Variantes (tallas, colores...)</label>
         <button class="btn btn-ghost btn-sm" onclick="addVarianteRow()">+ Añadir variante</button>
       </div>
@@ -753,12 +748,11 @@
     tbody.innerHTML = lista.map(m => {
       const vars = variantesData.filter(v => v.material_id === m.id);
       const stock = vars.reduce((a, v) => a + (v.stock_total || 0), 0);
-      const esSimple = vars.length === 1 && vars[0].tipo === '' && vars[0].valor === 'Unidad';
       return `
         <tr>
           <td><strong>${m.nombre}</strong></td>
           <td>${m.categoria || '<span style="color:var(--muted)">—</span>'}</td>
-          <td>${esSimple ? '<span style="color:var(--muted)">Sin variantes</span>' : vars.length + ' variante' + (vars.length !== 1 ? 's' : '')}</td>
+          <td>${vars.length} variante${vars.length !== 1 ? 's' : ''}</td>
           <td><span style="font-family:'Bebas Neue';font-size:18px;color:var(--accent)">${stock}</span></td>
           <td style="display:flex;gap:8px;">
             <button class="btn btn-ghost btn-sm" onclick="editarMaterial('${m.id}')">Editar</button>
@@ -780,7 +774,6 @@
     document.getElementById('mat-nombre').value = '';
     document.getElementById('mat-categoria').value = '';
     document.getElementById('mat-descripcion').value = '';
-    document.getElementById('mat-stock').value = '0';
       document.getElementById('variantes-container').innerHTML = '';
     document.getElementById('modal-material-title').textContent = matId ? 'EDITAR MATERIAL' : 'AÑADIR MATERIAL';
 
@@ -793,12 +786,7 @@
         document.getElementById('mat-descripcion').value = mat.descripcion || '';
       }
       const vars = variantesData.filter(v => v.material_id === matId);
-      // Si solo hay una variante "Unidad" (creada automáticamente), mostrar su stock en el campo general
-      if (vars.length === 1 && vars[0].tipo === '' && vars[0].valor === 'Unidad') {
-        document.getElementById('mat-stock').value = vars[0].stock_total || 0;
-      } else {
-        vars.forEach(v => addVarianteRow(v));
-      }
+      vars.forEach(v => addVarianteRow(v));
     } else {
       addVarianteRow();
     }
@@ -860,8 +848,7 @@
 
       // Guardar variantes
       const rows = document.querySelectorAll('#variantes-container .variante-row');
-      const stockGeneral = parseInt(document.getElementById('mat-stock').value) || 0;
-      let tieneVariantesReales = false;
+      let tieneVariantes = false;
 
       for (const row of rows) {
         const inputs = row.querySelectorAll('input');
@@ -871,7 +858,7 @@
         const varId = inputs[2].dataset.varid;
 
         if (!tipo && !valor) continue; // fila vacía, se ignora
-        tieneVariantesReales = true;
+        tieneVariantes = true;
 
         if (varId) {
           const { error } = await sb.from('variantes').update({ tipo, valor, stock_total: stock }).eq('id', varId);
@@ -882,14 +869,13 @@
         }
       }
 
-      // Si no hay variantes reales pero hay stock general, crear/actualizar variante "Unidad"
-      if (!tieneVariantesReales && stockGeneral > 0) {
-        const variantesExistentes = variantesData.filter(v => v.material_id === matId && v.valor === 'Unidad' && v.tipo === '');
-        if (variantesExistentes.length > 0) {
-          await sb.from('variantes').update({ stock_total: stockGeneral }).eq('id', variantesExistentes[0].id);
-        } else {
-          await sb.from('variantes').insert({ material_id: matId, tipo: '', valor: 'Unidad', stock_total: stockGeneral });
+      if (!tieneVariantes) {
+        toast('Añade al menos una variante con su stock', 'error');
+        // Revert material insert if new
+        if (!document.getElementById('mat-id').value) {
+          await sb.from('material').delete().eq('id', matId);
         }
+        return;
       }
 
       closeModal('modal-material');
