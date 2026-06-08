@@ -285,7 +285,7 @@ async function eliminarSalida(id) {
 
 async function testConexionSupabase() {
   try {
-    const { error } = await sb.from('productos').select('id', { count: 'exact', head: true });
+    const { error } = await sb.from('productos').select('id').limit(1);
     if (error) {
       console.error('❌ Error de conexión a Supabase:', error);
       return false;
