@@ -405,15 +405,30 @@
         width: 100%;
         height: auto;
         flex-direction: row;
+        position: relative;
+        overflow-x: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
       }
 
       .main {
         margin-left: 0;
+        margin-top: 0;
         padding: 20px;
       }
 
       .grid {
         grid-template-columns: 1fr;
+      }
+
+      .nav {
+        flex-direction: row;
+        padding: 0;
+      }
+
+      .nav-item {
+        white-space: nowrap;
+        flex-shrink: 0;
       }
     }
   </style>
@@ -630,8 +645,9 @@
       document.getElementById('stat-salidas').textContent = salidas.length;
 
       const connected = await testConexionSupabase();
-      document.getElementById('db-status').textContent = 
-        connected ? '✓ Base de datos: OK' : '✗ Error de conexión';
+      const dbStatus = document.getElementById('db-status');
+      dbStatus.textContent = connected ? '✓ Base de datos: OK' : '✗ Error de conexión';
+      dbStatus.style.color = connected ? 'var(--success)' : 'var(--danger)';
     }
 
     // ── IMPORTAR ────────────────────────────

@@ -8,6 +8,9 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // Inicializar cliente Supabase
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// Hacer accesible globalmente (para consola y otros scripts)
+window.sb = sb;
+
 // ============================================
 // FUNCIONES GLOBALES DE SUPABASE
 // ============================================
@@ -282,7 +285,7 @@ async function eliminarSalida(id) {
 
 async function testConexionSupabase() {
   try {
-    const { data, error } = await sb.from('productos').select('COUNT(*)');
+    const { error } = await sb.from('productos').select('id', { count: 'exact', head: true });
     if (error) {
       console.error('❌ Error de conexión a Supabase:', error);
       return false;
