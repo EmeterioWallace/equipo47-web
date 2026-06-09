@@ -308,6 +308,22 @@
       font-size: 11px;
     }
 
+    .btn-small {
+      padding: 6px 12px;
+      font-size: 11px;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .form-row .form-group {
+      flex: 1;
+      min-width: 140px;
+    }
+
     /* MODALES */
     .modal {
       display: none;
@@ -518,8 +534,31 @@
           <h1>PRODUCTOS</h1>
           <p>Gestiona el catálogo de productos</p>
         </div>
-        <button class="btn btn-primary" onclick="nuevoProducto()">➕ Nuevo producto</button>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-ghost" onclick="mostrarModalCategorias()">🏷️ Categorías</button>
+          <button class="btn btn-primary" onclick="mostrarModalProducto()">➕ Nuevo producto</button>
+        </div>
       </div>
+
+      <div class="form-row" style="margin-bottom: 20px;">
+        <div class="form-group">
+          <label>Buscar</label>
+          <input type="text" id="buscadorProductos" placeholder="🔍 Nombre o descripción..." onkeyup="renderProductos()">
+        </div>
+        <div class="form-group">
+          <label>Categoría</label>
+          <select id="filtroCategorias" onchange="cargarFiltroSubcategorias(); renderProductos()">
+            <option value="">Todas las categorías</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Subcategoría</label>
+          <select id="filtroSubcategorias" style="display:none;" onchange="renderProductos()">
+            <option value="">Todas las subcategorías</option>
+          </select>
+        </div>
+      </div>
+
       <div id="productos-tabla" class="loading">Cargando...</div>
     </section>
 
@@ -615,6 +654,135 @@
     </section>
   </main>
 
+  <!-- MODAL PRODUCTO -->
+  <div id="modalProducto" class="modal">
+    <div class="modal-content" style="max-width: 800px;">
+      <div class="modal-header">
+        <h2 id="tituloModalProducto">Añadir Producto</h2>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="productoId">
+
+        <div class="form-group">
+          <label>Nombre del Producto *</label>
+          <input type="text" id="productoNombre" placeholder="Ej: Camiseta Deportiva Azul">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Categoría</label>
+            <select id="productoCategoria" onchange="cargarSubcategorias()">
+              <option value="">Sin categoría</option>
+            </select>
+          </div>
+          <div class="form-group" id="grupoSubcategoria" style="display:none;">
+            <label>Subcategoría</label>
+            <select id="productoSubcategoria">
+              <option value="">Sin subcategoría</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>¿Tiene variantes? *</label>
+            <select id="productoTieneVariantes" onchange="toggleVariantes()">
+              <option value="si">Sí (tallas, colores, tamaños)</option>
+              <option value="no">No (producto simple)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Producto simple -->
+        <div id="seccionSimple" style="display: none;">
+          <div class="form-group">
+            <label>Cantidad Total *</label>
+            <input type="number" id="productoCantidadSimple" min="0" placeholder="Cantidad de unidades">
+          </div>
+        </div>
+
+        <!-- Producto con variantes -->
+        <div id="seccionVariantes">
+          <div style="background: var(--card); padding: 15px; border-radius: 10px; margin: 15px 0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <h4 style="color: var(--accent);">Variantes del Producto</h4>
+              <button type="button" class="btn btn-success btn-small" onclick="anadirVarianteEnModal()">+ Añadir Variante</button>
+            </div>
+            <div id="listaVariantesModal"></div>
+            <div style="background: var(--dark); padding: 12px; border-radius: 8px; margin-top: 12px;">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Tipo</label>
+                  <input type="text" id="varianteModalTipo" placeholder="Ej: Talla, Color">
+                </div>
+                <div class="form-group">
+                  <label>Valor</label>
+                  <input type="text" id="varianteModalValor" placeholder="Ej: M, Rojo">
+                </div>
+                <div class="form-group">
+                  <label>Cantidad</label>
+                  <input type="number" id="varianteModalCantidad" min="0" placeholder="0">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Stock Mínimo (opcional)</label>
+          <input type="number" id="productoStockMinimo" min="0" placeholder="Ej: 10 — avisa cuando el stock baje de aquí">
+        </div>
+
+        <div class="form-group">
+          <label>Descripción</label>
+          <textarea id="productoDescripcion" rows="2" placeholder="Descripción opcional..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModalAdmin('modalProducto')">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="guardarProducto()">💾 Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL CATEGORÍAS -->
+  <div id="modalCategorias" class="modal">
+    <div class="modal-content" style="max-width: 600px;">
+      <div class="modal-header">
+        <h2>🏷️ Gestión de Categorías</h2>
+      </div>
+      <div class="modal-body">
+        <div style="background: var(--card); padding: 15px; border-radius: 10px; margin-bottom: 16px;">
+          <h4 style="color: var(--accent); margin-bottom: 10px;">Nueva categoría</h4>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="nuevaCategoriaNombre" placeholder="Nombre de la categoría" style="flex:1;">
+            <button class="btn btn-success btn-small" onclick="guardarCategoria()">+ Añadir</button>
+          </div>
+        </div>
+
+        <div style="background: var(--card); padding: 15px; border-radius: 10px; margin-bottom: 16px;">
+          <h4 style="color: var(--accent); margin-bottom: 10px;">Nueva subcategoría</h4>
+          <div class="form-group">
+            <label>Categoría padre</label>
+            <select id="subcategoriaCategoriaPadre">
+              <option value="">Seleccionar...</option>
+            </select>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="nuevaSubcategoriaNombre" placeholder="Nombre de la subcategoría" style="flex:1;">
+            <button class="btn btn-success btn-small" onclick="guardarSubcategoria()">+ Añadir</button>
+          </div>
+        </div>
+
+        <h4 style="color: var(--accent); margin-bottom: 10px;">Categorías existentes</h4>
+        <div id="listaCategoriasMod"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModalAdmin('modalCategorias')">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- SCRIPTS -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/supabase.js"></script>
@@ -629,6 +797,7 @@
       document.querySelector(`[onclick="mostrarPagina('${pagina}')"]`).classList.add('active');
       
       if (pagina === 'dashboard') cargarDashboard();
+      if (pagina === 'productos') cargarProductosTabla();
     }
 
     // ── DASHBOARD ───────────────────────────
@@ -685,7 +854,7 @@
           if (Array.isArray(cat.subcategorias)) {
             for (const sub of cat.subcategorias) {
               const { error: eSub } = await sb.from('subcategorias').insert({
-                categoria_id: cat.id, nombre: sub.nombre
+                id: sub.id, categoria_id: cat.id, nombre: sub.nombre
               });
               if (eSub) errores.push(`Subcategoría ${sub.nombre}: ${eSub.message}`);
             }
@@ -703,7 +872,9 @@
             descripcion: p.descripcion || null,
             categoria_id: p.categoriaId || null,
             subcategoria_id: p.subcategoriaId || null,
-            foto_url: p.fotoUrl || null
+            foto_url: p.fotoUrl || null,
+            tiene_variantes: p.tieneVariantes || 'si',
+            stock_minimo: p.stockMinimo || 0
           });
           if (error) errores.push(`Producto ${p.nombre}: ${error.message}`);
         }
@@ -831,9 +1002,502 @@
       toast('Función de reset (a completar)');
     }
 
-    // ── NUEVO PRODUCTO ──────────────────────
-    function nuevoProducto() {
-      toast('Panel de nuevo producto (a completar)');
+    // ── CARGAR TABLA DE PRODUCTOS ───────────
+    // ════════════════════════════════════════
+    //  MÓDULO PRODUCTOS + CATEGORÍAS
+    // ════════════════════════════════════════
+
+    // Datos en memoria
+    let productos = [];
+    let variantes = [];
+    let categorias = []; // con subcategorias anidadas
+    let variantesTemporales = [];
+
+    async function cargarDatosGlobales() {
+      productos = await obtenerProductos();
+      variantes = await obtenerVariantes();
+      await cargarCategoriasGlobal();
+    }
+
+    async function cargarCategoriasGlobal() {
+      const cats = await obtenerCategorias();
+      const { data: subs } = await sb.from('subcategorias').select('*');
+      categorias = (cats || []).map(c => ({
+        ...c,
+        subcategorias: (subs || []).filter(s => s.categoria_id === c.id)
+      }));
+    }
+
+    // ── MODALES (clase 'open') ──────────────
+    function abrirModalAdmin(id) {
+      document.getElementById(id).classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+    function cerrarModalAdmin(id) {
+      document.getElementById(id).classList.remove('open');
+      document.body.style.overflow = 'auto';
+    }
+
+    // ── TABLA DE PRODUCTOS (con filtros) ────
+    async function cargarProductosTabla() {
+      const cont = document.getElementById('productos-tabla');
+      cont.innerHTML = '<div class="loading">Cargando...</div>';
+      await cargarDatosGlobales();
+      cargarFiltroCategorias();
+      renderProductos();
+    }
+
+    function renderProductos() {
+      const cont = document.getElementById('productos-tabla');
+      const texto = (document.getElementById('buscadorProductos').value || '').toLowerCase();
+      const catId = document.getElementById('filtroCategorias').value;
+      const subId = document.getElementById('filtroSubcategorias').value;
+
+      let lista = productos.slice();
+
+      if (texto) {
+        lista = lista.filter(p =>
+          (p.nombre || '').toLowerCase().includes(texto) ||
+          (p.descripcion || '').toLowerCase().includes(texto)
+        );
+      }
+      if (catId) lista = lista.filter(p => String(p.categoria_id) === String(catId));
+      if (subId) lista = lista.filter(p => String(p.subcategoria_id) === String(subId));
+
+      if (!lista.length) {
+        cont.innerHTML = `
+          <div class="empty">
+            <div class="empty-icon">📦</div>
+            <p>${productos.length ? 'Ningún producto coincide con el filtro' : 'No hay productos todavía'}</p>
+          </div>`;
+        return;
+      }
+
+      let html = `
+        <table>
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Categoría</th>
+              <th>Variantes</th>
+              <th>Stock total</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>`;
+
+      for (const p of lista) {
+        const varsProd = variantes.filter(v => v.producto_id === p.id);
+        const stockTotal = varsProd.reduce((s, v) => s + (v.stock_total || 0), 0);
+        const minimo = p.stock_minimo || 0;
+        const bajo = minimo > 0 && stockTotal <= minimo;
+
+        const variantesTxt = (p.tiene_variantes === 'no')
+          ? '<span style="color: var(--muted);">Producto simple</span>'
+          : (varsProd.length
+              ? varsProd.map(v => `${v.tipo || ''}: ${v.valor || ''}`).join(', ')
+              : '<span style="color: var(--muted);">Sin variantes</span>');
+
+        const badgeClass = stockTotal === 0 ? 'danger' : (bajo ? 'warning' : 'success');
+        const avisoBajo = bajo ? ' ⚠️' : '';
+
+        html += `
+          <tr>
+            <td><strong>${p.nombre}</strong></td>
+            <td style="font-size: 12px; color: var(--muted);">${nombreCategoria(p)}</td>
+            <td style="font-size: 12px;">${variantesTxt}</td>
+            <td><span class="badge badge-${badgeClass}">${stockTotal} uds${avisoBajo}</span></td>
+            <td>
+              <button class="btn btn-ghost btn-sm" onclick="mostrarModalProducto(${p.id})">✏️</button>
+              <button class="btn btn-danger btn-sm" onclick="eliminarProductoAdmin(${p.id})">🗑️</button>
+            </td>
+          </tr>`;
+      }
+
+      html += '</tbody></table>';
+      cont.innerHTML = html;
+    }
+
+    function nombreCategoria(p) {
+      if (!p.categoria_id) return '—';
+      const cat = categorias.find(c => c.id == p.categoria_id);
+      if (!cat) return '—';
+      if (p.subcategoria_id) {
+        const sub = (cat.subcategorias || []).find(s => s.id == p.subcategoria_id);
+        if (sub) return `${cat.nombre} › ${sub.nombre}`;
+      }
+      return cat.nombre;
+    }
+
+    // ── MODAL PRODUCTO ──────────────────────
+    function mostrarModalProducto(id = null) {
+      variantesTemporales = [];
+      cargarSelectCategorias();
+
+      if (id) {
+        const p = productos.find(x => x.id === id);
+        document.getElementById('tituloModalProducto').textContent = 'Editar Producto';
+        document.getElementById('productoId').value = p.id;
+        document.getElementById('productoNombre').value = p.nombre;
+        document.getElementById('productoCategoria').value = p.categoria_id || '';
+        cargarSubcategorias();
+        document.getElementById('productoSubcategoria').value = p.subcategoria_id || '';
+        document.getElementById('productoTieneVariantes').value = p.tiene_variantes || 'si';
+        document.getElementById('productoDescripcion').value = p.descripcion || '';
+        document.getElementById('productoStockMinimo').value = p.stock_minimo || '';
+
+        const varsProd = variantes.filter(v => v.producto_id === p.id);
+        if (p.tiene_variantes === 'no') {
+          document.getElementById('productoCantidadSimple').value =
+            varsProd.length ? (varsProd[0].stock_total || 0) : 0;
+        } else {
+          variantesTemporales = varsProd.map(v => ({
+            id: v.id, tipo: v.tipo, valor: v.valor, stockTotal: v.stock_total || 0
+          }));
+        }
+      } else {
+        document.getElementById('tituloModalProducto').textContent = 'Añadir Producto';
+        document.getElementById('productoId').value = '';
+        document.getElementById('productoNombre').value = '';
+        document.getElementById('productoCategoria').value = '';
+        document.getElementById('productoSubcategoria').value = '';
+        document.getElementById('grupoSubcategoria').style.display = 'none';
+        document.getElementById('productoTieneVariantes').value = 'si';
+        document.getElementById('productoDescripcion').value = '';
+        document.getElementById('productoCantidadSimple').value = '';
+        document.getElementById('productoStockMinimo').value = '';
+      }
+
+      toggleVariantes();
+      actualizarListaVariantesModal();
+      abrirModalAdmin('modalProducto');
+    }
+
+    function toggleVariantes() {
+      const tiene = document.getElementById('productoTieneVariantes').value;
+      document.getElementById('seccionVariantes').style.display = tiene === 'si' ? 'block' : 'none';
+      document.getElementById('seccionSimple').style.display = tiene === 'no' ? 'block' : 'none';
+    }
+
+    function anadirVarianteEnModal() {
+      const tipo = document.getElementById('varianteModalTipo').value.trim();
+      const valor = document.getElementById('varianteModalValor').value.trim();
+      const cantidad = parseInt(document.getElementById('varianteModalCantidad').value) || 0;
+      if (!tipo || !valor) { alert('Completa tipo y valor de la variante'); return; }
+
+      variantesTemporales.push({ id: null, tipo, valor, stockTotal: cantidad });
+      document.getElementById('varianteModalTipo').value = '';
+      document.getElementById('varianteModalValor').value = '';
+      document.getElementById('varianteModalCantidad').value = '';
+      actualizarListaVariantesModal();
+    }
+
+    function actualizarListaVariantesModal() {
+      const lista = document.getElementById('listaVariantesModal');
+      if (!variantesTemporales.length) {
+        lista.innerHTML = '<p style="text-align:center; color: var(--muted); padding: 10px;">No hay variantes añadidas</p>';
+        return;
+      }
+      lista.innerHTML = variantesTemporales.map((v, i) => `
+        <div style="background: var(--dark); padding: 10px; border-radius: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <div><strong>${v.tipo}: ${v.valor}</strong> <span style="margin-left: 8px; color: var(--accent);">${v.stockTotal} uds</span></div>
+          <div style="display: flex; gap: 4px; align-items: center;">
+            <button type="button" class="btn btn-secondary btn-small" onclick="ajustarVarianteModal(${i}, -10)">−10</button>
+            <button type="button" class="btn btn-secondary btn-small" onclick="ajustarVarianteModal(${i}, -1)">−</button>
+            <input type="number" value="${v.stockTotal}" onchange="cambiarCantidadVarianteModal(${i}, this.value)" style="width: 60px; text-align: center; padding: 4px; border: 1px solid var(--border); border-radius: 4px; background: var(--card); color: var(--text);">
+            <button type="button" class="btn btn-success btn-small" onclick="ajustarVarianteModal(${i}, 1)">+</button>
+            <button type="button" class="btn btn-success btn-small" onclick="ajustarVarianteModal(${i}, 10)">+10</button>
+            <button type="button" class="btn btn-danger btn-small" onclick="eliminarVarianteModal(${i})">🗑️</button>
+          </div>
+        </div>`).join('');
+    }
+
+    function ajustarVarianteModal(i, cambio) {
+      variantesTemporales[i].stockTotal = Math.max(0, variantesTemporales[i].stockTotal + cambio);
+      actualizarListaVariantesModal();
+    }
+    function cambiarCantidadVarianteModal(i, valor) {
+      variantesTemporales[i].stockTotal = Math.max(0, parseInt(valor) || 0);
+      actualizarListaVariantesModal();
+    }
+    function eliminarVarianteModal(i) {
+      if (confirm('¿Eliminar esta variante?')) {
+        variantesTemporales.splice(i, 1);
+        actualizarListaVariantesModal();
+      }
+    }
+
+    async function guardarProducto() {
+      const nombre = document.getElementById('productoNombre').value.trim();
+      if (!nombre) { alert('❌ El nombre del producto es obligatorio'); return; }
+
+      const idStr = document.getElementById('productoId').value;
+      const tiene = document.getElementById('productoTieneVariantes').value;
+
+      if (tiene === 'si' && variantesTemporales.length === 0) {
+        alert('❌ Añade al menos una variante o cambia a "producto simple"');
+        return;
+      }
+
+      const datosProducto = {
+        nombre,
+        categoria_id: parseInt(document.getElementById('productoCategoria').value) || null,
+        subcategoria_id: parseInt(document.getElementById('productoSubcategoria').value) || null,
+        tiene_variantes: tiene,
+        descripcion: document.getElementById('productoDescripcion').value.trim() || null,
+        stock_minimo: parseInt(document.getElementById('productoStockMinimo').value) || 0
+      };
+
+      let productoId;
+
+      if (idStr) {
+        // EDITAR
+        productoId = parseInt(idStr);
+        const { error } = await sb.from('productos').update(datosProducto).eq('id', productoId);
+        if (error) { alert('❌ Error al guardar: ' + error.message); return; }
+      } else {
+        // CREAR
+        productoId = Date.now();
+        const { error } = await sb.from('productos').insert({ id: productoId, ...datosProducto });
+        if (error) { alert('❌ Error al crear: ' + error.message); return; }
+      }
+
+      // ── Variantes ──
+      const varsActuales = variantes.filter(v => v.producto_id === productoId);
+
+      if (tiene === 'si') {
+        // IDs que quedan tras la edición (las que tienen id y siguen en el modal)
+        const idsQueQuedan = variantesTemporales.filter(v => v.id).map(v => v.id);
+
+        // 1. Borrar las que el usuario quitó (estaban en BD, ya no en el modal)
+        for (const va of varsActuales) {
+          if (!idsQueQuedan.includes(va.id)) {
+            await sb.from('cajas').delete().eq('variante_id', va.id); // limpia cajas huérfanas
+            await sb.from('variantes').delete().eq('id', va.id);
+          }
+        }
+        // 2. Actualizar las existentes / insertar las nuevas
+        for (const vt of variantesTemporales) {
+          if (vt.id) {
+            await sb.from('variantes').update({
+              tipo: vt.tipo, valor: vt.valor, stock_total: parseInt(vt.stockTotal) || 0
+            }).eq('id', vt.id);
+          } else {
+            await sb.from('variantes').insert({
+              id: Date.now() + Math.floor(Math.random() * 100000),
+              producto_id: productoId,
+              tipo: vt.tipo, valor: vt.valor, stock_total: parseInt(vt.stockTotal) || 0
+            });
+          }
+        }
+      } else {
+        // PRODUCTO SIMPLE → una variante "Unidad: Estándar"
+        const cantidad = parseInt(document.getElementById('productoCantidadSimple').value) || 0;
+        const simpleExistente = varsActuales.find(v => v.tipo === 'Unidad');
+
+        // Si antes tenía variantes reales y ahora es simple, limpiarlas
+        for (const va of varsActuales) {
+          if (va.tipo !== 'Unidad') {
+            await sb.from('cajas').delete().eq('variante_id', va.id);
+            await sb.from('variantes').delete().eq('id', va.id);
+          }
+        }
+
+        if (simpleExistente) {
+          await sb.from('variantes').update({ stock_total: cantidad }).eq('id', simpleExistente.id);
+        } else {
+          await sb.from('variantes').insert({
+            id: Date.now() + Math.floor(Math.random() * 100000),
+            producto_id: productoId,
+            tipo: 'Unidad', valor: 'Estándar', stock_total: cantidad
+          });
+        }
+      }
+
+      cerrarModalAdmin('modalProducto');
+      toast('✅ Producto guardado');
+      await cargarProductosTabla();
+    }
+
+    async function eliminarProductoAdmin(id) {
+      const p = productos.find(x => x.id === id);
+      if (!confirmar(`¿Eliminar "${p?.nombre}" y todas sus variantes y cajas?`)) return;
+
+      // Borrar cajas de sus variantes, luego variantes, luego producto
+      const varsProd = variantes.filter(v => v.producto_id === id);
+      for (const v of varsProd) {
+        await sb.from('cajas').delete().eq('variante_id', v.id);
+      }
+      await sb.from('variantes').delete().eq('producto_id', id);
+      const ok = await eliminarProducto(id);
+      if (ok) {
+        toast('✓ Producto eliminado');
+        await cargarProductosTabla();
+      } else {
+        toast('❌ Error al eliminar');
+      }
+    }
+
+    // ── CATEGORÍAS: SELECTS Y FILTROS ───────
+    function cargarSelectCategorias() {
+      const select = document.getElementById('productoCategoria');
+      const actual = select.value;
+      select.innerHTML = '<option value="">Sin categoría</option>';
+      categorias.forEach(c => select.innerHTML += `<option value="${c.id}">${c.nombre}</option>`);
+      select.value = actual;
+    }
+
+    function cargarSubcategorias() {
+      const catId = document.getElementById('productoCategoria').value;
+      const grupo = document.getElementById('grupoSubcategoria');
+      const select = document.getElementById('productoSubcategoria');
+      const cat = categorias.find(c => c.id == catId);
+
+      if (!catId || !cat || !(cat.subcategorias || []).length) {
+        grupo.style.display = 'none';
+        select.innerHTML = '<option value="">Sin subcategoría</option>';
+        return;
+      }
+      grupo.style.display = 'block';
+      select.innerHTML = '<option value="">Sin subcategoría</option>';
+      cat.subcategorias.forEach(s => select.innerHTML += `<option value="${s.id}">${s.nombre}</option>`);
+    }
+
+    function cargarFiltroCategorias() {
+      const select = document.getElementById('filtroCategorias');
+      const actual = select.value;
+      select.innerHTML = '<option value="">Todas las categorías</option>';
+      categorias.forEach(c => select.innerHTML += `<option value="${c.id}">${c.nombre}</option>`);
+      select.value = actual;
+    }
+
+    function cargarFiltroSubcategorias() {
+      const catId = document.getElementById('filtroCategorias').value;
+      const select = document.getElementById('filtroSubcategorias');
+      const cat = categorias.find(c => c.id == catId);
+
+      if (!catId || !cat || !(cat.subcategorias || []).length) {
+        select.style.display = 'none';
+        select.innerHTML = '<option value="">Todas las subcategorías</option>';
+        return;
+      }
+      select.style.display = 'block';
+      select.innerHTML = '<option value="">Todas las subcategorías</option>';
+      cat.subcategorias.forEach(s => select.innerHTML += `<option value="${s.id}">${s.nombre}</option>`);
+    }
+
+    // ── CATEGORÍAS: MODAL Y CRUD ────────────
+    async function mostrarModalCategorias() {
+      await cargarCategoriasGlobal();
+      const selectPadre = document.getElementById('subcategoriaCategoriaPadre');
+      selectPadre.innerHTML = '<option value="">Seleccionar...</option>';
+      categorias.forEach(c => selectPadre.innerHTML += `<option value="${c.id}">${c.nombre}</option>`);
+      document.getElementById('nuevaCategoriaNombre').value = '';
+      document.getElementById('nuevaSubcategoriaNombre').value = '';
+      cargarListaCategorias();
+      abrirModalAdmin('modalCategorias');
+    }
+
+    async function guardarCategoria() {
+      const nombre = document.getElementById('nuevaCategoriaNombre').value.trim();
+      if (!nombre) { alert('❌ Escribe un nombre'); return; }
+      if (categorias.some(c => c.nombre.toLowerCase() === nombre.toLowerCase())) {
+        alert('❌ Ya existe una categoría con ese nombre'); return;
+      }
+      const { error } = await sb.from('categorias').insert({ id: Date.now(), nombre });
+      if (error) { alert('❌ Error: ' + error.message); return; }
+      await mostrarModalCategorias();
+      cargarFiltroCategorias();
+    }
+
+    async function guardarSubcategoria() {
+      const catId = parseInt(document.getElementById('subcategoriaCategoriaPadre').value);
+      const nombre = document.getElementById('nuevaSubcategoriaNombre').value.trim();
+      if (!catId) { alert('❌ Selecciona una categoría padre'); return; }
+      if (!nombre) { alert('❌ Escribe un nombre'); return; }
+      const cat = categorias.find(c => c.id == catId);
+      if (cat && (cat.subcategorias || []).some(s => s.nombre.toLowerCase() === nombre.toLowerCase())) {
+        alert('❌ Ya existe esa subcategoría'); return;
+      }
+      const { error } = await sb.from('subcategorias').insert({
+        id: Date.now(), categoria_id: catId, nombre
+      });
+      if (error) { alert('❌ Error: ' + error.message); return; }
+      await mostrarModalCategorias();
+    }
+
+    async function eliminarCategoria(id) {
+      const enUso = productos.filter(p => p.categoria_id == id);
+      if (enUso.length) {
+        alert(`❌ No se puede borrar. ${enUso.length} producto(s) usan esta categoría.`);
+        return;
+      }
+      const cat = categorias.find(c => c.id == id);
+      if (!confirm(`¿Eliminar la categoría "${cat?.nombre}" y sus subcategorías?`)) return;
+      await sb.from('subcategorias').delete().eq('categoria_id', id);
+      await sb.from('categorias').delete().eq('id', id);
+      await mostrarModalCategorias();
+      cargarFiltroCategorias();
+    }
+
+    async function eliminarSubcategoria(catId, subId) {
+      const enUso = productos.filter(p => p.subcategoria_id == subId);
+      if (enUso.length) {
+        alert(`❌ No se puede borrar. ${enUso.length} producto(s) usan esta subcategoría.`);
+        return;
+      }
+      if (!confirm('¿Eliminar esta subcategoría?')) return;
+      await sb.from('subcategorias').delete().eq('id', subId);
+      await mostrarModalCategorias();
+    }
+
+    async function editarCategoria(id) {
+      const cat = categorias.find(c => c.id == id);
+      const nuevo = prompt('Nuevo nombre para la categoría:', cat?.nombre);
+      if (nuevo && nuevo.trim()) {
+        await sb.from('categorias').update({ nombre: nuevo.trim() }).eq('id', id);
+        await mostrarModalCategorias();
+        cargarFiltroCategorias();
+      }
+    }
+
+    async function editarSubcategoria(catId, subId) {
+      const cat = categorias.find(c => c.id == catId);
+      const sub = (cat?.subcategorias || []).find(s => s.id == subId);
+      const nuevo = prompt('Nuevo nombre para la subcategoría:', sub?.nombre);
+      if (nuevo && nuevo.trim()) {
+        await sb.from('subcategorias').update({ nombre: nuevo.trim() }).eq('id', subId);
+        await mostrarModalCategorias();
+      }
+    }
+
+    function cargarListaCategorias() {
+      const cont = document.getElementById('listaCategoriasMod');
+      if (!categorias.length) {
+        cont.innerHTML = '<p style="text-align:center; color: var(--muted); padding: 20px;">No hay categorías creadas</p>';
+        return;
+      }
+      cont.innerHTML = categorias.map(cat => {
+        const subs = (cat.subcategorias || []).map(sub => `
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; background: var(--dark); border-radius: 4px; margin-top: 4px;">
+            <span style="font-size: 13px;">↳ ${sub.nombre}</span>
+            <div style="display: flex; gap: 4px;">
+              <button class="btn btn-ghost btn-small" onclick="editarSubcategoria(${cat.id}, ${sub.id})">✏️</button>
+              <button class="btn btn-danger btn-small" onclick="eliminarSubcategoria(${cat.id}, ${sub.id})">🗑️</button>
+            </div>
+          </div>`).join('');
+        return `
+          <div style="background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <strong style="font-size: 15px;">${cat.nombre}</strong>
+              <div style="display: flex; gap: 5px;">
+                <button class="btn btn-ghost btn-small" onclick="editarCategoria(${cat.id})">✏️</button>
+                <button class="btn btn-danger btn-small" onclick="eliminarCategoria(${cat.id})">🗑️</button>
+              </div>
+            </div>
+            ${subs ? '<div style="margin-top: 8px; margin-left: 10px;">' + subs + '</div>' : '<p style="color: var(--muted); font-size: 12px; margin-top: 6px;">Sin subcategorías</p>'}
+          </div>`;
+      }).join('');
     }
 
     // ── INIT ────────────────────────────────
