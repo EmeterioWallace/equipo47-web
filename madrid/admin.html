@@ -1091,6 +1091,7 @@
         const stockTotal = varsProd.reduce((s, v) => s + (v.stock_total || 0), 0);
         const minimo = p.stock_minimo || 0;
         const bajo = minimo > 0 && stockTotal <= minimo;
+        const tieneDesglose = p.tiene_variantes === 'si' && varsProd.length > 0;
 
         const variantesTxt = (p.tiene_variantes === 'no')
           ? '<span style="color: var(--muted);">Producto simple</span>'
@@ -1101,17 +1102,40 @@
         const badgeClass = stockTotal === 0 ? 'danger' : (bajo ? 'warning' : 'success');
         const avisoBajo = bajo ? ' ⚠️' : '';
 
+        const flecha = tieneDesglose
+          ? `<span id="flecha-${p.id}" style="display:inline-block; width:14px; color: var(--accent);">▶</span>`
+          : '<span style="display:inline-block; width:14px;"></span>';
+        const filaClick = tieneDesglose ? `onclick="toggleDesglose(${p.id})" style="cursor:pointer;"` : '';
+
         html += `
-          <tr>
-            <td><strong>${p.nombre}</strong></td>
+          <tr ${filaClick}>
+            <td>${flecha} <strong>${p.nombre}</strong></td>
             <td style="font-size: 12px; color: var(--muted);">${nombreCategoria(p)}</td>
             <td style="font-size: 12px;">${variantesTxt}</td>
             <td><span class="badge badge-${badgeClass}">${stockTotal} uds${avisoBajo}</span></td>
             <td>
-              <button class="btn btn-ghost btn-sm" onclick="mostrarModalProducto(${p.id})">✏️</button>
-              <button class="btn btn-danger btn-sm" onclick="eliminarProductoAdmin(${p.id})">🗑️</button>
+              <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); mostrarModalProducto(${p.id})">✏️</button>
+              <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); eliminarProductoAdmin(${p.id})">🗑️</button>
             </td>
           </tr>`;
+
+        if (tieneDesglose) {
+          const filasVar = varsProd.map(v => `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:7px 12px; border-bottom:1px solid var(--border);">
+              <span style="font-size:13px;">${v.tipo}: <strong>${v.valor}</strong></span>
+              <span class="badge badge-${(v.stock_total || 0) === 0 ? 'danger' : 'success'}">${v.stock_total || 0} uds</span>
+            </div>`).join('');
+
+          html += `
+            <tr id="desglose-${p.id}" style="display:none;">
+              <td colspan="5" style="background: var(--card); padding: 0;">
+                <div style="padding: 10px 16px 10px 40px;">
+                  <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color: var(--muted); margin-bottom:6px;">Desglose por variante</div>
+                  ${filasVar}
+                </div>
+              </td>
+            </tr>`;
+        }
       }
 
       html += '</tbody></table>';
@@ -1127,6 +1151,15 @@
         if (sub) return `${cat.nombre} › ${sub.nombre}`;
       }
       return cat.nombre;
+    }
+
+    function toggleDesglose(id) {
+      const fila = document.getElementById('desglose-' + id);
+      const flecha = document.getElementById('flecha-' + id);
+      if (!fila) return;
+      const abierto = fila.style.display !== 'none';
+      fila.style.display = abierto ? 'none' : 'table-row';
+      if (flecha) flecha.textContent = abierto ? '▶' : '▼';
     }
 
     // ── MODAL PRODUCTO ──────────────────────
