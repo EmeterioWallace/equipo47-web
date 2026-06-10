@@ -532,6 +532,11 @@
       </div>
 
       <div class="card" style="margin-top: 20px;">
+        <h3>⚠️ Avisos de stock bajo</h3>
+        <div id="avisos-stock"><p style="color: var(--muted);">Comprobando...</p></div>
+      </div>
+
+      <div class="card" style="margin-top: 20px;">
         <h3>ℹ️ Información del sistema</h3>
         <p>✓ Conexión a Supabase activa</p>
         <p>✓ Almacén Madrid v2 funcionando</p>
@@ -751,42 +756,55 @@
 
         <!-- Producto simple -->
         <div id="seccionSimple" style="display: none;">
-          <div class="form-group">
-            <label>Cantidad Total *</label>
-            <input type="number" id="productoCantidadSimple" min="0" placeholder="Cantidad de unidades">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Cantidad Total *</label>
+              <input type="number" id="productoCantidadSimple" min="0" placeholder="Unidades">
+            </div>
+            <div class="form-group">
+              <label>Stock Mínimo (opcional)</label>
+              <input type="number" id="productoStockMinimoSimple" min="0" placeholder="Aviso de stock bajo">
+            </div>
           </div>
         </div>
 
         <!-- Producto con variantes -->
         <div id="seccionVariantes">
+          <!-- Generador de combinaciones -->
           <div style="background: var(--card); padding: 15px; border-radius: 10px; margin: 15px 0;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-              <h4 style="color: var(--accent);">Variantes del Producto</h4>
-              <button type="button" class="btn btn-success btn-small" onclick="anadirVarianteEnModal()">+ Añadir Variante</button>
-            </div>
-            <div id="listaVariantesModal"></div>
-            <div style="background: var(--dark); padding: 12px; border-radius: 8px; margin-top: 12px;">
-              <div class="form-row">
-                <div class="form-group">
-                  <label>Tipo</label>
-                  <input type="text" id="varianteModalTipo" placeholder="Ej: Talla, Color">
-                </div>
-                <div class="form-group">
-                  <label>Valor</label>
-                  <input type="text" id="varianteModalValor" placeholder="Ej: M, Rojo">
-                </div>
-                <div class="form-group">
-                  <label>Cantidad</label>
-                  <input type="number" id="varianteModalCantidad" min="0" placeholder="0">
-                </div>
+            <h4 style="color: var(--accent); margin-bottom: 4px;">Generador de variantes</h4>
+            <p style="font-size: 12px; color: var(--muted); margin-bottom: 12px;">Define uno o dos ejes y genera las combinaciones automáticamente. Ej: Talla (S, M, L) × Color (Blanco, Negro).</p>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Eje 1 — Nombre</label>
+                <input type="text" id="eje1Nombre" placeholder="Ej: Talla">
+              </div>
+              <div class="form-group" style="flex: 2;">
+                <label>Eje 1 — Valores (separados por comas)</label>
+                <input type="text" id="eje1Valores" placeholder="Ej: S, M, L, XL">
               </div>
             </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Eje 2 — Nombre (opcional)</label>
+                <input type="text" id="eje2Nombre" placeholder="Ej: Color">
+              </div>
+              <div class="form-group" style="flex: 2;">
+                <label>Eje 2 — Valores (opcional)</label>
+                <input type="text" id="eje2Valores" placeholder="Ej: Blanco, Negro">
+              </div>
+            </div>
+            <button type="button" class="btn btn-success btn-small" onclick="generarCombinaciones()">⚙️ Generar combinaciones</button>
           </div>
-        </div>
 
-        <div class="form-group">
-          <label>Stock Mínimo (opcional)</label>
-          <input type="number" id="productoStockMinimo" min="0" placeholder="Ej: 10 — avisa cuando el stock baje de aquí">
+          <!-- Lista de variantes -->
+          <div style="background: var(--card); padding: 15px; border-radius: 10px; margin: 15px 0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <h4 style="color: var(--accent);">Variantes (<span id="contadorVariantes">0</span>)</h4>
+              <button type="button" class="btn btn-secondary btn-small" onclick="anadirVarianteManual()">+ Añadir una suelta</button>
+            </div>
+            <div id="listaVariantesModal"></div>
+          </div>
         </div>
 
         <div class="form-group">
@@ -1003,15 +1021,34 @@
 
     // ── DASHBOARD ───────────────────────────
     async function cargarDashboard() {
-      const productos = await obtenerProductos();
-      const cajas = await obtenerCajas();
-      const pales = await obtenerPales();
-      const salidas = await obtenerSalidas('pendiente');
+      const productosD = await obtenerProductos();
+      const cajasD = await obtenerCajas();
+      const palesD = await obtenerPales();
+      const salidasD = await obtenerSalidas('pendiente');
+      const variantesD = await obtenerVariantes();
 
-      document.getElementById('stat-productos').textContent = productos.length;
-      document.getElementById('stat-cajas').textContent = cajas.length;
-      document.getElementById('stat-pales').textContent = pales.length;
-      document.getElementById('stat-salidas').textContent = salidas.length;
+      document.getElementById('stat-productos').textContent = productosD.length;
+      document.getElementById('stat-cajas').textContent = cajasD.length;
+      document.getElementById('stat-pales').textContent = palesD.length;
+      document.getElementById('stat-salidas').textContent = salidasD.length;
+
+      // Avisos de stock bajo (por variante)
+      const bajos = variantesD.filter(v => (v.stock_minimo || 0) > 0 && (v.stock_total || 0) <= v.stock_minimo);
+      const cont = document.getElementById('avisos-stock');
+      if (!bajos.length) {
+        cont.innerHTML = '<p style="color: var(--success);">✓ Todo el stock está por encima del mínimo</p>';
+      } else {
+        cont.innerHTML = bajos.map(v => {
+          const prod = productosD.find(p => p.id === v.producto_id);
+          const nombre = prod ? prod.nombre : 'Producto';
+          const etiqueta = (v.tipo === 'Unidad' && v.valor === 'Estándar') ? nombre : `${nombre} · ${v.tipo}: ${v.valor}`;
+          const cero = (v.stock_total || 0) === 0;
+          return `<div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border);">
+            <span style="font-size:13px;">${cero ? '🔴' : '⚠️'} ${etiqueta}</span>
+            <span class="badge badge-${cero ? 'danger' : 'warning'}">${v.stock_total || 0} uds (mín. ${v.stock_minimo})</span>
+          </div>`;
+        }).join('');
+      }
 
       const connected = await testConexionSupabase();
       const dbStatus = document.getElementById('db-status');
@@ -1290,8 +1327,8 @@
       for (const p of lista) {
         const varsProd = variantes.filter(v => v.producto_id === p.id);
         const stockTotal = varsProd.reduce((s, v) => s + (v.stock_total || 0), 0);
-        const minimo = p.stock_minimo || 0;
-        const bajo = minimo > 0 && stockTotal <= minimo;
+        // Stock bajo: alguna variante por debajo (o igual) de su propio mínimo
+        const bajo = varsProd.some(v => (v.stock_minimo || 0) > 0 && (v.stock_total || 0) <= v.stock_minimo);
         const tieneDesglose = p.tiene_variantes === 'si' && varsProd.length > 0;
 
         const variantesTxt = (p.tiene_variantes === 'no')
@@ -1321,11 +1358,17 @@
           </tr>`;
 
         if (tieneDesglose) {
-          const filasVar = varsProd.map(v => `
+          const filasVar = varsProd.map(v => {
+            const vBajo = (v.stock_minimo || 0) > 0 && (v.stock_total || 0) <= v.stock_minimo;
+            const vBadge = (v.stock_total || 0) === 0 ? 'danger' : (vBajo ? 'warning' : 'success');
+            const vAviso = vBajo ? ' ⚠️' : '';
+            const minTxt = (v.stock_minimo || 0) > 0 ? ` <span style="color:var(--muted); font-size:11px;">(mín. ${v.stock_minimo})</span>` : '';
+            return `
             <div style="display:flex; justify-content:space-between; align-items:center; padding:7px 12px; border-bottom:1px solid var(--border);">
-              <span style="font-size:13px;">${v.tipo}: <strong>${v.valor}</strong></span>
-              <span class="badge badge-${(v.stock_total || 0) === 0 ? 'danger' : 'success'}">${v.stock_total || 0} uds</span>
-            </div>`).join('');
+              <span style="font-size:13px;">${v.tipo}: <strong>${v.valor}</strong>${minTxt}</span>
+              <span class="badge badge-${vBadge}">${v.stock_total || 0} uds${vAviso}</span>
+            </div>`;
+          }).join('');
 
           html += `
             <tr id="desglose-${p.id}" style="display:none;">
@@ -1378,15 +1421,17 @@
         document.getElementById('productoSubcategoria').value = p.subcategoria_id || '';
         document.getElementById('productoTieneVariantes').value = p.tiene_variantes || 'si';
         document.getElementById('productoDescripcion').value = p.descripcion || '';
-        document.getElementById('productoStockMinimo').value = p.stock_minimo || '';
 
         const varsProd = variantes.filter(v => v.producto_id === p.id);
         if (p.tiene_variantes === 'no') {
           document.getElementById('productoCantidadSimple').value =
             varsProd.length ? (varsProd[0].stock_total || 0) : 0;
+          document.getElementById('productoStockMinimoSimple').value =
+            varsProd.length ? (varsProd[0].stock_minimo || 0) : 0;
         } else {
           variantesTemporales = varsProd.map(v => ({
-            id: v.id, tipo: v.tipo, valor: v.valor, stockTotal: v.stock_total || 0
+            id: v.id, tipo: v.tipo, valor: v.valor,
+            stockTotal: v.stock_total || 0, stockMinimo: v.stock_minimo || 0
           }));
         }
       } else {
@@ -1399,8 +1444,13 @@
         document.getElementById('productoTieneVariantes').value = 'si';
         document.getElementById('productoDescripcion').value = '';
         document.getElementById('productoCantidadSimple').value = '';
-        document.getElementById('productoStockMinimo').value = '';
+        document.getElementById('productoStockMinimoSimple').value = '';
       }
+
+      // Limpiar campos del generador de ejes
+      ['eje1Nombre','eje1Valores','eje2Nombre','eje2Valores'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.value = '';
+      });
 
       toggleVariantes();
       actualizarListaVariantesModal();
@@ -1413,46 +1463,70 @@
       document.getElementById('seccionSimple').style.display = tiene === 'no' ? 'block' : 'none';
     }
 
-    function anadirVarianteEnModal() {
-      const tipo = document.getElementById('varianteModalTipo').value.trim();
-      const valor = document.getElementById('varianteModalValor').value.trim();
-      const cantidad = parseInt(document.getElementById('varianteModalCantidad').value) || 0;
-      if (!tipo || !valor) { alert('Completa tipo y valor de la variante'); return; }
+    function generarCombinaciones() {
+      const e1n = document.getElementById('eje1Nombre').value.trim();
+      const e1v = document.getElementById('eje1Valores').value.split(',').map(s => s.trim()).filter(Boolean);
+      const e2n = document.getElementById('eje2Nombre').value.trim();
+      const e2v = document.getElementById('eje2Valores').value.split(',').map(s => s.trim()).filter(Boolean);
 
-      variantesTemporales.push({ id: null, tipo, valor, stockTotal: cantidad });
-      document.getElementById('varianteModalTipo').value = '';
-      document.getElementById('varianteModalValor').value = '';
-      document.getElementById('varianteModalCantidad').value = '';
+      if (!e1n || !e1v.length) { alert('❌ Indica al menos el Eje 1 con su nombre y sus valores'); return; }
+
+      const nuevas = [];
+      if (e2n && e2v.length) {
+        const tipoComb = `${e1n} / ${e2n}`;
+        e1v.forEach(v1 => e2v.forEach(v2 => nuevas.push({ tipo: tipoComb, valor: `${v1} / ${v2}` })));
+      } else {
+        e1v.forEach(v1 => nuevas.push({ tipo: e1n, valor: v1 }));
+      }
+
+      let anadidas = 0;
+      nuevas.forEach(n => {
+        const existe = variantesTemporales.some(vt => vt.tipo === n.tipo && vt.valor === n.valor);
+        if (!existe) {
+          variantesTemporales.push({ id: null, tipo: n.tipo, valor: n.valor, stockTotal: 0, stockMinimo: 0 });
+          anadidas++;
+        }
+      });
+
+      ['eje1Nombre','eje1Valores','eje2Nombre','eje2Valores'].forEach(id => document.getElementById(id).value = '');
+      actualizarListaVariantesModal();
+      toast(`${anadidas} variante(s) generada(s)`);
+    }
+
+    function anadirVarianteManual() {
+      const tipo = prompt('Tipo de la variante (ej: Talla):');
+      if (!tipo || !tipo.trim()) return;
+      const valor = prompt('Valor (ej: M):');
+      if (!valor || !valor.trim()) return;
+      const existe = variantesTemporales.some(vt => vt.tipo === tipo.trim() && vt.valor === valor.trim());
+      if (existe) { alert('Esa variante ya está en la lista'); return; }
+      variantesTemporales.push({ id: null, tipo: tipo.trim(), valor: valor.trim(), stockTotal: 0, stockMinimo: 0 });
       actualizarListaVariantesModal();
     }
 
     function actualizarListaVariantesModal() {
       const lista = document.getElementById('listaVariantesModal');
+      const contador = document.getElementById('contadorVariantes');
+      if (contador) contador.textContent = variantesTemporales.length;
       if (!variantesTemporales.length) {
-        lista.innerHTML = '<p style="text-align:center; color: var(--muted); padding: 10px;">No hay variantes añadidas</p>';
+        lista.innerHTML = '<p style="text-align:center; color: var(--muted); padding: 10px;">No hay variantes. Genera combinaciones o añade una suelta.</p>';
         return;
       }
-      lista.innerHTML = variantesTemporales.map((v, i) => `
-        <div style="background: var(--dark); padding: 10px; border-radius: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
-          <div><strong>${v.tipo}: ${v.valor}</strong> <span style="margin-left: 8px; color: var(--accent);">${v.stockTotal} uds</span></div>
-          <div style="display: flex; gap: 4px; align-items: center;">
-            <button type="button" class="btn btn-secondary btn-small" onclick="ajustarVarianteModal(${i}, -10)">−10</button>
-            <button type="button" class="btn btn-secondary btn-small" onclick="ajustarVarianteModal(${i}, -1)">−</button>
-            <input type="number" value="${v.stockTotal}" onchange="cambiarCantidadVarianteModal(${i}, this.value)" style="width: 60px; text-align: center; padding: 4px; border: 1px solid var(--border); border-radius: 4px; background: var(--card); color: var(--text);">
-            <button type="button" class="btn btn-success btn-small" onclick="ajustarVarianteModal(${i}, 1)">+</button>
-            <button type="button" class="btn btn-success btn-small" onclick="ajustarVarianteModal(${i}, 10)">+10</button>
-            <button type="button" class="btn btn-danger btn-small" onclick="eliminarVarianteModal(${i})">🗑️</button>
-          </div>
+      lista.innerHTML = `
+        <div style="display:grid; grid-template-columns: 1fr 80px 80px 40px; gap:8px; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; padding:0 4px 6px;">
+          <span>Variante</span><span style="text-align:center;">Cantidad</span><span style="text-align:center;">Mínimo</span><span></span>
+        </div>` +
+        variantesTemporales.map((v, i) => `
+        <div style="display:grid; grid-template-columns: 1fr 80px 80px 40px; gap:8px; align-items:center; background: var(--dark); padding:8px; border-radius:6px; margin-bottom:6px;">
+          <span style="font-size:13px;"><strong>${v.tipo}:</strong> ${v.valor}</span>
+          <input type="number" min="0" value="${v.stockTotal}" onchange="setVarCampo(${i},'stockTotal',this.value)" style="width:100%; text-align:center; padding:5px; border:1px solid var(--border); border-radius:4px; background: var(--card); color: var(--text);">
+          <input type="number" min="0" value="${v.stockMinimo}" onchange="setVarCampo(${i},'stockMinimo',this.value)" style="width:100%; text-align:center; padding:5px; border:1px solid var(--border); border-radius:4px; background: var(--card); color: var(--text);">
+          <button type="button" class="btn btn-danger btn-small" onclick="eliminarVarianteModal(${i})">🗑️</button>
         </div>`).join('');
     }
 
-    function ajustarVarianteModal(i, cambio) {
-      variantesTemporales[i].stockTotal = Math.max(0, variantesTemporales[i].stockTotal + cambio);
-      actualizarListaVariantesModal();
-    }
-    function cambiarCantidadVarianteModal(i, valor) {
-      variantesTemporales[i].stockTotal = Math.max(0, parseInt(valor) || 0);
-      actualizarListaVariantesModal();
+    function setVarCampo(i, campo, valor) {
+      variantesTemporales[i][campo] = Math.max(0, parseInt(valor) || 0);
     }
     function eliminarVarianteModal(i) {
       if (confirm('¿Eliminar esta variante?')) {
@@ -1478,8 +1552,7 @@
         categoria_id: parseInt(document.getElementById('productoCategoria').value) || null,
         subcategoria_id: parseInt(document.getElementById('productoSubcategoria').value) || null,
         tiene_variantes: tiene,
-        descripcion: document.getElementById('productoDescripcion').value.trim() || null,
-        stock_minimo: parseInt(document.getElementById('productoStockMinimo').value) || 0
+        descripcion: document.getElementById('productoDescripcion').value.trim() || null
       };
 
       let productoId;
@@ -1514,19 +1587,24 @@
         for (const vt of variantesTemporales) {
           if (vt.id) {
             await sb.from('variantes').update({
-              tipo: vt.tipo, valor: vt.valor, stock_total: parseInt(vt.stockTotal) || 0
+              tipo: vt.tipo, valor: vt.valor,
+              stock_total: parseInt(vt.stockTotal) || 0,
+              stock_minimo: parseInt(vt.stockMinimo) || 0
             }).eq('id', vt.id);
           } else {
             await sb.from('variantes').insert({
               id: Date.now() + Math.floor(Math.random() * 100000),
               producto_id: productoId,
-              tipo: vt.tipo, valor: vt.valor, stock_total: parseInt(vt.stockTotal) || 0
+              tipo: vt.tipo, valor: vt.valor,
+              stock_total: parseInt(vt.stockTotal) || 0,
+              stock_minimo: parseInt(vt.stockMinimo) || 0
             });
           }
         }
       } else {
         // PRODUCTO SIMPLE → una variante "Unidad: Estándar"
         const cantidad = parseInt(document.getElementById('productoCantidadSimple').value) || 0;
+        const minimo = parseInt(document.getElementById('productoStockMinimoSimple').value) || 0;
         const simpleExistente = varsActuales.find(v => v.tipo === 'Unidad');
 
         // Si antes tenía variantes reales y ahora es simple, limpiarlas
@@ -1538,12 +1616,12 @@
         }
 
         if (simpleExistente) {
-          await sb.from('variantes').update({ stock_total: cantidad }).eq('id', simpleExistente.id);
+          await sb.from('variantes').update({ stock_total: cantidad, stock_minimo: minimo }).eq('id', simpleExistente.id);
         } else {
           await sb.from('variantes').insert({
             id: Date.now() + Math.floor(Math.random() * 100000),
             producto_id: productoId,
-            tipo: 'Unidad', valor: 'Estándar', stock_total: cantidad
+            tipo: 'Unidad', valor: 'Estándar', stock_total: cantidad, stock_minimo: minimo
           });
         }
       }
