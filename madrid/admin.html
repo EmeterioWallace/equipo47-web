@@ -473,6 +473,10 @@
         <span class="icon">🏛️</span>
         <span>Palés</span>
       </div>
+      <div class="nav-item" onclick="mostrarPagina('cajas')">
+        <span class="icon">🗃️</span>
+        <span>Cajas</span>
+      </div>
       <div class="nav-item" onclick="mostrarPagina('importar')">
         <span class="icon">📥</span>
         <span>Importar datos</span>
@@ -592,6 +596,26 @@
         <button class="btn btn-primary" onclick="mostrarModalPale()">➕ Nuevo palé</button>
       </div>
       <div id="pales-tabla" class="loading">Cargando...</div>
+    </section>
+
+    <!-- CAJAS -->
+    <section class="page" id="cajas-page">
+      <div class="page-header">
+        <div>
+          <h1>CAJAS</h1>
+          <p>Contenedores con su contenido — pueden ir en un palé o directas en una ubicación</p>
+        </div>
+        <button class="btn btn-primary" onclick="mostrarModalCaja()">➕ Nueva caja</button>
+      </div>
+
+      <div class="form-row" style="margin-bottom: 20px;">
+        <div class="form-group">
+          <label>Buscar</label>
+          <input type="text" id="buscadorCajas" placeholder="🔍 Código de caja o contenido..." onkeyup="renderCajas()">
+        </div>
+      </div>
+
+      <div id="cajas-tabla" class="loading">Cargando...</div>
     </section>
 
     <!-- IMPORTAR DATOS -->
@@ -834,6 +858,91 @@
     </div>
   </div>
 
+  <!-- MODAL CAJA (contenedor) -->
+  <div id="modalCaja" class="modal">
+    <div class="modal-content" style="max-width: 520px;">
+      <div class="modal-header">
+        <h2 id="tituloModalCaja">Nueva Caja</h2>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="cajaId">
+        <div class="form-group">
+          <label>Código</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="cajaCodigo" placeholder="Auto" style="flex: 1;">
+            <button type="button" class="btn btn-secondary btn-small" onclick="generarCodigoCaja()">🔄</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>¿Dónde está la caja? *</label>
+          <select id="cajaUbicacionTipo" onchange="toggleUbicacionCaja()">
+            <option value="pale">En un palé</option>
+            <option value="ubicacion">Directa en una ubicación (estantería/armario)</option>
+          </select>
+        </div>
+        <div class="form-group" id="grupoCajaPale">
+          <label>Palé</label>
+          <select id="cajaPale">
+            <option value="">Seleccionar palé...</option>
+          </select>
+        </div>
+        <div class="form-group" id="grupoCajaUbicacion" style="display:none;">
+          <label>Ubicación</label>
+          <select id="cajaUbicacion">
+            <option value="">Seleccionar ubicación...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Descripción (opcional)</label>
+          <textarea id="cajaDescripcion" rows="2" placeholder="Notas sobre esta caja..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModalAdmin('modalCaja')">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="guardarCaja()">💾 Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL LÍNEA (añadir contenido a una caja) -->
+  <div id="modalLinea" class="modal">
+    <div class="modal-content" style="max-width: 520px;">
+      <div class="modal-header">
+        <h2 id="tituloModalLinea">Añadir artículo a la caja</h2>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="lineaId">
+        <input type="hidden" id="lineaCajaId">
+        <div class="form-group">
+          <label>Producto *</label>
+          <select id="lineaProducto" onchange="cargarVariantesLinea()">
+            <option value="">Seleccionar producto...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Variante *</label>
+          <select id="lineaVariante" onchange="mostrarDisponibleLinea()">
+            <option value="">Seleccionar variante...</option>
+          </select>
+        </div>
+        <div id="infoDisponibleLinea" style="display:none; background: var(--card); padding: 10px 12px; border-radius: 8px; margin-bottom: 14px; font-size: 13px;">
+          Disponible sin organizar: <strong id="dispLinea" style="color: var(--accent);">0</strong> uds
+        </div>
+        <div class="form-group">
+          <label>Cantidad *</label>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <input type="number" id="lineaCantidad" min="1" placeholder="Cantidad" style="flex: 1;">
+            <button type="button" class="btn btn-success btn-small" onclick="llenarMaximoLinea()">MAX</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModalAdmin('modalLinea')">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="guardarLinea()">💾 Guardar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL CATEGORÍAS -->
   <div id="modalCategorias" class="modal">
     <div class="modal-content" style="max-width: 600px;">
@@ -889,6 +998,7 @@
       if (pagina === 'productos') cargarProductosTabla();
       if (pagina === 'ubicaciones') cargarUbicacionesTabla();
       if (pagina === 'pales') cargarPalesTabla();
+      if (pagina === 'cajas') cargarCajasTabla();
     }
 
     // ── DASHBOARD ───────────────────────────
@@ -1863,6 +1973,357 @@
       if (error) { toast('❌ Error al eliminar'); return; }
       toast('✓ Palé eliminado');
       await cargarPalesTabla();
+    }
+
+    // ════════════════════════════════════════
+    //  MÓDULO CAJAS (contenedores + contenido)
+    // ════════════════════════════════════════
+    let cajas = [];
+    let stockItems = [];
+
+    async function cargarCajasTabla() {
+      const cont = document.getElementById('cajas-tabla');
+      cont.innerHTML = '<div class="loading">Cargando...</div>';
+
+      // Cargar todo lo necesario
+      const r1 = await sb.from('cajas').select('*');
+      cajas = r1.data || [];
+      const r2 = await sb.from('stock').select('*');
+      stockItems = r2.data || [];
+      productos = await obtenerProductos();
+      variantes = await obtenerVariantes();
+      pales = await obtenerPales();
+      ubicaciones = await obtenerUbicaciones();
+
+      renderCajas();
+    }
+
+    function nombreVarianteCompleto(varianteId) {
+      const v = variantes.find(x => x.id === varianteId);
+      if (!v) return 'Variante desconocida';
+      const prod = productos.find(p => p.id === v.producto_id);
+      const nombreProd = prod ? prod.nombre : 'Producto';
+      if (v.tipo === 'Unidad' && v.valor === 'Estándar') return nombreProd;
+      return `${nombreProd} · ${v.tipo}: ${v.valor}`;
+    }
+
+    function ubicacionFisicaCaja(caja) {
+      if (caja.pale_id) {
+        const pale = pales.find(p => p.id === caja.pale_id);
+        if (pale) {
+          const ubi = ubicaciones.find(u => u.id === pale.ubicacion_id);
+          return `🏛️ ${pale.codigo}${ubi ? ` › ${ubi.nombre}` : ''}`;
+        }
+        return '🏛️ Palé';
+      }
+      if (caja.ubicacion_id) {
+        const ubi = ubicaciones.find(u => u.id === caja.ubicacion_id);
+        return `📍 ${ubi ? ubi.nombre : 'Ubicación'} (directa)`;
+      }
+      return '<span style="color: var(--muted);">Sin ubicar</span>';
+    }
+
+    function renderCajas() {
+      const cont = document.getElementById('cajas-tabla');
+      const texto = (document.getElementById('buscadorCajas').value || '').toLowerCase();
+
+      let lista = cajas.slice();
+      if (texto) {
+        lista = lista.filter(c => {
+          if ((c.codigo || '').toLowerCase().includes(texto)) return true;
+          // buscar en el contenido
+          const lineas = stockItems.filter(s => s.caja_id === c.id);
+          return lineas.some(l => nombreVarianteCompleto(l.variante_id).toLowerCase().includes(texto));
+        });
+      }
+
+      if (!lista.length) {
+        cont.innerHTML = `
+          <div class="empty">
+            <div class="empty-icon">🗃️</div>
+            <p>${cajas.length ? 'Ninguna caja coincide con la búsqueda' : 'No hay cajas todavía. Crea la primera con "Nueva caja".'}</p>
+          </div>`;
+        return;
+      }
+
+      let html = `
+        <table>
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Ubicación física</th>
+              <th>Artículos</th>
+              <th>Total uds</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>`;
+
+      for (const c of lista) {
+        const lineas = stockItems.filter(s => s.caja_id === c.id);
+        const totalUds = lineas.reduce((s, l) => s + (l.cantidad || 0), 0);
+        const flecha = `<span id="flecha-caja-${c.id}" style="display:inline-block; width:14px; color: var(--accent);">▶</span>`;
+
+        html += `
+          <tr onclick="toggleContenidoCaja(${c.id})" style="cursor:pointer;">
+            <td>${flecha} <strong>${c.codigo || '—'}</strong></td>
+            <td style="font-size: 13px;">${ubicacionFisicaCaja(c)}</td>
+            <td>${lineas.length}</td>
+            <td><span class="badge badge-${totalUds === 0 ? 'warning' : 'success'}">${totalUds} uds</span></td>
+            <td>
+              <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); mostrarModalCaja(${c.id})">✏️</button>
+              <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); eliminarCajaAdmin(${c.id})">🗑️</button>
+            </td>
+          </tr>`;
+
+        // Fila de contenido (desplegable)
+        const filasContenido = lineas.length
+          ? lineas.map(l => `
+              <div style="display:flex; justify-content:space-between; align-items:center; padding:7px 12px; border-bottom:1px solid var(--border);">
+                <span style="font-size:13px;">${nombreVarianteCompleto(l.variante_id)} — <strong>${l.cantidad} uds</strong></span>
+                <span style="display:flex; gap:4px;">
+                  <button class="btn btn-ghost btn-small" onclick="mostrarModalLinea(${c.id}, ${l.id})">✏️</button>
+                  <button class="btn btn-danger btn-small" onclick="eliminarLineaCaja(${l.id})">🗑️</button>
+                </span>
+              </div>`).join('')
+          : '<p style="color: var(--muted); font-size: 13px; padding: 8px 12px;">Caja vacía</p>';
+
+        html += `
+          <tr id="contenido-caja-${c.id}" style="display:none;">
+            <td colspan="5" style="background: var(--card); padding: 0;">
+              <div style="padding: 10px 16px 12px 40px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                  <span style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color: var(--muted);">Contenido de la caja</span>
+                  <button class="btn btn-success btn-small" onclick="mostrarModalLinea(${c.id})">+ Añadir artículo</button>
+                </div>
+                ${filasContenido}
+              </div>
+            </td>
+          </tr>`;
+      }
+      html += '</tbody></table>';
+      cont.innerHTML = html;
+    }
+
+    function toggleContenidoCaja(id) {
+      const fila = document.getElementById('contenido-caja-' + id);
+      const flecha = document.getElementById('flecha-caja-' + id);
+      if (!fila) return;
+      const abierto = fila.style.display !== 'none';
+      fila.style.display = abierto ? 'none' : 'table-row';
+      if (flecha) flecha.textContent = abierto ? '▶' : '▼';
+    }
+
+    // ── MODAL CAJA (contenedor) ─────────────
+    async function mostrarModalCaja(id = null) {
+      pales = await obtenerPales();
+      ubicaciones = await obtenerUbicaciones();
+
+      const selPale = document.getElementById('cajaPale');
+      selPale.innerHTML = '<option value="">Seleccionar palé...</option>' +
+        pales.map(p => {
+          const ubi = ubicaciones.find(u => u.id === p.ubicacion_id);
+          return `<option value="${p.id}">${p.codigo}${ubi ? ` (${ubi.nombre})` : ''}</option>`;
+        }).join('');
+
+      const selUbi = document.getElementById('cajaUbicacion');
+      selUbi.innerHTML = '<option value="">Seleccionar ubicación...</option>' +
+        ubicaciones.map(u => `<option value="${u.id}">${u.nombre}</option>`).join('');
+
+      if (id) {
+        const c = cajas.find(x => x.id === id);
+        document.getElementById('tituloModalCaja').textContent = 'Editar Caja';
+        document.getElementById('cajaId').value = c.id;
+        document.getElementById('cajaCodigo').value = c.codigo || '';
+        document.getElementById('cajaDescripcion').value = c.descripcion || '';
+        if (c.ubicacion_id && !c.pale_id) {
+          document.getElementById('cajaUbicacionTipo').value = 'ubicacion';
+          document.getElementById('cajaUbicacion').value = c.ubicacion_id;
+        } else {
+          document.getElementById('cajaUbicacionTipo').value = 'pale';
+          document.getElementById('cajaPale').value = c.pale_id || '';
+        }
+      } else {
+        document.getElementById('tituloModalCaja').textContent = 'Nueva Caja';
+        document.getElementById('cajaId').value = '';
+        document.getElementById('cajaDescripcion').value = '';
+        document.getElementById('cajaUbicacionTipo').value = 'pale';
+        document.getElementById('cajaPale').value = '';
+        document.getElementById('cajaUbicacion').value = '';
+        generarCodigoCaja();
+      }
+      toggleUbicacionCaja();
+      abrirModalAdmin('modalCaja');
+    }
+
+    function toggleUbicacionCaja() {
+      const tipo = document.getElementById('cajaUbicacionTipo').value;
+      document.getElementById('grupoCajaPale').style.display = tipo === 'pale' ? 'block' : 'none';
+      document.getElementById('grupoCajaUbicacion').style.display = tipo === 'ubicacion' ? 'block' : 'none';
+    }
+
+    function generarCodigoCaja() {
+      const n = (cajas.length + 1).toString().padStart(3, '0');
+      document.getElementById('cajaCodigo').value = 'C-' + n;
+    }
+
+    async function guardarCaja() {
+      const codigo = document.getElementById('cajaCodigo').value.trim() || ('C-' + Date.now());
+      const tipo = document.getElementById('cajaUbicacionTipo').value;
+      const descripcion = document.getElementById('cajaDescripcion').value.trim() || null;
+
+      let pale_id = null, ubicacion_id = null;
+      if (tipo === 'pale') {
+        pale_id = parseInt(document.getElementById('cajaPale').value) || null;
+        if (!pale_id) { alert('❌ Selecciona un palé (o cambia a ubicación directa)'); return; }
+      } else {
+        ubicacion_id = parseInt(document.getElementById('cajaUbicacion').value) || null;
+        if (!ubicacion_id) { alert('❌ Selecciona una ubicación'); return; }
+      }
+
+      const idStr = document.getElementById('cajaId').value;
+      if (idStr) {
+        const { error } = await sb.from('cajas')
+          .update({ codigo, pale_id, ubicacion_id, descripcion })
+          .eq('id', parseInt(idStr));
+        if (error) { alert('❌ Error: ' + error.message); return; }
+      } else {
+        const id = Date.now();
+        const { error } = await sb.from('cajas')
+          .insert({ id, codigo, pale_id, ubicacion_id, descripcion });
+        if (error) { alert('❌ Error: ' + error.message); return; }
+      }
+
+      cerrarModalAdmin('modalCaja');
+      toast('✅ Caja guardada');
+      await cargarCajasTabla();
+    }
+
+    async function eliminarCajaAdmin(id) {
+      const c = cajas.find(x => x.id === id);
+      const lineas = stockItems.filter(s => s.caja_id === id);
+
+      if (lineas.length > 0) {
+        if (!confirmar(`La caja "${c?.codigo}" contiene ${lineas.length} artículo(s).\n\nAl borrarla, ese stock volverá a quedar "sin organizar" (no se pierde del inventario).\n\n¿Continuar?`)) return;
+      } else {
+        if (!confirmar(`¿Eliminar la caja "${c?.codigo}"?`)) return;
+      }
+
+      // Al borrar la caja, el stock asociado se borra en cascada (vuelve a sin organizar)
+      const { error } = await sb.from('cajas').delete().eq('id', id);
+      if (error) { toast('❌ Error al eliminar'); return; }
+      toast('✓ Caja eliminada');
+      await cargarCajasTabla();
+    }
+
+    // ── MODAL LÍNEA (contenido) ─────────────
+    function calcularDisponible(varianteId, excluirStockId = null) {
+      const v = variantes.find(x => x.id === varianteId);
+      if (!v) return 0;
+      const colocado = stockItems
+        .filter(s => s.variante_id === varianteId && s.id !== excluirStockId)
+        .reduce((sum, s) => sum + (s.cantidad || 0), 0);
+      return (v.stock_total || 0) - colocado;
+    }
+
+    function mostrarModalLinea(cajaId, lineaId = null) {
+      // Cargar productos en el select
+      const selProd = document.getElementById('lineaProducto');
+      selProd.innerHTML = '<option value="">Seleccionar producto...</option>' +
+        productos.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+
+      document.getElementById('lineaCajaId').value = cajaId;
+      document.getElementById('lineaCantidad').value = '';
+      document.getElementById('infoDisponibleLinea').style.display = 'none';
+
+      if (lineaId) {
+        const linea = stockItems.find(s => s.id === lineaId);
+        const v = variantes.find(x => x.id === linea.variante_id);
+        document.getElementById('tituloModalLinea').textContent = 'Editar artículo';
+        document.getElementById('lineaId').value = linea.id;
+        document.getElementById('lineaProducto').value = v.producto_id;
+        cargarVariantesLinea();
+        document.getElementById('lineaVariante').value = v.id;
+        document.getElementById('lineaCantidad').value = linea.cantidad;
+        mostrarDisponibleLinea();
+      } else {
+        document.getElementById('tituloModalLinea').textContent = 'Añadir artículo a la caja';
+        document.getElementById('lineaId').value = '';
+        document.getElementById('lineaProducto').value = '';
+        document.getElementById('lineaVariante').innerHTML = '<option value="">Seleccionar variante...</option>';
+      }
+      abrirModalAdmin('modalLinea');
+    }
+
+    function cargarVariantesLinea() {
+      const prodId = parseInt(document.getElementById('lineaProducto').value);
+      const sel = document.getElementById('lineaVariante');
+      const vars = variantes.filter(v => v.producto_id === prodId);
+      sel.innerHTML = '<option value="">Seleccionar variante...</option>' +
+        vars.map(v => {
+          const etiqueta = (v.tipo === 'Unidad' && v.valor === 'Estándar') ? 'Producto simple' : `${v.tipo}: ${v.valor}`;
+          return `<option value="${v.id}">${etiqueta}</option>`;
+        }).join('');
+      document.getElementById('infoDisponibleLinea').style.display = 'none';
+    }
+
+    function mostrarDisponibleLinea() {
+      const varId = parseInt(document.getElementById('lineaVariante').value);
+      if (!varId) { document.getElementById('infoDisponibleLinea').style.display = 'none'; return; }
+      const excluir = parseInt(document.getElementById('lineaId').value) || null;
+      const disp = calcularDisponible(varId, excluir);
+      document.getElementById('dispLinea').textContent = disp;
+      document.getElementById('infoDisponibleLinea').style.display = 'block';
+      document.getElementById('lineaCantidad').setAttribute('data-max', disp);
+    }
+
+    function llenarMaximoLinea() {
+      const max = parseInt(document.getElementById('lineaCantidad').getAttribute('data-max'));
+      if (isNaN(max) || max <= 0) { alert('⚠️ No hay stock disponible sin organizar de esta variante'); return; }
+      document.getElementById('lineaCantidad').value = max;
+    }
+
+    async function guardarLinea() {
+      const cajaId = parseInt(document.getElementById('lineaCajaId').value);
+      const varId = parseInt(document.getElementById('lineaVariante').value);
+      const cantidad = parseInt(document.getElementById('lineaCantidad').value);
+      const lineaIdStr = document.getElementById('lineaId').value;
+
+      if (!varId) { alert('❌ Selecciona una variante'); return; }
+      if (!cantidad || cantidad <= 0) { alert('❌ Indica una cantidad válida'); return; }
+
+      const excluir = parseInt(lineaIdStr) || null;
+      const disp = calcularDisponible(varId, excluir);
+      if (cantidad > disp) {
+        alert(`❌ Solo hay ${disp} uds disponibles sin organizar de esta variante.\n\nNo puedes meter ${cantidad}.`);
+        return;
+      }
+
+      if (lineaIdStr) {
+        const { error } = await sb.from('stock')
+          .update({ variante_id: varId, cantidad })
+          .eq('id', parseInt(lineaIdStr));
+        if (error) { alert('❌ Error: ' + error.message); return; }
+      } else {
+        const id = Date.now() + Math.floor(Math.random() * 100000);
+        const { error } = await sb.from('stock')
+          .insert({ id, variante_id: varId, cantidad, caja_id: cajaId });
+        if (error) { alert('❌ Error: ' + error.message); return; }
+      }
+
+      cerrarModalAdmin('modalLinea');
+      toast('✅ Contenido actualizado');
+      await cargarCajasTabla();
+      // Reabrir el contenido de esa caja para ver el cambio
+      setTimeout(() => toggleContenidoCaja(cajaId), 100);
+    }
+
+    async function eliminarLineaCaja(lineaId) {
+      if (!confirmar('¿Quitar este artículo de la caja? El stock volverá a quedar sin organizar.')) return;
+      const { error } = await sb.from('stock').delete().eq('id', lineaId);
+      if (error) { toast('❌ Error'); return; }
+      toast('✓ Artículo quitado');
+      await cargarCajasTabla();
     }
 
     // ── INIT ────────────────────────────────
