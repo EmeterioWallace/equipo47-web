@@ -469,6 +469,10 @@
         <span class="icon">📍</span>
         <span>Ubicaciones</span>
       </div>
+      <div class="nav-item" onclick="mostrarPagina('pales')">
+        <span class="icon">🏛️</span>
+        <span>Palés</span>
+      </div>
       <div class="nav-item" onclick="mostrarPagina('importar')">
         <span class="icon">📥</span>
         <span>Importar datos</span>
@@ -576,6 +580,18 @@
         <button class="btn btn-primary" onclick="mostrarModalUbicacion()">➕ Nueva ubicación</button>
       </div>
       <div id="ubicaciones-tabla" class="loading">Cargando...</div>
+    </section>
+
+    <!-- PALÉS -->
+    <section class="page" id="pales-page">
+      <div class="page-header">
+        <div>
+          <h1>PALÉS</h1>
+          <p>Contenedores que se colocan en las ubicaciones</p>
+        </div>
+        <button class="btn btn-primary" onclick="mostrarModalPale()">➕ Nuevo palé</button>
+      </div>
+      <div id="pales-tabla" class="loading">Cargando...</div>
     </section>
 
     <!-- IMPORTAR DATOS -->
@@ -785,6 +801,39 @@
     </div>
   </div>
 
+  <!-- MODAL PALÉ -->
+  <div id="modalPale" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
+      <div class="modal-header">
+        <h2 id="tituloModalPale">Nuevo Palé</h2>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="paleId">
+        <div class="form-group">
+          <label>Código</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="paleCodigo" placeholder="Auto" style="flex: 1;">
+            <button type="button" class="btn btn-secondary btn-small" onclick="generarCodigoPale()">🔄</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Ubicación</label>
+          <select id="paleUbicacion">
+            <option value="">Sin ubicación asignada</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Descripción (opcional)</label>
+          <textarea id="paleDescripcion" rows="2" placeholder="Notas sobre este palé..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModalAdmin('modalPale')">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="guardarPale()">💾 Guardar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL CATEGORÍAS -->
   <div id="modalCategorias" class="modal">
     <div class="modal-content" style="max-width: 600px;">
@@ -839,6 +888,7 @@
       if (pagina === 'dashboard') cargarDashboard();
       if (pagina === 'productos') cargarProductosTabla();
       if (pagina === 'ubicaciones') cargarUbicacionesTabla();
+      if (pagina === 'pales') cargarPalesTabla();
     }
 
     // ── DASHBOARD ───────────────────────────
@@ -1688,6 +1738,131 @@
       if (error) { toast('❌ Error al eliminar'); return; }
       toast('✓ Ubicación eliminada');
       await cargarUbicacionesTabla();
+    }
+
+    // ════════════════════════════════════════
+    //  MÓDULO PALÉS
+    // ════════════════════════════════════════
+    let pales = [];
+
+    async function cargarPalesTabla() {
+      const cont = document.getElementById('pales-tabla');
+      cont.innerHTML = '<div class="loading">Cargando...</div>';
+
+      pales = await obtenerPales();
+      ubicaciones = await obtenerUbicaciones();
+      const { data: cajas } = await sb.from('cajas').select('id, pale_id');
+
+      if (!pales.length) {
+        cont.innerHTML = `
+          <div class="empty">
+            <div class="empty-icon">🏛️</div>
+            <p>No hay palés todavía. Crea el primero con "Nuevo palé".</p>
+          </div>`;
+        return;
+      }
+
+      let html = `
+        <table>
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Ubicación</th>
+              <th>Cajas</th>
+              <th>Descripción</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>`;
+
+      for (const p of pales) {
+        const ubi = ubicaciones.find(u => u.id === p.ubicacion_id);
+        const nCajas = (cajas || []).filter(c => c.pale_id === p.id).length;
+        html += `
+          <tr>
+            <td><strong>${p.codigo || '—'}</strong></td>
+            <td style="font-size: 13px;">${ubi ? ubi.nombre : '<span style="color: var(--muted);">Sin ubicación</span>'}</td>
+            <td>${nCajas}</td>
+            <td style="font-size: 12px; color: var(--muted);">${p.descripcion || '—'}</td>
+            <td>
+              <button class="btn btn-ghost btn-sm" onclick="mostrarModalPale(${p.id})">✏️</button>
+              <button class="btn btn-danger btn-sm" onclick="eliminarPaleAdmin(${p.id})">🗑️</button>
+            </td>
+          </tr>`;
+      }
+      html += '</tbody></table>';
+      cont.innerHTML = html;
+    }
+
+    async function mostrarModalPale(id = null) {
+      ubicaciones = await obtenerUbicaciones();
+      const selectUbi = document.getElementById('paleUbicacion');
+      selectUbi.innerHTML = '<option value="">Sin ubicación asignada</option>' +
+        ubicaciones.map(u => `<option value="${u.id}">${u.nombre}</option>`).join('');
+
+      if (id) {
+        const p = pales.find(x => x.id === id);
+        document.getElementById('tituloModalPale').textContent = 'Editar Palé';
+        document.getElementById('paleId').value = p.id;
+        document.getElementById('paleCodigo').value = p.codigo || '';
+        document.getElementById('paleUbicacion').value = p.ubicacion_id || '';
+        document.getElementById('paleDescripcion').value = p.descripcion || '';
+      } else {
+        document.getElementById('tituloModalPale').textContent = 'Nuevo Palé';
+        document.getElementById('paleId').value = '';
+        document.getElementById('paleCodigo').value = '';
+        document.getElementById('paleUbicacion').value = '';
+        document.getElementById('paleDescripcion').value = '';
+        generarCodigoPale();
+      }
+      abrirModalAdmin('modalPale');
+    }
+
+    function generarCodigoPale() {
+      const n = (pales.length + 1).toString().padStart(3, '0');
+      document.getElementById('paleCodigo').value = 'PAL-' + n;
+    }
+
+    async function guardarPale() {
+      const codigo = document.getElementById('paleCodigo').value.trim() || ('PAL-' + Date.now());
+      const ubicacion_id = parseInt(document.getElementById('paleUbicacion').value) || null;
+      const descripcion = document.getElementById('paleDescripcion').value.trim() || null;
+      const idStr = document.getElementById('paleId').value;
+
+      if (idStr) {
+        const { error } = await sb.from('pales')
+          .update({ codigo, ubicacion_id, descripcion })
+          .eq('id', parseInt(idStr));
+        if (error) { alert('❌ Error: ' + error.message); return; }
+      } else {
+        const id = Date.now();
+        const { error } = await sb.from('pales')
+          .insert({ id, codigo, ubicacion_id, descripcion });
+        if (error) { alert('❌ Error: ' + error.message); return; }
+      }
+
+      cerrarModalAdmin('modalPale');
+      toast('✅ Palé guardado');
+      await cargarPalesTabla();
+    }
+
+    async function eliminarPaleAdmin(id) {
+      const p = pales.find(x => x.id === id);
+
+      const { data: cajas } = await sb.from('cajas').select('id').eq('pale_id', id);
+      const { data: stock } = await sb.from('stock').select('id').eq('pale_id', id);
+      const usos = (cajas?.length || 0) + (stock?.length || 0);
+
+      if (usos > 0) {
+        alert(`❌ No se puede borrar "${p?.codigo}".\n\nHay ${cajas?.length || 0} caja(s) y ${stock?.length || 0} artículo(s) suelto(s) en este palé.\n\nMuévelos primero.`);
+        return;
+      }
+
+      if (!confirmar(`¿Eliminar el palé "${p?.codigo}"?`)) return;
+      const { error } = await sb.from('pales').delete().eq('id', id);
+      if (error) { toast('❌ Error al eliminar'); return; }
+      toast('✓ Palé eliminado');
+      await cargarPalesTabla();
     }
 
     // ── INIT ────────────────────────────────
