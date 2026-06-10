@@ -465,6 +465,10 @@
         <span class="icon">📦</span>
         <span>Productos</span>
       </div>
+      <div class="nav-item" onclick="mostrarPagina('ubicaciones')">
+        <span class="icon">📍</span>
+        <span>Ubicaciones</span>
+      </div>
       <div class="nav-item" onclick="mostrarPagina('importar')">
         <span class="icon">📥</span>
         <span>Importar datos</span>
@@ -560,6 +564,18 @@
       </div>
 
       <div id="productos-tabla" class="loading">Cargando...</div>
+    </section>
+
+    <!-- UBICACIONES -->
+    <section class="page" id="ubicaciones-page">
+      <div class="page-header">
+        <div>
+          <h1>UBICACIONES</h1>
+          <p>Sitios físicos del almacén (estanterías, armarios, pasillos)</p>
+        </div>
+        <button class="btn btn-primary" onclick="mostrarModalUbicacion()">➕ Nueva ubicación</button>
+      </div>
+      <div id="ubicaciones-tabla" class="loading">Cargando...</div>
     </section>
 
     <!-- IMPORTAR DATOS -->
@@ -745,6 +761,30 @@
     </div>
   </div>
 
+  <!-- MODAL UBICACIÓN -->
+  <div id="modalUbicacion" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
+      <div class="modal-header">
+        <h2 id="tituloModalUbicacion">Nueva Ubicación</h2>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="ubicacionId">
+        <div class="form-group">
+          <label>Nombre *</label>
+          <input type="text" id="ubicacionNombre" placeholder="Ej: Pasillo 3 - Estantería B">
+        </div>
+        <div class="form-group">
+          <label>Descripción (opcional)</label>
+          <textarea id="ubicacionDescripcion" rows="2" placeholder="Notas sobre esta ubicación..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModalAdmin('modalUbicacion')">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="guardarUbicacion()">💾 Guardar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL CATEGORÍAS -->
   <div id="modalCategorias" class="modal">
     <div class="modal-content" style="max-width: 600px;">
@@ -798,6 +838,7 @@
       
       if (pagina === 'dashboard') cargarDashboard();
       if (pagina === 'productos') cargarProductosTabla();
+      if (pagina === 'ubicaciones') cargarUbicacionesTabla();
     }
 
     // ── DASHBOARD ───────────────────────────
@@ -1531,6 +1572,122 @@
             ${subs ? '<div style="margin-top: 8px; margin-left: 10px;">' + subs + '</div>' : '<p style="color: var(--muted); font-size: 12px; margin-top: 6px;">Sin subcategorías</p>'}
           </div>`;
       }).join('');
+    }
+
+    // ════════════════════════════════════════
+    //  MÓDULO UBICACIONES
+    // ════════════════════════════════════════
+    let ubicaciones = [];
+
+    async function cargarUbicacionesTabla() {
+      const cont = document.getElementById('ubicaciones-tabla');
+      cont.innerHTML = '<div class="loading">Cargando...</div>';
+
+      ubicaciones = await obtenerUbicaciones();
+      // Cargamos palés y cajas para mostrar cuántos hay en cada ubicación
+      const { data: pales } = await sb.from('pales').select('id, ubicacion_id');
+      const { data: cajas } = await sb.from('cajas').select('id, ubicacion_id');
+
+      if (!ubicaciones.length) {
+        cont.innerHTML = `
+          <div class="empty">
+            <div class="empty-icon">📍</div>
+            <p>No hay ubicaciones todavía. Crea la primera con "Nueva ubicación".</p>
+          </div>`;
+        return;
+      }
+
+      let html = `
+        <table>
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Código</th>
+              <th>Palés</th>
+              <th>Cajas directas</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>`;
+
+      for (const u of ubicaciones) {
+        const nPales = (pales || []).filter(p => p.ubicacion_id === u.id).length;
+        const nCajas = (cajas || []).filter(c => c.ubicacion_id === u.id).length;
+        html += `
+          <tr>
+            <td><strong>${u.nombre}</strong>${u.descripcion ? `<br><span style="font-size:12px; color: var(--muted);">${u.descripcion}</span>` : ''}</td>
+            <td style="font-size: 12px; color: var(--muted);">${u.codigo || '—'}</td>
+            <td>${nPales}</td>
+            <td>${nCajas}</td>
+            <td>
+              <button class="btn btn-ghost btn-sm" onclick="mostrarModalUbicacion(${u.id})">✏️</button>
+              <button class="btn btn-danger btn-sm" onclick="eliminarUbicacionAdmin(${u.id})">🗑️</button>
+            </td>
+          </tr>`;
+      }
+      html += '</tbody></table>';
+      cont.innerHTML = html;
+    }
+
+    function mostrarModalUbicacion(id = null) {
+      if (id) {
+        const u = ubicaciones.find(x => x.id === id);
+        document.getElementById('tituloModalUbicacion').textContent = 'Editar Ubicación';
+        document.getElementById('ubicacionId').value = u.id;
+        document.getElementById('ubicacionNombre').value = u.nombre;
+        document.getElementById('ubicacionDescripcion').value = u.descripcion || '';
+      } else {
+        document.getElementById('tituloModalUbicacion').textContent = 'Nueva Ubicación';
+        document.getElementById('ubicacionId').value = '';
+        document.getElementById('ubicacionNombre').value = '';
+        document.getElementById('ubicacionDescripcion').value = '';
+      }
+      abrirModalAdmin('modalUbicacion');
+    }
+
+    async function guardarUbicacion() {
+      const nombre = document.getElementById('ubicacionNombre').value.trim();
+      if (!nombre) { alert('❌ El nombre es obligatorio'); return; }
+
+      const idStr = document.getElementById('ubicacionId').value;
+      const descripcion = document.getElementById('ubicacionDescripcion').value.trim() || null;
+
+      if (idStr) {
+        const { error } = await sb.from('ubicaciones')
+          .update({ nombre, descripcion })
+          .eq('id', parseInt(idStr));
+        if (error) { alert('❌ Error: ' + error.message); return; }
+      } else {
+        const id = Date.now();
+        const { error } = await sb.from('ubicaciones')
+          .insert({ id, codigo: 'UBI-' + id, nombre, descripcion });
+        if (error) { alert('❌ Error: ' + error.message); return; }
+      }
+
+      cerrarModalAdmin('modalUbicacion');
+      toast('✅ Ubicación guardada');
+      await cargarUbicacionesTabla();
+    }
+
+    async function eliminarUbicacionAdmin(id) {
+      const u = ubicaciones.find(x => x.id === id);
+
+      // Comprobar si hay palés, cajas o stock en esta ubicación
+      const { data: pales } = await sb.from('pales').select('id').eq('ubicacion_id', id);
+      const { data: cajas } = await sb.from('cajas').select('id').eq('ubicacion_id', id);
+      const { data: stock } = await sb.from('stock').select('id').eq('ubicacion_id', id);
+      const usos = (pales?.length || 0) + (cajas?.length || 0) + (stock?.length || 0);
+
+      if (usos > 0) {
+        alert(`❌ No se puede borrar "${u?.nombre}".\n\nHay ${pales?.length || 0} palé(s), ${cajas?.length || 0} caja(s) y ${stock?.length || 0} artículo(s) suelto(s) en esta ubicación.\n\nMuévelos o reasígnalos primero.`);
+        return;
+      }
+
+      if (!confirmar(`¿Eliminar la ubicación "${u?.nombre}"?`)) return;
+      const { error } = await sb.from('ubicaciones').delete().eq('id', id);
+      if (error) { toast('❌ Error al eliminar'); return; }
+      toast('✓ Ubicación eliminada');
+      await cargarUbicacionesTabla();
     }
 
     // ── INIT ────────────────────────────────
