@@ -1134,6 +1134,29 @@
       dbStatus.style.color = connected ? 'var(--success)' : 'var(--danger)';
     }
 
+    // ── HELPERS DE MIGRACIÓN ROBUSTA ────────
+    // Inserta en lotes; si un lote falla, reintenta uno a uno para aislar el fallo.
+    async function insertarLote(tabla, registros, tam = 100) {
+      let ok = 0; const fallos = [];
+      for (let i = 0; i < registros.length; i += tam) {
+        const lote = registros.slice(i, i + tam);
+        const { error } = await sb.from(tabla).insert(lote);
+        if (error) {
+          for (const reg of lote) {
+            const { error: e2 } = await sb.from(tabla).insert(reg);
+            if (e2) fallos.push(`${tabla} id ${reg.id}: ${e2.message}`); else ok++;
+          }
+        } else {
+          ok += lote.length;
+        }
+      }
+      return { ok, fallos };
+    }
+
+    // Generador de ids únicos crecientes (evita colisiones al crear muchos seguidos)
+    let _seqId = Date.now();
+    function idUnico() { return _seqId++; }
+
     // ── IMPORTAR / MIGRACIÓN v1 → v2 ────────
     // Migra SOLO el almacén (ubicaciones, palés, cajas→stock). Los productos ya están.
     async function importarAlmacen() {
@@ -1150,49 +1173,37 @@
 
       // UBICACIONES
       if (datos.ubicaciones?.length) {
-        for (const u of datos.ubicaciones) {
-          const { error } = await sb.from('ubicaciones').insert({
-            id: u.id, codigo: u.codigo || ('UBI-' + u.id), nombre: u.nombre, descripcion: u.descripcion || null
-          });
-          if (error) errores.push(`Ubicación ${u.nombre}: ${error.message}`);
-        }
-        log.push(`Ubicaciones: ${datos.ubicaciones.length}`);
+        const ubis = datos.ubicaciones.map(u => ({
+          id: u.id, codigo: u.codigo || ('UBI-' + u.id), nombre: u.nombre, descripcion: u.descripcion || null
+        }));
+        const r = await insertarLote('ubicaciones', ubis);
+        log.push(`Ubicaciones: ${r.ok}/${ubis.length}`); errores.push(...r.fallos);
       }
 
       // PALÉS
       if (datos.pales?.length) {
-        for (const pl of datos.pales) {
-          const { error } = await sb.from('pales').insert({
-            id: pl.id, codigo: pl.codigo, ubicacion_id: pl.ubicacionId || null, descripcion: pl.descripcion || null
-          });
-          if (error) errores.push(`Palé ${pl.codigo}: ${error.message}`);
-        }
-        log.push(`Palés: ${datos.pales.length}`);
+        const pls = datos.pales.map(pl => ({
+          id: pl.id, codigo: pl.codigo, ubicacion_id: pl.ubicacionId || null, descripcion: pl.descripcion || null
+        }));
+        const r = await insertarLote('pales', pls);
+        log.push(`Palés: ${r.ok}/${pls.length}`); errores.push(...r.fallos);
       }
 
       // CAJAS → contenedor + línea de stock
       if (datos.cajas?.length) {
-        let nStock = 0;
-        for (const c of datos.cajas) {
+        const cajasArr = [], stockArr = [];
+        datos.cajas.forEach(c => {
           if (c.esSuelto) {
-            const { error } = await sb.from('stock').insert({
-              id: Date.now() + Math.floor(Math.random() * 1000000),
-              variante_id: c.varianteId, cantidad: c.cantidad || 0, pale_id: c.paleId || null
-            });
-            if (error) errores.push(`Suelto ${c.codigo}: ${error.message}`); else nStock++;
+            stockArr.push({ id: idUnico(), variante_id: c.varianteId, cantidad: c.cantidad || 0, pale_id: c.paleId || null });
           } else {
-            const { error: eCaja } = await sb.from('cajas').insert({
-              id: c.id, codigo: c.codigo, pale_id: c.paleId || null, ubicacion_id: c.ubicacionId || null
-            });
-            if (eCaja) { errores.push(`Caja ${c.codigo}: ${eCaja.message}`); continue; }
-            const { error: eStock } = await sb.from('stock').insert({
-              id: Date.now() + Math.floor(Math.random() * 1000000),
-              variante_id: c.varianteId, cantidad: c.cantidad || 0, caja_id: c.id
-            });
-            if (eStock) errores.push(`Contenido de ${c.codigo}: ${eStock.message}`); else nStock++;
+            cajasArr.push({ id: c.id, codigo: c.codigo, pale_id: c.paleId || null, ubicacion_id: c.ubicacionId || null });
+            stockArr.push({ id: idUnico(), variante_id: c.varianteId, cantidad: c.cantidad || 0, caja_id: c.id });
           }
-        }
-        log.push(`Cajas: ${datos.cajas.length} (${nStock} líneas de stock)`);
+        });
+        const rc = await insertarLote('cajas', cajasArr);
+        log.push(`Cajas: ${rc.ok}/${cajasArr.length}`); errores.push(...rc.fallos);
+        const rs = await insertarLote('stock', stockArr);
+        log.push(`Stock (contenido): ${rs.ok}/${stockArr.length}`); errores.push(...rs.fallos);
       }
 
       console.log('───── MIGRACIÓN DE ALMACÉN ─────');
@@ -1228,116 +1239,80 @@
       const log = [];
       const errores = [];
 
-      // Orden IMPORTANTE para respetar las relaciones (foreign keys):
-      // categorías → productos → variantes → palés → cajas → salidas → líneas
+      // Inserción POR LOTES (robusta): construimos arrays y los metemos en bloque.
+      // Orden por relaciones: categorías → subcategorías → productos → variantes
+      // → ubicaciones → palés → cajas → stock → salidas → líneas.
 
-      // 1. CATEGORÍAS (y subcategorías)
+      // 1. CATEGORÍAS Y SUBCATEGORÍAS
       if (datos.categorias?.length) {
-        for (const cat of datos.categorias) {
-          const { error } = await sb.from('categorias').insert({
-            id: cat.id, nombre: cat.nombre
-          });
-          if (error) errores.push(`Categoría ${cat.nombre}: ${error.message}`);
+        const cats = datos.categorias.map(c => ({ id: c.id, nombre: c.nombre }));
+        const r = await insertarLote('categorias', cats);
+        log.push(`Categorías: ${r.ok}/${cats.length}`); errores.push(...r.fallos);
 
-          if (Array.isArray(cat.subcategorias)) {
-            for (const sub of cat.subcategorias) {
-              const { error: eSub } = await sb.from('subcategorias').insert({
-                id: sub.id, categoria_id: cat.id, nombre: sub.nombre
-              });
-              if (eSub) errores.push(`Subcategoría ${sub.nombre}: ${eSub.message}`);
-            }
-          }
+        const subs = [];
+        datos.categorias.forEach(c => (c.subcategorias || []).forEach(s =>
+          subs.push({ id: s.id, categoria_id: c.id, nombre: s.nombre })));
+        if (subs.length) {
+          const rs = await insertarLote('subcategorias', subs);
+          log.push(`Subcategorías: ${rs.ok}/${subs.length}`); errores.push(...rs.fallos);
         }
-        log.push(`Categorías: ${datos.categorias.length}`);
       }
 
       // 2. PRODUCTOS
       if (datos.productos?.length) {
-        for (const p of datos.productos) {
-          const { error } = await sb.from('productos').insert({
-            id: p.id,
-            nombre: p.nombre,
-            descripcion: p.descripcion || null,
-            categoria_id: p.categoriaId || null,
-            subcategoria_id: p.subcategoriaId || null,
-            foto_url: p.fotoUrl || null,
-            tiene_variantes: p.tieneVariantes || 'si',
-            stock_minimo: p.stockMinimo || 0
-          });
-          if (error) errores.push(`Producto ${p.nombre}: ${error.message}`);
-        }
-        log.push(`Productos: ${datos.productos.length}`);
+        const prods = datos.productos.map(p => ({
+          id: p.id, nombre: p.nombre, descripcion: p.descripcion || null,
+          categoria_id: p.categoriaId || null, subcategoria_id: p.subcategoriaId || null,
+          foto_url: p.fotoUrl || null, tiene_variantes: p.tieneVariantes || 'si',
+          stock_minimo: p.stockMinimo || 0
+        }));
+        const r = await insertarLote('productos', prods);
+        log.push(`Productos: ${r.ok}/${prods.length}`); errores.push(...r.fallos);
       }
 
       // 3. VARIANTES
       if (datos.variantes?.length) {
-        for (const v of datos.variantes) {
-          const { error } = await sb.from('variantes').insert({
-            id: v.id,
-            producto_id: v.productoId,
-            tipo: v.tipo || null,
-            valor: v.valor || null,
-            stock_total: v.stockTotal || 0
-          });
-          if (error) errores.push(`Variante ${v.id}: ${error.message}`);
-        }
-        log.push(`Variantes: ${datos.variantes.length}`);
+        const vars = datos.variantes.map(v => ({
+          id: v.id, producto_id: v.productoId, tipo: v.tipo || null,
+          valor: v.valor || null, stock_total: v.stockTotal || 0, stock_minimo: v.stockMinimo || 0
+        }));
+        const r = await insertarLote('variantes', vars);
+        log.push(`Variantes: ${r.ok}/${vars.length}`); errores.push(...r.fallos);
       }
 
       // 4. UBICACIONES
       if (datos.ubicaciones?.length) {
-        for (const u of datos.ubicaciones) {
-          const { error } = await sb.from('ubicaciones').insert({
-            id: u.id,
-            codigo: u.codigo || ('UBI-' + u.id),
-            nombre: u.nombre,
-            descripcion: u.descripcion || null
-          });
-          if (error) errores.push(`Ubicación ${u.nombre}: ${error.message}`);
-        }
-        log.push(`Ubicaciones: ${datos.ubicaciones.length}`);
+        const ubis = datos.ubicaciones.map(u => ({
+          id: u.id, codigo: u.codigo || ('UBI-' + u.id), nombre: u.nombre, descripcion: u.descripcion || null
+        }));
+        const r = await insertarLote('ubicaciones', ubis);
+        log.push(`Ubicaciones: ${r.ok}/${ubis.length}`); errores.push(...r.fallos);
       }
 
-      // 5. PALÉS (con ubicacion_id; antes que cajas, que los referencian)
+      // 5. PALÉS
       if (datos.pales?.length) {
-        for (const pl of datos.pales) {
-          const { error } = await sb.from('pales').insert({
-            id: pl.id,
-            codigo: pl.codigo,
-            ubicacion_id: pl.ubicacionId || null,
-            descripcion: pl.descripcion || null
-          });
-          if (error) errores.push(`Palé ${pl.codigo}: ${error.message}`);
-        }
-        log.push(`Palés: ${datos.pales.length}`);
+        const pls = datos.pales.map(pl => ({
+          id: pl.id, codigo: pl.codigo, ubicacion_id: pl.ubicacionId || null, descripcion: pl.descripcion || null
+        }));
+        const r = await insertarLote('pales', pls);
+        log.push(`Palés: ${r.ok}/${pls.length}`); errores.push(...r.fallos);
       }
 
       // 6. CAJAS → contenedor + línea de stock
       if (datos.cajas?.length) {
-        let nStock = 0;
-        for (const c of datos.cajas) {
+        const cajasArr = [], stockArr = [];
+        datos.cajas.forEach(c => {
           if (c.esSuelto) {
-            // Suelto sobre palé (sin caja física)
-            const { error } = await sb.from('stock').insert({
-              id: Date.now() + Math.floor(Math.random() * 1000000),
-              variante_id: c.varianteId, cantidad: c.cantidad || 0,
-              pale_id: c.paleId || null
-            });
-            if (error) errores.push(`Suelto ${c.codigo}: ${error.message}`); else nStock++;
+            stockArr.push({ id: idUnico(), variante_id: c.varianteId, cantidad: c.cantidad || 0, pale_id: c.paleId || null });
           } else {
-            // Caja contenedor + su contenido
-            const { error: eCaja } = await sb.from('cajas').insert({
-              id: c.id, codigo: c.codigo, pale_id: c.paleId || null, ubicacion_id: c.ubicacionId || null
-            });
-            if (eCaja) { errores.push(`Caja ${c.codigo}: ${eCaja.message}`); continue; }
-            const { error: eStock } = await sb.from('stock').insert({
-              id: Date.now() + Math.floor(Math.random() * 1000000),
-              variante_id: c.varianteId, cantidad: c.cantidad || 0, caja_id: c.id
-            });
-            if (eStock) errores.push(`Contenido de ${c.codigo}: ${eStock.message}`); else nStock++;
+            cajasArr.push({ id: c.id, codigo: c.codigo, pale_id: c.paleId || null, ubicacion_id: c.ubicacionId || null });
+            stockArr.push({ id: idUnico(), variante_id: c.varianteId, cantidad: c.cantidad || 0, caja_id: c.id });
           }
-        }
-        log.push(`Cajas: ${datos.cajas.length} (${nStock} líneas de stock)`);
+        });
+        const rc = await insertarLote('cajas', cajasArr);
+        log.push(`Cajas: ${rc.ok}/${cajasArr.length}`); errores.push(...rc.fallos);
+        const rs = await insertarLote('stock', stockArr);
+        log.push(`Stock (contenido): ${rs.ok}/${stockArr.length}`); errores.push(...rs.fallos);
       }
 
       // 6. SALIDAS (+ líneas)
