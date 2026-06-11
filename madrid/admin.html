@@ -650,16 +650,20 @@
 
       <div class="card">
         <h3>🔄 Migración de datos v1 → v2</h3>
-        <p style="margin: 12px 0;">Copia aquí el JSON exportado de la versión anterior (localStorage).</p>
+        <p style="margin: 12px 0;">Pega aquí el JSON exportado de la v1 (con el comando de la consola).</p>
         
         <div class="form-group">
           <label>Datos JSON (v1)</label>
           <textarea id="import-json" rows="10" placeholder='Pega aquí el JSON exportado de v1...'></textarea>
         </div>
 
-        <button class="btn btn-primary" onclick="importarDatos()">📥 Importar datos</button>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="importarAlmacen()">🏛️ Migrar almacén (ubicaciones, palés, cajas)</button>
+          <button class="btn btn-ghost" onclick="importarDatos()">📦 Migrar todo (desde cero)</button>
+        </div>
         <p style="font-size: 11px; color: var(--muted); margin-top: 12px;">
-          ⚠️ Esta acción es irreversible. Hacer backup antes de proceder.
+          Como tus <strong>productos ya están migrados</strong>, usa <strong>"Migrar almacén"</strong>: trae solo ubicaciones, palés y cajas con su contenido.<br>
+          "Migrar todo" es solo para empezar de cero con las tablas vacías.
         </p>
       </div>
     </section>
@@ -1131,6 +1135,78 @@
     }
 
     // ── IMPORTAR / MIGRACIÓN v1 → v2 ────────
+    // Migra SOLO el almacén (ubicaciones, palés, cajas→stock). Los productos ya están.
+    async function importarAlmacen() {
+      const json = document.getElementById('import-json').value;
+      if (!json) { toast('Pega los datos JSON primero'); return; }
+
+      let datos;
+      try { datos = JSON.parse(json); }
+      catch (e) { toast('❌ JSON inválido'); console.error(e); return; }
+
+      if (!confirmar('Esto traerá ubicaciones, palés y cajas (con su contenido) de la v1.\n\n¿Continuar?')) return;
+
+      const log = [], errores = [];
+
+      // UBICACIONES
+      if (datos.ubicaciones?.length) {
+        for (const u of datos.ubicaciones) {
+          const { error } = await sb.from('ubicaciones').insert({
+            id: u.id, codigo: u.codigo || ('UBI-' + u.id), nombre: u.nombre, descripcion: u.descripcion || null
+          });
+          if (error) errores.push(`Ubicación ${u.nombre}: ${error.message}`);
+        }
+        log.push(`Ubicaciones: ${datos.ubicaciones.length}`);
+      }
+
+      // PALÉS
+      if (datos.pales?.length) {
+        for (const pl of datos.pales) {
+          const { error } = await sb.from('pales').insert({
+            id: pl.id, codigo: pl.codigo, ubicacion_id: pl.ubicacionId || null, descripcion: pl.descripcion || null
+          });
+          if (error) errores.push(`Palé ${pl.codigo}: ${error.message}`);
+        }
+        log.push(`Palés: ${datos.pales.length}`);
+      }
+
+      // CAJAS → contenedor + línea de stock
+      if (datos.cajas?.length) {
+        let nStock = 0;
+        for (const c of datos.cajas) {
+          if (c.esSuelto) {
+            const { error } = await sb.from('stock').insert({
+              id: Date.now() + Math.floor(Math.random() * 1000000),
+              variante_id: c.varianteId, cantidad: c.cantidad || 0, pale_id: c.paleId || null
+            });
+            if (error) errores.push(`Suelto ${c.codigo}: ${error.message}`); else nStock++;
+          } else {
+            const { error: eCaja } = await sb.from('cajas').insert({
+              id: c.id, codigo: c.codigo, pale_id: c.paleId || null, ubicacion_id: c.ubicacionId || null
+            });
+            if (eCaja) { errores.push(`Caja ${c.codigo}: ${eCaja.message}`); continue; }
+            const { error: eStock } = await sb.from('stock').insert({
+              id: Date.now() + Math.floor(Math.random() * 1000000),
+              variante_id: c.varianteId, cantidad: c.cantidad || 0, caja_id: c.id
+            });
+            if (eStock) errores.push(`Contenido de ${c.codigo}: ${eStock.message}`); else nStock++;
+          }
+        }
+        log.push(`Cajas: ${datos.cajas.length} (${nStock} líneas de stock)`);
+      }
+
+      console.log('───── MIGRACIÓN DE ALMACÉN ─────');
+      log.forEach(l => console.log('✓ ' + l));
+      if (errores.length) {
+        console.warn(`⚠️ ${errores.length} avisos:`);
+        errores.forEach(e => console.warn('  - ' + e));
+        toast(`Almacén migrado con ${errores.length} avisos (ver consola)`);
+      } else {
+        toast('✅ Almacén migrado sin errores');
+      }
+      setTimeout(() => location.reload(), 2500);
+    }
+
     async function importarDatos() {
       const json = document.getElementById('import-json').value;
       if (!json) {
@@ -1208,13 +1284,27 @@
         log.push(`Variantes: ${datos.variantes.length}`);
       }
 
-      // 4. PALÉS (antes que cajas, porque las cajas los referencian)
+      // 4. UBICACIONES
+      if (datos.ubicaciones?.length) {
+        for (const u of datos.ubicaciones) {
+          const { error } = await sb.from('ubicaciones').insert({
+            id: u.id,
+            codigo: u.codigo || ('UBI-' + u.id),
+            nombre: u.nombre,
+            descripcion: u.descripcion || null
+          });
+          if (error) errores.push(`Ubicación ${u.nombre}: ${error.message}`);
+        }
+        log.push(`Ubicaciones: ${datos.ubicaciones.length}`);
+      }
+
+      // 5. PALÉS (con ubicacion_id; antes que cajas, que los referencian)
       if (datos.pales?.length) {
         for (const pl of datos.pales) {
           const { error } = await sb.from('pales').insert({
             id: pl.id,
             codigo: pl.codigo,
-            ubicacion: pl.ubicacion || null,
+            ubicacion_id: pl.ubicacionId || null,
             descripcion: pl.descripcion || null
           });
           if (error) errores.push(`Palé ${pl.codigo}: ${error.message}`);
@@ -1222,20 +1312,32 @@
         log.push(`Palés: ${datos.pales.length}`);
       }
 
-      // 5. CAJAS
+      // 6. CAJAS → contenedor + línea de stock
       if (datos.cajas?.length) {
+        let nStock = 0;
         for (const c of datos.cajas) {
-          const { error } = await sb.from('cajas').insert({
-            id: c.id,
-            variante_id: c.varianteId,
-            codigo: c.codigo,
-            cantidad: c.cantidad || 0,
-            pale_id: c.paleId || null,
-            es_suelto: c.esSuelto || false
-          });
-          if (error) errores.push(`Caja ${c.codigo}: ${error.message}`);
+          if (c.esSuelto) {
+            // Suelto sobre palé (sin caja física)
+            const { error } = await sb.from('stock').insert({
+              id: Date.now() + Math.floor(Math.random() * 1000000),
+              variante_id: c.varianteId, cantidad: c.cantidad || 0,
+              pale_id: c.paleId || null
+            });
+            if (error) errores.push(`Suelto ${c.codigo}: ${error.message}`); else nStock++;
+          } else {
+            // Caja contenedor + su contenido
+            const { error: eCaja } = await sb.from('cajas').insert({
+              id: c.id, codigo: c.codigo, pale_id: c.paleId || null, ubicacion_id: c.ubicacionId || null
+            });
+            if (eCaja) { errores.push(`Caja ${c.codigo}: ${eCaja.message}`); continue; }
+            const { error: eStock } = await sb.from('stock').insert({
+              id: Date.now() + Math.floor(Math.random() * 1000000),
+              variante_id: c.varianteId, cantidad: c.cantidad || 0, caja_id: c.id
+            });
+            if (eStock) errores.push(`Contenido de ${c.codigo}: ${eStock.message}`); else nStock++;
+          }
         }
-        log.push(`Cajas: ${datos.cajas.length}`);
+        log.push(`Cajas: ${datos.cajas.length} (${nStock} líneas de stock)`);
       }
 
       // 6. SALIDAS (+ líneas)
