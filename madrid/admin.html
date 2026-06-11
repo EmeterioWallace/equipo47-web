@@ -477,6 +477,10 @@
         <span class="icon">🗃️</span>
         <span>Cajas</span>
       </div>
+      <div class="nav-item" onclick="mostrarPagina('sueltos')">
+        <span class="icon">🧺</span>
+        <span>Sueltos</span>
+      </div>
       <div class="nav-item" onclick="mostrarPagina('importar')">
         <span class="icon">📥</span>
         <span>Importar datos</span>
@@ -621,6 +625,18 @@
       </div>
 
       <div id="cajas-tabla" class="loading">Cargando...</div>
+    </section>
+
+    <!-- SUELTOS -->
+    <section class="page" id="sueltos-page">
+      <div class="page-header">
+        <div>
+          <h1>MATERIAL SUELTO</h1>
+          <p>Stock sin caja — colocado directamente en un palé o en una ubicación (ej. un carro voluminoso)</p>
+        </div>
+        <button class="btn btn-primary" onclick="mostrarModalSuelto()">➕ Colocar material</button>
+      </div>
+      <div id="sueltos-tabla" class="loading">Cargando...</div>
     </section>
 
     <!-- IMPORTAR DATOS -->
@@ -961,6 +977,63 @@
     </div>
   </div>
 
+  <!-- MODAL SUELTO (material sin caja) -->
+  <div id="modalSuelto" class="modal">
+    <div class="modal-content" style="max-width: 520px;">
+      <div class="modal-header">
+        <h2 id="tituloModalSuelto">Colocar material suelto</h2>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="sueltoId">
+        <div class="form-group">
+          <label>Producto *</label>
+          <select id="sueltoProducto" onchange="cargarVariantesSuelto()">
+            <option value="">Seleccionar producto...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Variante *</label>
+          <select id="sueltoVariante" onchange="mostrarDisponibleSuelto()">
+            <option value="">Seleccionar variante...</option>
+          </select>
+        </div>
+        <div id="infoDisponibleSuelto" style="display:none; background: var(--card); padding: 10px 12px; border-radius: 8px; margin-bottom: 14px; font-size: 13px;">
+          Disponible sin organizar: <strong id="dispSuelto" style="color: var(--accent);">0</strong> uds
+        </div>
+        <div class="form-group">
+          <label>Cantidad *</label>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <input type="number" id="sueltoCantidad" min="1" placeholder="Cantidad" style="flex: 1;">
+            <button type="button" class="btn btn-success btn-small" onclick="llenarMaximoSuelto()">MAX</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>¿Dónde se coloca? *</label>
+          <select id="sueltoDestinoTipo" onchange="toggleDestinoSuelto()">
+            <option value="pale">Sobre un palé</option>
+            <option value="ubicacion">Directo en una ubicación (estantería/armario)</option>
+          </select>
+        </div>
+        <div class="form-group" id="grupoSueltoPale">
+          <label>Palé</label>
+          <select id="sueltoPale"><option value="">Seleccionar palé...</option></select>
+        </div>
+        <div class="form-group" id="grupoSueltoUbicacion" style="display:none;">
+          <label>Ubicación</label>
+          <select id="sueltoUbicacion"><option value="">Seleccionar ubicación...</option></select>
+        </div>
+        <div class="form-group">
+          <label>Nota (opcional)</label>
+          <input type="text" id="sueltoDescripcion" placeholder="Ej: carro voluminoso">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModalAdmin('modalSuelto')">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="guardarSuelto()">💾 Guardar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL CATEGORÍAS -->
   <div id="modalCategorias" class="modal">
     <div class="modal-content" style="max-width: 600px;">
@@ -1017,6 +1090,7 @@
       if (pagina === 'ubicaciones') cargarUbicacionesTabla();
       if (pagina === 'pales') cargarPalesTabla();
       if (pagina === 'cajas') cargarCajasTabla();
+      if (pagina === 'sueltos') cargarSueltosTabla();
     }
 
     // ── DASHBOARD ───────────────────────────
@@ -2402,6 +2476,224 @@
       if (error) { toast('❌ Error'); return; }
       toast('✓ Artículo quitado');
       await cargarCajasTabla();
+    }
+
+    // ════════════════════════════════════════
+    //  MÓDULO MATERIAL SUELTO (stock sin caja)
+    // ════════════════════════════════════════
+    async function cargarSueltosTabla() {
+      const cont = document.getElementById('sueltos-tabla');
+      cont.innerHTML = '<div class="loading">Cargando...</div>';
+
+      const r = await sb.from('stock').select('*');
+      stockItems = r.data || [];
+      productos = await obtenerProductos();
+      variantes = await obtenerVariantes();
+      pales = await obtenerPales();
+      ubicaciones = await obtenerUbicaciones();
+
+      renderSueltos();
+    }
+
+    function ubicacionFisicaSuelto(s) {
+      if (s.pale_id) {
+        const pale = pales.find(p => p.id === s.pale_id);
+        if (pale) {
+          const ubi = ubicaciones.find(u => u.id === pale.ubicacion_id);
+          return `🏛️ ${pale.codigo}${ubi ? ` › ${ubi.nombre}` : ''}`;
+        }
+        return '🏛️ Palé';
+      }
+      if (s.ubicacion_id) {
+        const ubi = ubicaciones.find(u => u.id === s.ubicacion_id);
+        return `📍 ${ubi ? ubi.nombre : 'Ubicación'}`;
+      }
+      return '—';
+    }
+
+    function renderSueltos() {
+      const cont = document.getElementById('sueltos-tabla');
+      // Sueltos = stock sin caja, colocado en palé o ubicación
+      const sueltos = stockItems.filter(s => !s.caja_id && (s.pale_id || s.ubicacion_id));
+
+      if (!sueltos.length) {
+        cont.innerHTML = `
+          <div class="empty">
+            <div class="empty-icon">🧺</div>
+            <p>No hay material suelto. Usa "Colocar material" para poner algo directamente en un palé o ubicación sin caja.</p>
+          </div>`;
+        return;
+      }
+
+      let html = `
+        <table>
+          <thead>
+            <tr>
+              <th>Artículo</th>
+              <th>Cantidad</th>
+              <th>Dónde está</th>
+              <th>Nota</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>`;
+      for (const s of sueltos) {
+        html += `
+          <tr>
+            <td><strong>${nombreVarianteCompleto(s.variante_id)}</strong></td>
+            <td><span class="badge badge-success">${s.cantidad} uds</span></td>
+            <td style="font-size: 13px;">${ubicacionFisicaSuelto(s)}</td>
+            <td style="font-size: 12px; color: var(--muted);">${s.descripcion || '—'}</td>
+            <td>
+              <button class="btn btn-ghost btn-sm" onclick="mostrarModalSuelto(${s.id})">✏️</button>
+              <button class="btn btn-danger btn-sm" onclick="eliminarSuelto(${s.id})">🗑️</button>
+            </td>
+          </tr>`;
+      }
+      html += '</tbody></table>';
+      cont.innerHTML = html;
+    }
+
+    async function mostrarModalSuelto(id = null) {
+      // Asegurar datos cargados
+      if (!productos.length) productos = await obtenerProductos();
+      if (!variantes.length) variantes = await obtenerVariantes();
+      pales = await obtenerPales();
+      ubicaciones = await obtenerUbicaciones();
+      const r = await sb.from('stock').select('*');
+      stockItems = r.data || [];
+
+      // Rellenar selects de destino
+      document.getElementById('sueltoPale').innerHTML = '<option value="">Seleccionar palé...</option>' +
+        pales.map(p => {
+          const ubi = ubicaciones.find(u => u.id === p.ubicacion_id);
+          return `<option value="${p.id}">${p.codigo}${ubi ? ` (${ubi.nombre})` : ''}</option>`;
+        }).join('');
+      document.getElementById('sueltoUbicacion').innerHTML = '<option value="">Seleccionar ubicación...</option>' +
+        ubicaciones.map(u => `<option value="${u.id}">${u.nombre}</option>`).join('');
+
+      // Productos
+      document.getElementById('sueltoProducto').innerHTML = '<option value="">Seleccionar producto...</option>' +
+        productos.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+
+      document.getElementById('sueltoCantidad').value = '';
+      document.getElementById('infoDisponibleSuelto').style.display = 'none';
+
+      if (id) {
+        const s = stockItems.find(x => x.id === id);
+        const v = variantes.find(x => x.id === s.variante_id);
+        document.getElementById('tituloModalSuelto').textContent = 'Editar material suelto';
+        document.getElementById('sueltoId').value = s.id;
+        document.getElementById('sueltoProducto').value = v.producto_id;
+        cargarVariantesSuelto();
+        document.getElementById('sueltoVariante').value = v.id;
+        document.getElementById('sueltoCantidad').value = s.cantidad;
+        document.getElementById('sueltoDescripcion').value = s.descripcion || '';
+        if (s.ubicacion_id && !s.pale_id) {
+          document.getElementById('sueltoDestinoTipo').value = 'ubicacion';
+          document.getElementById('sueltoUbicacion').value = s.ubicacion_id;
+        } else {
+          document.getElementById('sueltoDestinoTipo').value = 'pale';
+          document.getElementById('sueltoPale').value = s.pale_id || '';
+        }
+        mostrarDisponibleSuelto();
+      } else {
+        document.getElementById('tituloModalSuelto').textContent = 'Colocar material suelto';
+        document.getElementById('sueltoId').value = '';
+        document.getElementById('sueltoProducto').value = '';
+        document.getElementById('sueltoVariante').innerHTML = '<option value="">Seleccionar variante...</option>';
+        document.getElementById('sueltoDescripcion').value = '';
+        document.getElementById('sueltoDestinoTipo').value = 'pale';
+        document.getElementById('sueltoPale').value = '';
+        document.getElementById('sueltoUbicacion').value = '';
+      }
+      toggleDestinoSuelto();
+      abrirModalAdmin('modalSuelto');
+    }
+
+    function cargarVariantesSuelto() {
+      const prodId = parseInt(document.getElementById('sueltoProducto').value);
+      const sel = document.getElementById('sueltoVariante');
+      const vars = variantes.filter(v => v.producto_id === prodId);
+      sel.innerHTML = '<option value="">Seleccionar variante...</option>' +
+        vars.map(v => {
+          const etiqueta = (v.tipo === 'Unidad' && v.valor === 'Estándar') ? 'Producto simple' : `${v.tipo}: ${v.valor}`;
+          return `<option value="${v.id}">${etiqueta}</option>`;
+        }).join('');
+      document.getElementById('infoDisponibleSuelto').style.display = 'none';
+    }
+
+    function mostrarDisponibleSuelto() {
+      const varId = parseInt(document.getElementById('sueltoVariante').value);
+      if (!varId) { document.getElementById('infoDisponibleSuelto').style.display = 'none'; return; }
+      const excluir = parseInt(document.getElementById('sueltoId').value) || null;
+      const disp = calcularDisponible(varId, excluir);
+      document.getElementById('dispSuelto').textContent = disp;
+      document.getElementById('infoDisponibleSuelto').style.display = 'block';
+      document.getElementById('sueltoCantidad').setAttribute('data-max', disp);
+    }
+
+    function llenarMaximoSuelto() {
+      const max = parseInt(document.getElementById('sueltoCantidad').getAttribute('data-max'));
+      if (isNaN(max) || max <= 0) { alert('⚠️ No hay stock disponible sin organizar de esta variante'); return; }
+      document.getElementById('sueltoCantidad').value = max;
+    }
+
+    function toggleDestinoSuelto() {
+      const tipo = document.getElementById('sueltoDestinoTipo').value;
+      document.getElementById('grupoSueltoPale').style.display = tipo === 'pale' ? 'block' : 'none';
+      document.getElementById('grupoSueltoUbicacion').style.display = tipo === 'ubicacion' ? 'block' : 'none';
+    }
+
+    async function guardarSuelto() {
+      const varId = parseInt(document.getElementById('sueltoVariante').value);
+      const cantidad = parseInt(document.getElementById('sueltoCantidad').value);
+      const tipo = document.getElementById('sueltoDestinoTipo').value;
+      const descripcion = document.getElementById('sueltoDescripcion').value.trim() || null;
+      const idStr = document.getElementById('sueltoId').value;
+
+      if (!varId) { alert('❌ Selecciona una variante'); return; }
+      if (!cantidad || cantidad <= 0) { alert('❌ Indica una cantidad válida'); return; }
+
+      let pale_id = null, ubicacion_id = null;
+      if (tipo === 'pale') {
+        pale_id = parseInt(document.getElementById('sueltoPale').value) || null;
+        if (!pale_id) { alert('❌ Selecciona un palé'); return; }
+      } else {
+        ubicacion_id = parseInt(document.getElementById('sueltoUbicacion').value) || null;
+        if (!ubicacion_id) { alert('❌ Selecciona una ubicación'); return; }
+      }
+
+      const excluir = parseInt(idStr) || null;
+      const disp = calcularDisponible(varId, excluir);
+      if (cantidad > disp) {
+        alert(`❌ Solo hay ${disp} uds disponibles sin organizar de esta variante.\n\nNo puedes colocar ${cantidad}.`);
+        return;
+      }
+
+      if (idStr) {
+        const { error } = await sb.from('stock')
+          .update({ variante_id: varId, cantidad, pale_id, ubicacion_id, descripcion, caja_id: null })
+          .eq('id', parseInt(idStr));
+        if (error) { alert('❌ Error: ' + error.message); return; }
+      } else {
+        const id = Date.now() + Math.floor(Math.random() * 100000);
+        const { error } = await sb.from('stock')
+          .insert({ id, variante_id: varId, cantidad, pale_id, ubicacion_id, descripcion, caja_id: null });
+        if (error) { alert('❌ Error: ' + error.message); return; }
+      }
+
+      cerrarModalAdmin('modalSuelto');
+      toast('✅ Material colocado');
+      await cargarSueltosTabla();
+    }
+
+    async function eliminarSuelto(id) {
+      if (!confirmar('¿Quitar este material suelto? El stock volverá a quedar sin organizar.')) return;
+      const { error } = await sb.from('stock').delete().eq('id', id);
+      if (error) { toast('❌ Error'); return; }
+      toast('✓ Material quitado');
+      await cargarSueltosTabla();
     }
 
     // ── INIT ────────────────────────────────
