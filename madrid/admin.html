@@ -578,6 +578,17 @@
             <option value="">Todas las subcategorías</option>
           </select>
         </div>
+        <div class="form-group">
+          <label>Ordenar por</label>
+          <select id="ordenProductos" onchange="renderProductos()">
+            <option value="nombre-az">Nombre (A → Z)</option>
+            <option value="nombre-za">Nombre (Z → A)</option>
+            <option value="reciente">Más recientes primero</option>
+            <option value="antiguo">Más antiguos primero</option>
+            <option value="stock-asc">Menos stock primero</option>
+            <option value="stock-desc">Más stock primero</option>
+          </select>
+        </div>
       </div>
 
       <div id="productos-tabla" class="loading">Cargando...</div>
@@ -650,21 +661,29 @@
 
       <div class="card">
         <h3>🔄 Migración de datos v1 → v2</h3>
-        <p style="margin: 12px 0;">Pega aquí el JSON exportado de la v1 (con el comando de la consola).</p>
-        
-        <div class="form-group">
-          <label>Datos JSON (v1)</label>
-          <textarea id="import-json" rows="10" placeholder='Pega aquí el JSON exportado de v1...'></textarea>
-        </div>
-
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <button class="btn btn-primary" onclick="importarAlmacen()">🏛️ Migrar almacén (ubicaciones, palés, cajas)</button>
-          <button class="btn btn-ghost" onclick="importarDatos()">📦 Migrar todo (desde cero)</button>
-        </div>
-        <p style="font-size: 11px; color: var(--muted); margin-top: 12px;">
-          Como tus <strong>productos ya están migrados</strong>, usa <strong>"Migrar almacén"</strong>: trae solo ubicaciones, palés y cajas con su contenido.<br>
-          "Migrar todo" es solo para empezar de cero con las tablas vacías.
+        <p style="color: var(--success); margin: 10px 0;">✓ La migración ya se realizó. Normalmente no necesitas volver a usar esto.</p>
+        <p style="font-size: 13px; color: var(--muted); margin: 10px 0;">
+          Estas herramientas <strong>sobrescriben datos</strong> y solo sirven para migrar desde la v1 o recargar todo desde cero. Si no es tu caso, déjalas como están.
         </p>
+        <button class="btn btn-ghost btn-sm" onclick="toggleMigracion()">🔧 Mostrar herramientas de migración</button>
+
+        <div id="bloqueMigracion" style="display:none; margin-top:16px; padding-top:16px; border-top:1px solid var(--border);">
+          <div class="form-group">
+            <label>Datos JSON (exportados de la v1)</label>
+            <textarea id="import-json" rows="10" placeholder='Pega aquí el JSON exportado de v1...'></textarea>
+          </div>
+          <button class="btn btn-primary" onclick="importarDatos()">📦 Migrar todo (desde cero)</button>
+          <p style="font-size: 11px; color: var(--muted); margin-top: 12px;">
+            Trae <strong>todo</strong> de una vez: productos, variantes, categorías, ubicaciones, palés y cajas con su contenido. Requiere haber vaciado antes las tablas.
+          </p>
+          <details style="margin-top:14px;">
+            <summary style="cursor:pointer; font-size:12px; color: var(--muted);">Opción avanzada: migrar solo el almacén</summary>
+            <div style="margin-top:10px;">
+              <button class="btn btn-ghost btn-sm" onclick="importarAlmacen()">🏛️ Migrar solo almacén</button>
+              <p style="font-size:11px; color: var(--muted); margin-top:8px;">Trae solo ubicaciones, palés y cajas (no toca productos). Úsalo únicamente si los productos ya están migrados.</p>
+            </div>
+          </details>
+        </div>
       </div>
     </section>
 
@@ -1157,6 +1176,11 @@
     let _seqId = Date.now();
     function idUnico() { return _seqId++; }
 
+    function toggleMigracion() {
+      const b = document.getElementById('bloqueMigracion');
+      b.style.display = b.style.display === 'none' ? 'block' : 'none';
+    }
+
     // ── IMPORTAR / MIGRACIÓN v1 → v2 ────────
     // Migra SOLO el almacén (ubicaciones, palés, cajas→stock). Los productos ya están.
     async function importarAlmacen() {
@@ -1452,6 +1476,21 @@
       }
       if (catId) lista = lista.filter(p => String(p.categoria_id) === String(catId));
       if (subId) lista = lista.filter(p => String(p.subcategoria_id) === String(subId));
+
+      // Ordenación
+      const orden = document.getElementById('ordenProductos').value;
+      const stockDe = p => variantes.filter(v => v.producto_id === p.id).reduce((s, v) => s + (v.stock_total || 0), 0);
+      lista.sort((a, b) => {
+        switch (orden) {
+          case 'nombre-az': return (a.nombre || '').localeCompare(b.nombre || '', 'es', { sensitivity: 'base' });
+          case 'nombre-za': return (b.nombre || '').localeCompare(a.nombre || '', 'es', { sensitivity: 'base' });
+          case 'reciente': return (b.id || 0) - (a.id || 0);
+          case 'antiguo': return (a.id || 0) - (b.id || 0);
+          case 'stock-asc': return stockDe(a) - stockDe(b);
+          case 'stock-desc': return stockDe(b) - stockDe(a);
+          default: return 0;
+        }
+      });
 
       if (!lista.length) {
         cont.innerHTML = `
