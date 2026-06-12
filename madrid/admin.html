@@ -3185,17 +3185,17 @@
           : '<p style="color: var(--muted); font-size: 13px; padding: 8px 12px;">Sin artículos todavía</p>';
 
         // Botones de acción según estado
-        let acciones = '';
+        let acciones = `<button class="btn btn-ghost btn-small" onclick="generarAlbaran(${s.id})">🖨️ Albarán</button> `;
         if (s.estado === 'preparando') {
-          acciones = `
+          acciones += `
             <button class="btn btn-success btn-small" onclick="mostrarModalLineaSalida(${s.id})">+ Añadir artículo</button>
             <button class="btn btn-primary btn-small" onclick="finalizarSalida(${s.id})">✓ Finalizar (marcar como fuera)</button>`;
         } else if (s.estado === 'fuera') {
-          acciones = `
+          acciones += `
             <button class="btn btn-success btn-small" onclick="mostrarModalLineaSalida(${s.id})">+ Añadir artículo</button>
             <button class="btn btn-primary btn-small" onclick="registrarDevolucion(${s.id})">↩️ Registrar devolución</button>`;
         } else {
-          acciones = `<span style="font-size:12px; color:var(--muted);">Devuelta el ${fechaCorta(s.fecha_devolucion_real)}</span>`;
+          acciones += `<span style="font-size:12px; color:var(--muted);">Devuelta el ${fechaCorta(s.fecha_devolucion_real)}</span>`;
         }
 
         html += `<tr id="contenido-salida-${s.id}" style="display:none;">
@@ -3412,6 +3412,98 @@
       if (error) { toast('❌ Error'); return; }
       toast('✅ Devolución registrada');
       await cargarSalidasTabla();
+    }
+
+    // ── ALBARÁN IMPRIMIBLE (Fase 2) ─────────
+    function ubicacionesDeVariante(varianteId) {
+      const items = stockItems.filter(s => s.variante_id === varianteId);
+      if (!items.length) return ['<em>sin ubicar en el almacén</em>'];
+      return items.map(s => {
+        if (s.caja_id) {
+          const c = cajas.find(x => x.id === s.caja_id);
+          const donde = c ? ubicacionFisicaCaja(c).replace(/<[^>]*>/g, '') : '';
+          return `${s.cantidad} en caja <strong>${c ? c.codigo : '?'}</strong> ${donde ? '(' + donde + ')' : ''}`;
+        }
+        if (s.pale_id) { const p = pales.find(x => x.id === s.pale_id); return `${s.cantidad} suelto en palé <strong>${p ? p.codigo : '?'}</strong>`; }
+        if (s.ubicacion_id) { const u = ubicaciones.find(x => x.id === s.ubicacion_id); return `${s.cantidad} suelto en <strong>${u ? u.nombre : '?'}</strong>`; }
+        return `${s.cantidad} sin ubicar`;
+      });
+    }
+
+    async function generarAlbaran(salidaId) {
+      // Cargar datos de almacén para saber dónde está cada cosa
+      stockItems = (await sb.from('stock').select('*')).data || [];
+      cajas = (await sb.from('cajas').select('*')).data || [];
+      pales = await obtenerPales();
+      ubicaciones = await obtenerUbicaciones();
+      if (!variantes.length) variantes = await obtenerVariantes();
+      if (!productos.length) productos = await obtenerProductos();
+
+      const s = salidas.find(x => x.id === salidaId);
+      const lineas = salidaLineas.filter(l => l.salida_id === salidaId);
+      if (!lineas.length) { alert('Esta salida no tiene artículos todavía'); return; }
+
+      const totalUds = lineas.reduce((a, l) => a + (l.cantidad || 0), 0);
+      const tipoTxt = s.tipo === 'prestamo' ? 'Préstamo' : 'Material a evento';
+
+      const filas = lineas.map(l => {
+        const ubis = ubicacionesDeVariante(l.variante_id).join('<br>');
+        return `<tr>
+          <td style="text-align:center; font-size:18px;">☐</td>
+          <td><strong>${nombreVarianteCompleto(l.variante_id)}</strong></td>
+          <td style="text-align:center; font-size:18px; font-weight:bold;">${l.cantidad}</td>
+          <td style="font-size:12px; color:#555;">${ubis}</td>
+        </tr>`;
+      }).join('');
+
+      const hoy = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+
+      const htmlAlbaran = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+        <title>Albarán — ${s.evento || 'Salida'}</title>
+        <style>
+          * { box-sizing: border-box; }
+          body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; padding: 30px; max-width: 800px; margin: 0 auto; }
+          h1 { font-size: 24px; margin: 0 0 4px; }
+          .sub { color: #666; font-size: 13px; margin-bottom: 20px; }
+          .datos { display: flex; flex-wrap: wrap; gap: 8px 32px; background: #f4f4f5; padding: 16px; border-radius: 8px; margin-bottom: 24px; font-size: 14px; }
+          .datos div { min-width: 180px; }
+          .datos strong { display: block; font-size: 11px; text-transform: uppercase; color: #888; letter-spacing: 0.5px; margin-bottom: 2px; }
+          table { width: 100%; border-collapse: collapse; }
+          th { background: #1a1a1a; color: #fff; padding: 10px 8px; text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+          td { padding: 10px 8px; border-bottom: 1px solid #ddd; vertical-align: top; }
+          .total { margin-top: 16px; text-align: right; font-size: 15px; }
+          .pie { margin-top: 40px; color: #999; font-size: 11px; border-top: 1px solid #ddd; padding-top: 12px; }
+          .firma { margin-top: 50px; display: flex; gap: 60px; }
+          .firma div { flex: 1; border-top: 1px solid #999; padding-top: 6px; font-size: 12px; color: #666; }
+          @media print { body { padding: 0; } button { display: none; } }
+        </style></head><body>
+        <button onclick="window.print()" style="float:right; padding:10px 18px; background:#1a1a1a; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:14px;">🖨️ Imprimir</button>
+        <h1>Albarán de salida</h1>
+        <div class="sub">Equipo 47 · Almacén Madrid · Generado el ${hoy}</div>
+        <div class="datos">
+          <div><strong>Evento / Destino</strong>${s.evento || '—'}</div>
+          <div><strong>Tipo</strong>${tipoTxt}</div>
+          <div><strong>${s.tipo === 'prestamo' ? 'Prestado a' : 'Responsable'}</strong>${s.destinatario || '—'}</div>
+          <div><strong>Fecha de salida</strong>${s.fecha_salida ? new Date(s.fecha_salida + 'T00:00:00').toLocaleDateString('es-ES') : '—'}</div>
+          <div><strong>Devolución prevista</strong>${s.fecha_devolucion ? new Date(s.fecha_devolucion + 'T00:00:00').toLocaleDateString('es-ES') : '—'}</div>
+        </div>
+        ${s.notas ? `<p style="font-size:13px; background:#fffbe6; padding:10px 14px; border-radius:6px; border-left:3px solid #f0c000;">📝 ${s.notas}</p>` : ''}
+        <table>
+          <thead><tr><th style="width:30px;"></th><th>Artículo</th><th style="width:70px; text-align:center;">Cant.</th><th style="width:300px;">Dónde encontrarlo</th></tr></thead>
+          <tbody>${filas}</tbody>
+        </table>
+        <div class="total"><strong>${lineas.length}</strong> artículos · <strong>${totalUds}</strong> unidades en total</div>
+        <div class="firma">
+          <div>Preparado por</div>
+          <div>Recibido por</div>
+        </div>
+        <div class="pie">Documento generado automáticamente desde el sistema de inventario · Equipo 47</div>
+        </body></html>`;
+
+      const win = window.open('', '_blank');
+      if (!win) { alert('Permite las ventanas emergentes para ver el albarán'); return; }
+      win.document.write(htmlAlbaran);
+      win.document.close();
     }
 
     // ── INIT ────────────────────────────────
