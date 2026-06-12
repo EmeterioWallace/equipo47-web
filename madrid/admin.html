@@ -707,18 +707,24 @@
 
         <div id="bloqueMigracion" style="display:none; margin-top:16px; padding-top:16px; border-top:1px solid var(--border);">
           <div class="form-group">
-            <label>Datos JSON (exportados de la v1)</label>
-            <textarea id="import-json" rows="10" placeholder='Pega aquí el JSON exportado de v1...'></textarea>
+            <label>Datos JSON</label>
+            <textarea id="import-json" rows="10" placeholder='Pega aquí el JSON...'></textarea>
           </div>
-          <button class="btn btn-primary" onclick="importarDatos()">📦 Migrar todo (desde cero)</button>
+          <button class="btn btn-success" onclick="importarProductos()">➕ Añadir productos (sin borrar nada)</button>
           <p style="font-size: 11px; color: var(--muted); margin-top: 12px;">
-            Trae <strong>todo</strong> de una vez: productos, variantes, categorías, ubicaciones, palés y cajas con su contenido. Requiere haber vaciado antes las tablas.
+            <strong>Lo más seguro y habitual.</strong> Añade categorías, productos y variantes del JSON a lo que ya tienes, sin tocar ni borrar nada. Para importar zapatillas u otros lotes de productos.
           </p>
           <details style="margin-top:14px;">
-            <summary style="cursor:pointer; font-size:12px; color: var(--muted);">Opción avanzada: migrar solo el almacén</summary>
-            <div style="margin-top:10px;">
-              <button class="btn btn-ghost btn-sm" onclick="importarAlmacen()">🏛️ Migrar solo almacén</button>
-              <p style="font-size:11px; color: var(--muted); margin-top:8px;">Trae solo ubicaciones, palés y cajas (no toca productos). Úsalo únicamente si los productos ya están migrados.</p>
+            <summary style="cursor:pointer; font-size:12px; color: var(--muted);">Opciones avanzadas (migración completa)</summary>
+            <div style="margin-top:10px; display:flex; flex-direction:column; gap:12px;">
+              <div>
+                <button class="btn btn-ghost btn-sm" onclick="importarDatos()">📦 Migrar todo (desde cero)</button>
+                <p style="font-size:11px; color: var(--muted); margin-top:8px;">Trae todo de una vez (productos + almacén). Requiere haber vaciado antes las tablas. Solo para empezar de cero.</p>
+              </div>
+              <div>
+                <button class="btn btn-ghost btn-sm" onclick="importarAlmacen()">🏛️ Migrar solo almacén</button>
+                <p style="font-size:11px; color: var(--muted); margin-top:8px;">Trae solo ubicaciones, palés y cajas (no toca productos).</p>
+              </div>
             </div>
           </details>
         </div>
@@ -1428,6 +1434,63 @@
     function toggleMigracion() {
       const b = document.getElementById('bloqueMigracion');
       b.style.display = b.style.display === 'none' ? 'block' : 'none';
+    }
+
+    // Añade categorías, productos y variantes SIN borrar nada de lo existente.
+    async function importarProductos() {
+      const json = document.getElementById('import-json').value;
+      if (!json) { toast('Pega los datos JSON primero'); return; }
+      let datos;
+      try { datos = JSON.parse(json); }
+      catch (e) { toast('❌ JSON inválido'); console.error(e); return; }
+
+      const nP = datos.productos?.length || 0;
+      const nV = datos.variantes?.length || 0;
+      if (!nP && !nV) { alert('El JSON no contiene productos ni variantes'); return; }
+      if (!confirmar(`Se añadirán ${nP} producto(s) y ${nV} variante(s) a lo que ya tienes, sin borrar nada.\n\n¿Continuar?`)) return;
+
+      const log = [], errores = [];
+
+      // Categorías y subcategorías
+      if (datos.categorias?.length) {
+        const cats = datos.categorias.map(c => ({ id: c.id, nombre: c.nombre }));
+        const r = await insertarLote('categorias', cats);
+        log.push(`Categorías: ${r.ok}/${cats.length}`); errores.push(...r.fallos);
+        const subs = [];
+        datos.categorias.forEach(c => (c.subcategorias || []).forEach(s => subs.push({ id: s.id, categoria_id: c.id, nombre: s.nombre })));
+        if (subs.length) { const rs = await insertarLote('subcategorias', subs); log.push(`Subcategorías: ${rs.ok}/${subs.length}`); errores.push(...rs.fallos); }
+      }
+
+      // Productos
+      if (datos.productos?.length) {
+        const prods = datos.productos.map(p => ({
+          id: p.id, nombre: p.nombre, descripcion: p.descripcion || null,
+          categoria_id: p.categoriaId || null, subcategoria_id: p.subcategoriaId || null,
+          foto_url: p.fotoUrl || null, tiene_variantes: p.tieneVariantes || 'si', stock_minimo: p.stockMinimo || 0
+        }));
+        const r = await insertarLote('productos', prods);
+        log.push(`Productos: ${r.ok}/${prods.length}`); errores.push(...r.fallos);
+      }
+
+      // Variantes
+      if (datos.variantes?.length) {
+        const vars = datos.variantes.map(v => ({
+          id: v.id, producto_id: v.productoId, tipo: v.tipo || null, valor: v.valor || null,
+          stock_total: v.stockTotal || 0, stock_minimo: v.stockMinimo || 0
+        }));
+        const r = await insertarLote('variantes', vars);
+        log.push(`Variantes: ${r.ok}/${vars.length}`); errores.push(...r.fallos);
+      }
+
+      console.log('───── IMPORTAR PRODUCTOS ─────');
+      log.forEach(l => console.log('✓ ' + l));
+      if (errores.length) {
+        console.warn(`⚠️ ${errores.length} avisos:`); errores.forEach(e => console.warn('  - ' + e));
+        toast(`Importado con ${errores.length} avisos (ver consola)`);
+      } else {
+        toast('✅ Productos añadidos correctamente');
+      }
+      setTimeout(() => location.reload(), 2500);
     }
 
     // ── IMPORTAR / MIGRACIÓN v1 → v2 ────────
