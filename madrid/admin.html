@@ -1057,6 +1057,54 @@
     </div>
   </div>
 
+  <!-- MODAL MOVER STOCK -->
+  <div id="modalMover" class="modal">
+    <div class="modal-content" style="max-width: 520px;">
+      <div class="modal-header">
+        <h2>↔️ Mover stock</h2>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="moverStockId">
+        <div id="moverOrigenInfo" style="background: var(--card); padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 14px;"></div>
+
+        <div class="form-group">
+          <label>¿Cuántas unidades mover? *</label>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <input type="number" id="moverCantidad" min="1" placeholder="Cantidad" style="flex: 1;">
+            <button type="button" class="btn btn-success btn-small" onclick="llenarMaximoMover()">TODO</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>¿A dónde? *</label>
+          <select id="moverDestinoTipo" onchange="toggleDestinoMover()">
+            <option value="caja">A otra caja</option>
+            <option value="pale">Suelto sobre un palé</option>
+            <option value="ubicacion">Suelto en una ubicación</option>
+            <option value="sin-organizar">Devolver a "sin organizar"</option>
+          </select>
+        </div>
+
+        <div class="form-group" id="grupoMoverCaja">
+          <label>Caja destino</label>
+          <select id="moverCaja"><option value="">Seleccionar caja...</option></select>
+        </div>
+        <div class="form-group" id="grupoMoverPale" style="display:none;">
+          <label>Palé destino</label>
+          <select id="moverPale"><option value="">Seleccionar palé...</option></select>
+        </div>
+        <div class="form-group" id="grupoMoverUbicacion" style="display:none;">
+          <label>Ubicación destino</label>
+          <select id="moverUbicacion"><option value="">Seleccionar ubicación...</option></select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModalAdmin('modalMover')">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="ejecutarMover()">↔️ Mover</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL CATEGORÍAS -->
   <div id="modalCategorias" class="modal">
     <div class="modal-content" style="max-width: 600px;">
@@ -2350,6 +2398,7 @@
               <div style="display:flex; justify-content:space-between; align-items:center; padding:7px 12px; border-bottom:1px solid var(--border);">
                 <span style="font-size:13px;">${nombreVarianteCompleto(l.variante_id)} — <strong>${l.cantidad} uds</strong></span>
                 <span style="display:flex; gap:4px;">
+                  <button class="btn btn-secondary btn-small" onclick="mostrarModalMover(${l.id})" title="Mover">↔️</button>
                   <button class="btn btn-ghost btn-small" onclick="mostrarModalLinea(${c.id}, ${l.id})">✏️</button>
                   <button class="btn btn-danger btn-small" onclick="eliminarLineaCaja(${l.id})">🗑️</button>
                 </span>
@@ -2661,6 +2710,7 @@
             <td style="font-size: 13px;">${ubicacionFisicaSuelto(s)}</td>
             <td style="font-size: 12px; color: var(--muted);">${s.descripcion || '—'}</td>
             <td>
+              <button class="btn btn-secondary btn-sm" onclick="mostrarModalMover(${s.id})" title="Mover">↔️</button>
               <button class="btn btn-ghost btn-sm" onclick="mostrarModalSuelto(${s.id})">✏️</button>
               <button class="btn btn-danger btn-sm" onclick="eliminarSuelto(${s.id})">🗑️</button>
             </td>
@@ -2810,6 +2860,121 @@
       if (error) { toast('❌ Error'); return; }
       toast('✓ Material quitado');
       await cargarSueltosTabla();
+    }
+
+    // ════════════════════════════════════════
+    //  MÓDULO MOVER / REORGANIZAR STOCK
+    // ════════════════════════════════════════
+    async function mostrarModalMover(stockId) {
+      // Cargar datos frescos
+      stockItems = (await sb.from('stock').select('*')).data || [];
+      if (!variantes.length) variantes = await obtenerVariantes();
+      if (!productos.length) productos = await obtenerProductos();
+      cajas = (await sb.from('cajas').select('*')).data || [];
+      pales = await obtenerPales();
+      ubicaciones = await obtenerUbicaciones();
+
+      const origen = stockItems.find(s => s.id === stockId);
+      if (!origen) { toast('No se encontró ese stock'); return; }
+
+      document.getElementById('moverStockId').value = stockId;
+
+      let dondeOrigen = 'sin organizar';
+      if (origen.caja_id) { const c = cajas.find(x => x.id === origen.caja_id); dondeOrigen = `caja ${c ? c.codigo : ''}`; }
+      else if (origen.pale_id) { const p = pales.find(x => x.id === origen.pale_id); dondeOrigen = `palé ${p ? p.codigo : ''} (suelto)`; }
+      else if (origen.ubicacion_id) { const u = ubicaciones.find(x => x.id === origen.ubicacion_id); dondeOrigen = `${u ? u.nombre : ''} (suelto)`; }
+
+      document.getElementById('moverOrigenInfo').innerHTML =
+        `<strong>${nombreVarianteCompleto(origen.variante_id)}</strong><br>` +
+        `<span style="color:var(--muted);">Desde: ${dondeOrigen} — hay ${origen.cantidad} uds aquí</span>`;
+
+      document.getElementById('moverCantidad').value = '';
+      document.getElementById('moverCantidad').setAttribute('data-max', origen.cantidad);
+
+      document.getElementById('moverCaja').innerHTML = '<option value="">Seleccionar caja...</option>' +
+        cajas.filter(c => c.id !== origen.caja_id).map(c => `<option value="${c.id}">${c.codigo} — ${ubicacionFisicaCaja(c).replace(/<[^>]*>/g, '')}</option>`).join('');
+      document.getElementById('moverPale').innerHTML = '<option value="">Seleccionar palé...</option>' +
+        pales.map(p => { const u = ubicaciones.find(x => x.id === p.ubicacion_id); return `<option value="${p.id}">${p.codigo}${u ? ` (${u.nombre})` : ''}</option>`; }).join('');
+      document.getElementById('moverUbicacion').innerHTML = '<option value="">Seleccionar ubicación...</option>' +
+        ubicaciones.map(u => `<option value="${u.id}">${u.nombre}</option>`).join('');
+
+      document.getElementById('moverDestinoTipo').value = 'caja';
+      toggleDestinoMover();
+      abrirModalAdmin('modalMover');
+    }
+
+    function toggleDestinoMover() {
+      const t = document.getElementById('moverDestinoTipo').value;
+      document.getElementById('grupoMoverCaja').style.display = t === 'caja' ? 'block' : 'none';
+      document.getElementById('grupoMoverPale').style.display = t === 'pale' ? 'block' : 'none';
+      document.getElementById('grupoMoverUbicacion').style.display = t === 'ubicacion' ? 'block' : 'none';
+    }
+
+    function llenarMaximoMover() {
+      const max = parseInt(document.getElementById('moverCantidad').getAttribute('data-max'));
+      if (!isNaN(max)) document.getElementById('moverCantidad').value = max;
+    }
+
+    async function ejecutarMover() {
+      const stockId = parseInt(document.getElementById('moverStockId').value);
+      const origen = stockItems.find(s => s.id === stockId);
+      if (!origen) { toast('❌ Error'); return; }
+
+      const n = parseInt(document.getElementById('moverCantidad').value);
+      const tipo = document.getElementById('moverDestinoTipo').value;
+
+      if (!n || n <= 0) { alert('❌ Indica cuántas unidades mover'); return; }
+      if (n > origen.cantidad) { alert(`❌ Solo hay ${origen.cantidad} uds en el origen`); return; }
+
+      let destCaja = null, destPale = null, destUbi = null;
+      if (tipo === 'caja') {
+        destCaja = parseInt(document.getElementById('moverCaja').value) || null;
+        if (!destCaja) { alert('❌ Selecciona la caja destino'); return; }
+        if (destCaja === origen.caja_id) { alert('❌ El stock ya está en esa caja'); return; }
+      } else if (tipo === 'pale') {
+        destPale = parseInt(document.getElementById('moverPale').value) || null;
+        if (!destPale) { alert('❌ Selecciona el palé destino'); return; }
+      } else if (tipo === 'ubicacion') {
+        destUbi = parseInt(document.getElementById('moverUbicacion').value) || null;
+        if (!destUbi) { alert('❌ Selecciona la ubicación destino'); return; }
+      }
+
+      // 1. Reducir o borrar el origen
+      if (n >= origen.cantidad) {
+        await sb.from('stock').delete().eq('id', origen.id);
+      } else {
+        await sb.from('stock').update({ cantidad: origen.cantidad - n }).eq('id', origen.id);
+      }
+
+      // 2. Sumar en el destino (salvo que sea "sin organizar")
+      if (tipo !== 'sin-organizar') {
+        const existente = stockItems.find(s =>
+          s.id !== origen.id &&
+          s.variante_id === origen.variante_id &&
+          (s.caja_id || null) === destCaja &&
+          (s.pale_id || null) === destPale &&
+          (s.ubicacion_id || null) === destUbi
+        );
+        if (existente) {
+          await sb.from('stock').update({ cantidad: existente.cantidad + n }).eq('id', existente.id);
+        } else {
+          await sb.from('stock').insert({
+            id: idUnico(), variante_id: origen.variante_id, cantidad: n,
+            caja_id: destCaja, pale_id: destPale, ubicacion_id: destUbi
+          });
+        }
+      }
+
+      cerrarModalAdmin('modalMover');
+      toast('✅ Stock movido');
+      recargarVistaActual();
+    }
+
+    function recargarVistaActual() {
+      const activa = document.querySelector('.page.active');
+      if (!activa) return;
+      if (activa.id === 'cajas-page') cargarCajasTabla();
+      else if (activa.id === 'sueltos-page') cargarSueltosTabla();
     }
 
     // ── INIT ────────────────────────────────
