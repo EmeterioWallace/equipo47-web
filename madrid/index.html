@@ -519,7 +519,7 @@
     </div>
     <div class="header-actions">
       <button class="btn-header" onclick="irAdmin()">⚙️ Admin</button>
-      <button class="btn-header" onclick="cerrarSesion()">🚪 Salir</button>
+      <button class="btn-header" onclick="cerrarSesionAuth()">🚪 Salir</button>
     </div>
   </header>
 
@@ -598,6 +598,24 @@
       <div id="buscar-content"></div>
     </section>
   </main>
+
+  <!-- PANTALLA DE LOGIN -->
+  <div id="login-overlay" style="position:fixed; inset:0; background:#0f1117; z-index:99999; display:flex; align-items:center; justify-content:center;">
+    <div style="background:#fff; padding:32px; border-radius:14px; width:340px; max-width:90%; box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+      <h2 style="margin:0 0 4px; color:#1a1a1a; font-size:20px;">🔐 Equipo 47 · Almacén</h2>
+      <p style="font-size:13px; color:#666; margin:0 0 20px;">Inicia sesión para continuar</p>
+      <div style="margin-bottom:14px;">
+        <label style="display:block; font-size:13px; color:#444; margin-bottom:4px;">Email</label>
+        <input type="email" id="loginEmail" placeholder="tu@email.com" autocomplete="username" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:6px; box-sizing:border-box;">
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="display:block; font-size:13px; color:#444; margin-bottom:4px;">Contraseña</label>
+        <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter') iniciarSesionAuth()" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:6px; box-sizing:border-box;">
+      </div>
+      <div id="loginError" style="display:none; color:#d33; font-size:13px; margin-bottom:12px;"></div>
+      <button onclick="iniciarSesionAuth()" style="width:100%; padding:11px; background:#1a1a1a; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:15px;">Entrar</button>
+    </div>
+  </div>
 
   <!-- SCRIPTS -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -871,11 +889,36 @@
       document.getElementById('buscar-content').innerHTML = html;
     }
 
-    // ── INICIALIZACIÓN ──────────────────────
-    async function init() {
-      if (!requiereAutenticacion()) return;
+    // ── AUTENTICACIÓN (Supabase Auth) ───────
+    async function iniciarSesionAuth() {
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const errEl = document.getElementById('loginError');
+      errEl.style.display = 'none';
+      if (!email || !password) { errEl.textContent = 'Escribe email y contraseña'; errEl.style.display = 'block'; return; }
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) { errEl.textContent = '❌ Email o contraseña incorrectos'; errEl.style.display = 'block'; return; }
+      document.getElementById('login-overlay').style.display = 'none';
       await testConexionSupabase();
       cargarProductos();
+    }
+
+    async function cerrarSesionAuth() {
+      if (!confirm('¿Cerrar sesión?')) return;
+      await sb.auth.signOut();
+      location.reload();
+    }
+
+    // ── INICIALIZACIÓN ──────────────────────
+    async function init() {
+      const { data: { session } } = await sb.auth.getSession();
+      if (session) {
+        document.getElementById('login-overlay').style.display = 'none';
+        await testConexionSupabase();
+        cargarProductos();
+      } else {
+        document.getElementById('login-overlay').style.display = 'flex';
+      }
     }
 
     function irAdmin() {
