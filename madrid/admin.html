@@ -481,6 +481,10 @@
         <span class="icon">🧺</span>
         <span>Sueltos</span>
       </div>
+      <div class="nav-item" onclick="mostrarPagina('salidas')">
+        <span class="icon">📤</span>
+        <span>Salidas</span>
+      </div>
       <div class="nav-item" onclick="mostrarPagina('importar')">
         <span class="icon">📥</span>
         <span>Importar datos</span>
@@ -648,6 +652,32 @@
         <button class="btn btn-primary" onclick="mostrarModalSuelto()">➕ Colocar material</button>
       </div>
       <div id="sueltos-tabla" class="loading">Cargando...</div>
+    </section>
+
+    <!-- SALIDAS -->
+    <section class="page" id="salidas-page">
+      <div class="page-header">
+        <div>
+          <h1>SALIDAS</h1>
+          <p>Material que sale a eventos o préstamos — se prepara como un carrito y vuelve</p>
+        </div>
+        <button class="btn btn-primary" onclick="nuevaSalida()">➕ Nueva salida</button>
+      </div>
+
+      <div class="form-row" style="margin-bottom: 20px;">
+        <div class="form-group">
+          <label>Ver</label>
+          <select id="filtroEstadoSalida" onchange="renderSalidas()">
+            <option value="activas">Activas (preparando + fuera)</option>
+            <option value="preparando">Solo preparando</option>
+            <option value="fuera">Solo fuera</option>
+            <option value="devuelta">Devueltas</option>
+            <option value="todas">Todas</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="salidas-tabla" class="loading">Cargando...</div>
     </section>
 
     <!-- IMPORTAR DATOS -->
@@ -1105,6 +1135,92 @@
     </div>
   </div>
 
+  <!-- MODAL SALIDA (cabecera) -->
+  <div id="modalSalida" class="modal">
+    <div class="modal-content" style="max-width: 560px;">
+      <div class="modal-header">
+        <h2 id="tituloModalSalida">Nueva Salida</h2>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="salidaId">
+        <div class="form-group">
+          <label>Evento / Destino *</label>
+          <input type="text" id="salidaEvento" placeholder="Ej: Maratón de Sevilla 2026">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Tipo</label>
+            <select id="salidaTipo">
+              <option value="evento">Material a evento (nuestro)</option>
+              <option value="prestamo">Préstamo a terceros</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Responsable / Prestado a</label>
+            <input type="text" id="salidaResponsable" placeholder="Nombre">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Fecha de salida</label>
+            <input type="date" id="salidaFechaSalida">
+          </div>
+          <div class="form-group">
+            <label>Devolución prevista</label>
+            <input type="date" id="salidaFechaDevolucion">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Notas (opcional)</label>
+          <textarea id="salidaNotas" rows="2" placeholder="Observaciones..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModalAdmin('modalSalida')">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="guardarSalida()">💾 Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL LÍNEA DE SALIDA (añadir artículo al carrito) -->
+  <div id="modalLineaSalida" class="modal">
+    <div class="modal-content" style="max-width: 520px;">
+      <div class="modal-header">
+        <h2 id="tituloModalLineaSalida">Añadir artículo</h2>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="lineaSalidaId">
+        <input type="hidden" id="lineaSalidaSalidaId">
+        <div class="form-group">
+          <label>Producto *</label>
+          <select id="lineaSalidaProducto" onchange="cargarVariantesLineaSalida()">
+            <option value="">Seleccionar producto...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Variante *</label>
+          <select id="lineaSalidaVariante" onchange="mostrarDisponibleLineaSalida()">
+            <option value="">Seleccionar variante...</option>
+          </select>
+        </div>
+        <div id="infoDisponibleLineaSalida" style="display:none; background: var(--card); padding: 10px 12px; border-radius: 8px; margin-bottom: 14px; font-size: 13px;">
+          Disponible para sacar: <strong id="dispLineaSalida" style="color: var(--accent);">0</strong> uds
+        </div>
+        <div class="form-group">
+          <label>Cantidad *</label>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <input type="number" id="lineaSalidaCantidad" min="1" placeholder="Cantidad" style="flex: 1;">
+            <button type="button" class="btn btn-success btn-small" onclick="llenarMaximoLineaSalida()">MAX</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModalAdmin('modalLineaSalida')">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="guardarLineaSalida()">💾 Añadir</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL CATEGORÍAS -->
   <div id="modalCategorias" class="modal">
     <div class="modal-content" style="max-width: 600px;">
@@ -1162,6 +1278,7 @@
       if (pagina === 'pales') cargarPalesTabla();
       if (pagina === 'cajas') cargarCajasTabla();
       if (pagina === 'sueltos') cargarSueltosTabla();
+      if (pagina === 'salidas') cargarSalidasTabla();
     }
 
     // ── DASHBOARD ───────────────────────────
@@ -1169,13 +1286,14 @@
       const productosD = await obtenerProductos();
       const cajasD = await obtenerCajas();
       const palesD = await obtenerPales();
-      const salidasD = await obtenerSalidas('pendiente');
+      const salidasD = (await sb.from('salidas').select('estado')).data || [];
+      const salidasFuera = salidasD.filter(s => s.estado === 'fuera').length;
       const variantesD = await obtenerVariantes();
 
       document.getElementById('stat-productos').textContent = productosD.length;
       document.getElementById('stat-cajas').textContent = cajasD.length;
       document.getElementById('stat-pales').textContent = palesD.length;
-      document.getElementById('stat-salidas').textContent = salidasD.length;
+      document.getElementById('stat-salidas').textContent = salidasFuera;
 
       // Avisos de stock bajo (por variante)
       const bajos = variantesD.filter(v => (v.stock_minimo || 0) > 0 && (v.stock_total || 0) <= v.stock_minimo);
@@ -2975,6 +3093,325 @@
       if (!activa) return;
       if (activa.id === 'cajas-page') cargarCajasTabla();
       else if (activa.id === 'sueltos-page') cargarSueltosTabla();
+    }
+
+    // ════════════════════════════════════════
+    //  MÓDULO SALIDAS (Fase 1: carrito + devolución)
+    // ════════════════════════════════════════
+    let salidas = [];
+    let salidaLineas = [];
+
+    async function cargarSalidasTabla() {
+      const cont = document.getElementById('salidas-tabla');
+      cont.innerHTML = '<div class="loading">Cargando...</div>';
+      salidas = (await sb.from('salidas').select('*').order('created_at', { ascending: false })).data || [];
+      salidaLineas = (await sb.from('salida_lineas').select('*')).data || [];
+      if (!productos.length) productos = await obtenerProductos();
+      if (!variantes.length) variantes = await obtenerVariantes();
+      renderSalidas();
+    }
+
+    function badgeEstadoSalida(estado) {
+      if (estado === 'preparando') return '<span class="badge badge-warning">🛒 Preparando</span>';
+      if (estado === 'fuera') return '<span class="badge" style="background:#1e40af; color:#fff;">📤 Fuera</span>';
+      if (estado === 'devuelta') return '<span class="badge badge-success">✓ Devuelta</span>';
+      return `<span class="badge">${estado}</span>`;
+    }
+
+    function fechaCorta(f) {
+      if (!f) return '—';
+      const d = new Date(f + 'T00:00:00');
+      return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' });
+    }
+
+    function disponibleParaSalida(varianteId, excluirLineaId = null) {
+      const v = variantes.find(x => x.id === varianteId);
+      if (!v) return 0;
+      const activas = new Set(salidas.filter(s => s.estado === 'preparando' || s.estado === 'fuera').map(s => s.id));
+      const comprometido = salidaLineas
+        .filter(l => l.variante_id === varianteId && activas.has(l.salida_id) && l.id !== excluirLineaId)
+        .reduce((sum, l) => sum + (l.cantidad || 0), 0);
+      return (v.stock_total || 0) - comprometido;
+    }
+
+    function renderSalidas() {
+      const cont = document.getElementById('salidas-tabla');
+      const filtro = document.getElementById('filtroEstadoSalida').value;
+
+      let lista = salidas.slice();
+      if (filtro === 'activas') lista = lista.filter(s => s.estado === 'preparando' || s.estado === 'fuera');
+      else if (filtro !== 'todas') lista = lista.filter(s => s.estado === filtro);
+
+      if (!lista.length) {
+        cont.innerHTML = `<div class="empty"><div class="empty-icon">📤</div><p>No hay salidas que mostrar. Crea una con "Nueva salida".</p></div>`;
+        return;
+      }
+
+      const hoy = new Date().toISOString().slice(0, 10);
+      let html = `<table><thead><tr>
+        <th>Evento / Destino</th><th>Fechas</th><th>Artículos</th><th>Estado</th><th>Acciones</th>
+        </tr></thead><tbody>`;
+
+      for (const s of lista) {
+        const lineas = salidaLineas.filter(l => l.salida_id === s.id);
+        const totalUds = lineas.reduce((a, l) => a + (l.cantidad || 0), 0);
+        const flecha = `<span id="flecha-salida-${s.id}" style="display:inline-block; width:14px; color: var(--accent);">▶</span>`;
+        const vencida = s.estado === 'fuera' && s.fecha_devolucion && s.fecha_devolucion < hoy;
+        const fechasTxt = `${fechaCorta(s.fecha_salida)} → ${fechaCorta(s.fecha_devolucion)}${vencida ? ' <span style="color:var(--danger);">⚠️ vencida</span>' : ''}`;
+        const respTxt = s.destinatario ? `<br><span style="font-size:11px; color:var(--muted);">${s.tipo === 'prestamo' ? 'Prestado a' : 'Resp.'}: ${s.destinatario}</span>` : '';
+
+        html += `<tr onclick="toggleContenidoSalida(${s.id})" style="cursor:pointer;">
+          <td>${flecha} <strong>${s.evento || '(sin nombre)'}</strong>${respTxt}</td>
+          <td style="font-size:12px;">${fechasTxt}</td>
+          <td>${lineas.length} art. / ${totalUds} uds</td>
+          <td>${badgeEstadoSalida(s.estado)}</td>
+          <td>
+            <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); mostrarModalSalida(${s.id})" title="Editar datos">✏️</button>
+            <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); eliminarSalidaAdmin(${s.id})">🗑️</button>
+          </td>
+        </tr>`;
+
+        // Contenido desplegable
+        const editable = s.estado === 'preparando' || s.estado === 'fuera';
+        const filasLineas = lineas.length
+          ? lineas.map(l => `
+              <div style="display:flex; justify-content:space-between; align-items:center; padding:7px 12px; border-bottom:1px solid var(--border);">
+                <span style="font-size:13px;">${nombreVarianteCompleto(l.variante_id)} — <strong>${l.cantidad} uds</strong></span>
+                ${editable ? `<span style="display:flex; gap:4px;">
+                  <button class="btn btn-ghost btn-small" onclick="mostrarModalLineaSalida(${s.id}, ${l.id})">✏️</button>
+                  <button class="btn btn-danger btn-small" onclick="eliminarLineaSalida(${l.id})">🗑️</button>
+                </span>` : ''}
+              </div>`).join('')
+          : '<p style="color: var(--muted); font-size: 13px; padding: 8px 12px;">Sin artículos todavía</p>';
+
+        // Botones de acción según estado
+        let acciones = '';
+        if (s.estado === 'preparando') {
+          acciones = `
+            <button class="btn btn-success btn-small" onclick="mostrarModalLineaSalida(${s.id})">+ Añadir artículo</button>
+            <button class="btn btn-primary btn-small" onclick="finalizarSalida(${s.id})">✓ Finalizar (marcar como fuera)</button>`;
+        } else if (s.estado === 'fuera') {
+          acciones = `
+            <button class="btn btn-success btn-small" onclick="mostrarModalLineaSalida(${s.id})">+ Añadir artículo</button>
+            <button class="btn btn-primary btn-small" onclick="registrarDevolucion(${s.id})">↩️ Registrar devolución</button>`;
+        } else {
+          acciones = `<span style="font-size:12px; color:var(--muted);">Devuelta el ${fechaCorta(s.fecha_devolucion_real)}</span>`;
+        }
+
+        html += `<tr id="contenido-salida-${s.id}" style="display:none;">
+          <td colspan="5" style="background: var(--card); padding:0;">
+            <div style="padding:10px 16px 12px 40px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:8px;">
+                <span style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted);">Contenido del pedido</span>
+                <span style="display:flex; gap:6px; flex-wrap:wrap;">${acciones}</span>
+              </div>
+              ${s.notas ? `<p style="font-size:12px; color:var(--muted); margin-bottom:8px;">📝 ${s.notas}</p>` : ''}
+              ${filasLineas}
+            </div>
+          </td>
+        </tr>`;
+      }
+      html += '</tbody></table>';
+      cont.innerHTML = html;
+    }
+
+    function toggleContenidoSalida(id) {
+      const fila = document.getElementById('contenido-salida-' + id);
+      const flecha = document.getElementById('flecha-salida-' + id);
+      if (!fila) return;
+      const abierto = fila.style.display !== 'none';
+      fila.style.display = abierto ? 'none' : 'table-row';
+      if (flecha) flecha.textContent = abierto ? '▶' : '▼';
+    }
+
+    // ── CABECERA DE SALIDA ──────────────────
+    function nuevaSalida() { mostrarModalSalida(); }
+
+    function mostrarModalSalida(id = null) {
+      if (id) {
+        const s = salidas.find(x => x.id === id);
+        document.getElementById('tituloModalSalida').textContent = 'Editar datos de la salida';
+        document.getElementById('salidaId').value = s.id;
+        document.getElementById('salidaEvento').value = s.evento || '';
+        document.getElementById('salidaTipo').value = s.tipo || 'evento';
+        document.getElementById('salidaResponsable').value = s.destinatario || '';
+        document.getElementById('salidaFechaSalida').value = s.fecha_salida || '';
+        document.getElementById('salidaFechaDevolucion').value = s.fecha_devolucion || '';
+        document.getElementById('salidaNotas').value = s.notas || '';
+      } else {
+        document.getElementById('tituloModalSalida').textContent = 'Nueva Salida';
+        document.getElementById('salidaId').value = '';
+        document.getElementById('salidaEvento').value = '';
+        document.getElementById('salidaTipo').value = 'evento';
+        document.getElementById('salidaResponsable').value = '';
+        document.getElementById('salidaFechaSalida').value = new Date().toISOString().slice(0, 10);
+        document.getElementById('salidaFechaDevolucion').value = '';
+        document.getElementById('salidaNotas').value = '';
+      }
+      abrirModalAdmin('modalSalida');
+    }
+
+    async function guardarSalida() {
+      const evento = document.getElementById('salidaEvento').value.trim();
+      if (!evento) { alert('❌ Indica el evento o destino'); return; }
+
+      const datos = {
+        evento,
+        tipo: document.getElementById('salidaTipo').value,
+        destinatario: document.getElementById('salidaResponsable').value.trim() || null,
+        fecha_salida: document.getElementById('salidaFechaSalida').value || null,
+        fecha_devolucion: document.getElementById('salidaFechaDevolucion').value || null,
+        notas: document.getElementById('salidaNotas').value.trim() || null
+      };
+
+      const idStr = document.getElementById('salidaId').value;
+      if (idStr) {
+        const { error } = await sb.from('salidas').update(datos).eq('id', parseInt(idStr));
+        if (error) { alert('❌ Error: ' + error.message); return; }
+        toast('✅ Salida actualizada');
+      } else {
+        const id = Date.now();
+        const { error } = await sb.from('salidas').insert({ id, estado: 'preparando', ...datos });
+        if (error) { alert('❌ Error: ' + error.message); return; }
+        toast('✅ Salida creada — añade artículos al carrito');
+      }
+      cerrarModalAdmin('modalSalida');
+      await cargarSalidasTabla();
+      if (!idStr) setTimeout(() => { const id = salidas[0]?.id; if (id) toggleContenidoSalida(id); }, 150);
+    }
+
+    async function eliminarSalidaAdmin(id) {
+      const s = salidas.find(x => x.id === id);
+      if (!confirmar(`¿Eliminar la salida "${s?.evento}" y todo su contenido?\n\n(El material se considera de vuelta en el almacén.)`)) return;
+      await sb.from('salida_lineas').delete().eq('salida_id', id);
+      const { error } = await sb.from('salidas').delete().eq('id', id);
+      if (error) { toast('❌ Error'); return; }
+      toast('✓ Salida eliminada');
+      await cargarSalidasTabla();
+    }
+
+    // ── LÍNEAS (artículos del carrito) ──────
+    function mostrarModalLineaSalida(salidaId, lineaId = null) {
+      document.getElementById('lineaSalidaProducto').innerHTML = '<option value="">Seleccionar producto...</option>' +
+        productos.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+      document.getElementById('lineaSalidaSalidaId').value = salidaId;
+      document.getElementById('lineaSalidaCantidad').value = '';
+      document.getElementById('infoDisponibleLineaSalida').style.display = 'none';
+
+      if (lineaId) {
+        const l = salidaLineas.find(x => x.id === lineaId);
+        const v = variantes.find(x => x.id === l.variante_id);
+        document.getElementById('tituloModalLineaSalida').textContent = 'Editar artículo';
+        document.getElementById('lineaSalidaId').value = l.id;
+        document.getElementById('lineaSalidaProducto').value = v.producto_id;
+        cargarVariantesLineaSalida();
+        document.getElementById('lineaSalidaVariante').value = v.id;
+        document.getElementById('lineaSalidaCantidad').value = l.cantidad;
+        mostrarDisponibleLineaSalida();
+      } else {
+        document.getElementById('tituloModalLineaSalida').textContent = 'Añadir artículo';
+        document.getElementById('lineaSalidaId').value = '';
+        document.getElementById('lineaSalidaProducto').value = '';
+        document.getElementById('lineaSalidaVariante').innerHTML = '<option value="">Seleccionar variante...</option>';
+      }
+      abrirModalAdmin('modalLineaSalida');
+    }
+
+    function cargarVariantesLineaSalida() {
+      const prodId = parseInt(document.getElementById('lineaSalidaProducto').value);
+      const sel = document.getElementById('lineaSalidaVariante');
+      const vars = variantes.filter(v => v.producto_id === prodId);
+      sel.innerHTML = '<option value="">Seleccionar variante...</option>' +
+        vars.map(v => {
+          const et = (v.tipo === 'Unidad' && v.valor === 'Estándar') ? 'Producto simple' : `${v.tipo}: ${v.valor}`;
+          return `<option value="${v.id}">${et}</option>`;
+        }).join('');
+      document.getElementById('infoDisponibleLineaSalida').style.display = 'none';
+    }
+
+    function mostrarDisponibleLineaSalida() {
+      const varId = parseInt(document.getElementById('lineaSalidaVariante').value);
+      if (!varId) { document.getElementById('infoDisponibleLineaSalida').style.display = 'none'; return; }
+      const excluir = parseInt(document.getElementById('lineaSalidaId').value) || null;
+      const disp = disponibleParaSalida(varId, excluir);
+      document.getElementById('dispLineaSalida').textContent = disp;
+      document.getElementById('infoDisponibleLineaSalida').style.display = 'block';
+      document.getElementById('lineaSalidaCantidad').setAttribute('data-max', disp);
+    }
+
+    function llenarMaximoLineaSalida() {
+      const max = parseInt(document.getElementById('lineaSalidaCantidad').getAttribute('data-max'));
+      if (isNaN(max) || max <= 0) { alert('⚠️ No hay unidades disponibles para sacar'); return; }
+      document.getElementById('lineaSalidaCantidad').value = max;
+    }
+
+    async function guardarLineaSalida() {
+      const salidaId = parseInt(document.getElementById('lineaSalidaSalidaId').value);
+      const varId = parseInt(document.getElementById('lineaSalidaVariante').value);
+      const cantidad = parseInt(document.getElementById('lineaSalidaCantidad').value);
+      const lineaIdStr = document.getElementById('lineaSalidaId').value;
+
+      if (!varId) { alert('❌ Selecciona una variante'); return; }
+      if (!cantidad || cantidad <= 0) { alert('❌ Indica una cantidad válida'); return; }
+
+      const excluir = parseInt(lineaIdStr) || null;
+      const disp = disponibleParaSalida(varId, excluir);
+      if (cantidad > disp) {
+        alert(`❌ Solo hay ${disp} uds disponibles para sacar de esta variante (el resto ya está comprometido en otras salidas).`);
+        return;
+      }
+
+      if (lineaIdStr) {
+        const { error } = await sb.from('salida_lineas').update({ variante_id: varId, cantidad }).eq('id', parseInt(lineaIdStr));
+        if (error) { alert('❌ Error: ' + error.message); return; }
+      } else {
+        // Si ya hay una línea de esa variante en esta salida, sumamos
+        const existente = salidaLineas.find(l => l.salida_id === salidaId && l.variante_id === varId);
+        if (existente) {
+          const { error } = await sb.from('salida_lineas').update({ cantidad: existente.cantidad + cantidad }).eq('id', existente.id);
+          if (error) { alert('❌ Error: ' + error.message); return; }
+        } else {
+          const id = idUnico();
+          const { error } = await sb.from('salida_lineas').insert({ id, salida_id: salidaId, variante_id: varId, cantidad });
+          if (error) { alert('❌ Error: ' + error.message); return; }
+        }
+      }
+
+      cerrarModalAdmin('modalLineaSalida');
+      toast('✅ Artículo añadido');
+      await cargarSalidasTabla();
+      setTimeout(() => toggleContenidoSalida(salidaId), 120);
+    }
+
+    async function eliminarLineaSalida(lineaId) {
+      if (!confirmar('¿Quitar este artículo del pedido?')) return;
+      const l = salidaLineas.find(x => x.id === lineaId);
+      const salidaId = l?.salida_id;
+      await sb.from('salida_lineas').delete().eq('id', lineaId);
+      toast('✓ Artículo quitado');
+      await cargarSalidasTabla();
+      if (salidaId) setTimeout(() => toggleContenidoSalida(salidaId), 120);
+    }
+
+    // ── CAMBIOS DE ESTADO ───────────────────
+    async function finalizarSalida(id) {
+      const lineas = salidaLineas.filter(l => l.salida_id === id);
+      if (!lineas.length) { alert('❌ Añade al menos un artículo antes de finalizar'); return; }
+      if (!confirmar('¿Finalizar el pedido y marcar el material como FUERA del almacén?')) return;
+      const { error } = await sb.from('salidas').update({ estado: 'fuera' }).eq('id', id);
+      if (error) { toast('❌ Error'); return; }
+      toast('📤 Salida finalizada — material fuera');
+      await cargarSalidasTabla();
+      setTimeout(() => toggleContenidoSalida(id), 120);
+    }
+
+    async function registrarDevolucion(id) {
+      if (!confirmar('¿Registrar la devolución? El material vuelve a estar disponible en el almacén.')) return;
+      const hoy = new Date().toISOString().slice(0, 10);
+      const { error } = await sb.from('salidas').update({ estado: 'devuelta', fecha_devolucion_real: hoy }).eq('id', id);
+      if (error) { toast('❌ Error'); return; }
+      toast('✅ Devolución registrada');
+      await cargarSalidasTabla();
     }
 
     // ── INIT ────────────────────────────────
