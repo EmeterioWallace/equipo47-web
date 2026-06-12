@@ -661,7 +661,10 @@
           <h1>SALIDAS</h1>
           <p>Material que sale a eventos o préstamos — se prepara como un carrito y vuelve</p>
         </div>
-        <button class="btn btn-primary" onclick="nuevaSalida()">➕ Nueva salida</button>
+        <div style="display:flex; gap:10px;">
+          <button class="btn btn-ghost" onclick="mostrarModalPlantillas()">📋 Plantillas</button>
+          <button class="btn btn-primary" onclick="nuevaSalida()">➕ Nueva salida</button>
+        </div>
       </div>
 
       <div class="form-row" style="margin-bottom: 20px;">
@@ -1217,6 +1220,44 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" onclick="cerrarModalAdmin('modalLineaSalida')">Cancelar</button>
         <button type="button" class="btn btn-primary" onclick="guardarLineaSalida()">💾 Añadir</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL APLICAR PLANTILLA -->
+  <div id="modalAplicarPlantilla" class="modal">
+    <div class="modal-content" style="max-width: 480px;">
+      <div class="modal-header">
+        <h2>📋 Aplicar plantilla</h2>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="aplicarPlantillaSalidaId">
+        <p style="font-size:13px; color:var(--muted); margin-bottom:14px;">Se añadirá al pedido el material de la plantilla. Si algo no tiene stock suficiente, se añade lo disponible y te avisamos.</p>
+        <div class="form-group">
+          <label>Plantilla *</label>
+          <select id="aplicarPlantillaSelect" onchange="previewPlantillaSel()"><option value="">Seleccionar plantilla...</option></select>
+        </div>
+        <div id="previewPlantilla" style="font-size:13px;"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModalAdmin('modalAplicarPlantilla')">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="ejecutarAplicarPlantilla()">📋 Aplicar al pedido</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL GESTIÓN DE PLANTILLAS -->
+  <div id="modalPlantillas" class="modal">
+    <div class="modal-content" style="max-width: 600px;">
+      <div class="modal-header">
+        <h2>📋 Plantillas de material</h2>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:13px; color:var(--muted); margin-bottom:14px;">Listas de material recurrente (trail, asfalto...). Se crean guardando una salida como plantilla con el botón "⭐ Guardar plantilla".</p>
+        <div id="listaPlantillas"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModalAdmin('modalPlantillas')">Cerrar</button>
       </div>
     </div>
   </div>
@@ -3100,15 +3141,23 @@
     // ════════════════════════════════════════
     let salidas = [];
     let salidaLineas = [];
+    let plantillas = [];
+    let plantillaLineas = [];
 
     async function cargarSalidasTabla() {
       const cont = document.getElementById('salidas-tabla');
       cont.innerHTML = '<div class="loading">Cargando...</div>';
       salidas = (await sb.from('salidas').select('*').order('created_at', { ascending: false })).data || [];
       salidaLineas = (await sb.from('salida_lineas').select('*')).data || [];
+      await cargarPlantillas();
       if (!productos.length) productos = await obtenerProductos();
       if (!variantes.length) variantes = await obtenerVariantes();
       renderSalidas();
+    }
+
+    async function cargarPlantillas() {
+      plantillas = (await sb.from('plantillas').select('*').order('nombre')).data || [];
+      plantillaLineas = (await sb.from('plantilla_lineas').select('*')).data || [];
     }
 
     function badgeEstadoSalida(estado) {
@@ -3189,10 +3238,13 @@
         if (s.estado === 'preparando') {
           acciones += `
             <button class="btn btn-success btn-small" onclick="mostrarModalLineaSalida(${s.id})">+ Añadir artículo</button>
+            <button class="btn btn-ghost btn-small" onclick="mostrarAplicarPlantilla(${s.id})">📋 Aplicar plantilla</button>
+            <button class="btn btn-ghost btn-small" onclick="guardarComoPlantilla(${s.id})">⭐ Guardar plantilla</button>
             <button class="btn btn-primary btn-small" onclick="finalizarSalida(${s.id})">✓ Finalizar (marcar como fuera)</button>`;
         } else if (s.estado === 'fuera') {
           acciones += `
             <button class="btn btn-success btn-small" onclick="mostrarModalLineaSalida(${s.id})">+ Añadir artículo</button>
+            <button class="btn btn-ghost btn-small" onclick="guardarComoPlantilla(${s.id})">⭐ Guardar plantilla</button>
             <button class="btn btn-primary btn-small" onclick="registrarDevolucion(${s.id})">↩️ Registrar devolución</button>`;
         } else {
           acciones += `<span style="font-size:12px; color:var(--muted);">Devuelta el ${fechaCorta(s.fecha_devolucion_real)}</span>`;
@@ -3504,6 +3556,132 @@
       if (!win) { alert('Permite las ventanas emergentes para ver el albarán'); return; }
       win.document.write(htmlAlbaran);
       win.document.close();
+    }
+
+    // ── PLANTILLAS / FAVORITOS (Fase 3) ─────
+    async function guardarComoPlantilla(salidaId) {
+      const lineas = salidaLineas.filter(l => l.salida_id === salidaId);
+      if (!lineas.length) { alert('Esta salida no tiene artículos para guardar como plantilla'); return; }
+      const nombre = prompt('Nombre de la plantilla (ej: Evento Trail):');
+      if (!nombre || !nombre.trim()) return;
+
+      const id = Date.now();
+      const { error } = await sb.from('plantillas').insert({ id, nombre: nombre.trim() });
+      if (error) { alert('❌ Error: ' + error.message); return; }
+      const pls = lineas.map(l => ({ id: idUnico(), plantilla_id: id, variante_id: l.variante_id, cantidad: l.cantidad }));
+      const { error: e2 } = await sb.from('plantilla_lineas').insert(pls);
+      if (e2) { alert('❌ Error al guardar el contenido: ' + e2.message); return; }
+      toast('⭐ Plantilla guardada');
+      await cargarPlantillas();
+    }
+
+    async function mostrarModalPlantillas() {
+      await cargarPlantillas();
+      if (!variantes.length) variantes = await obtenerVariantes();
+      if (!productos.length) productos = await obtenerProductos();
+      renderListaPlantillas();
+      abrirModalAdmin('modalPlantillas');
+    }
+
+    function renderListaPlantillas() {
+      const cont = document.getElementById('listaPlantillas');
+      if (!plantillas.length) {
+        cont.innerHTML = '<p style="text-align:center; color:var(--muted); padding:20px;">No hay plantillas todavía. Crea una guardando una salida con "⭐ Guardar plantilla".</p>';
+        return;
+      }
+      cont.innerHTML = plantillas.map(p => {
+        const pls = plantillaLineas.filter(l => l.plantilla_id === p.id);
+        const items = pls.length
+          ? pls.map(l => `<div style="padding:3px 0; font-size:13px;">• ${nombreVarianteCompleto(l.variante_id)} — <strong>${l.cantidad} uds</strong></div>`).join('')
+          : '<span style="color:var(--muted); font-size:12px;">Vacía</span>';
+        return `<div style="background:var(--card); border:1px solid var(--border); border-radius:8px; padding:12px; margin-bottom:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <strong style="font-size:15px;">${p.nombre}</strong>
+            <span style="display:flex; gap:5px;">
+              <button class="btn btn-ghost btn-small" onclick="renombrarPlantilla(${p.id})">✏️</button>
+              <button class="btn btn-danger btn-small" onclick="eliminarPlantilla(${p.id})">🗑️</button>
+            </span>
+          </div>
+          ${items}
+        </div>`;
+      }).join('');
+    }
+
+    async function renombrarPlantilla(id) {
+      const p = plantillas.find(x => x.id === id);
+      const nuevo = prompt('Nuevo nombre:', p?.nombre);
+      if (!nuevo || !nuevo.trim()) return;
+      await sb.from('plantillas').update({ nombre: nuevo.trim() }).eq('id', id);
+      toast('✓ Renombrada');
+      await cargarPlantillas();
+      renderListaPlantillas();
+    }
+
+    async function eliminarPlantilla(id) {
+      const p = plantillas.find(x => x.id === id);
+      if (!confirmar(`¿Eliminar la plantilla "${p?.nombre}"?`)) return;
+      await sb.from('plantilla_lineas').delete().eq('plantilla_id', id);
+      await sb.from('plantillas').delete().eq('id', id);
+      toast('✓ Plantilla eliminada');
+      await cargarPlantillas();
+      renderListaPlantillas();
+    }
+
+    async function mostrarAplicarPlantilla(salidaId) {
+      await cargarPlantillas();
+      if (!plantillas.length) { alert('No hay plantillas guardadas todavía.\n\nCrea una con "⭐ Guardar plantilla" en una salida que ya tenga material.'); return; }
+      document.getElementById('aplicarPlantillaSalidaId').value = salidaId;
+      document.getElementById('aplicarPlantillaSelect').innerHTML = '<option value="">Seleccionar plantilla...</option>' +
+        plantillas.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+      document.getElementById('previewPlantilla').innerHTML = '';
+      abrirModalAdmin('modalAplicarPlantilla');
+    }
+
+    function previewPlantillaSel() {
+      const pid = parseInt(document.getElementById('aplicarPlantillaSelect').value);
+      const cont = document.getElementById('previewPlantilla');
+      if (!pid) { cont.innerHTML = ''; return; }
+      const pls = plantillaLineas.filter(l => l.plantilla_id === pid);
+      cont.innerHTML = '<div style="background:var(--card); padding:10px 12px; border-radius:8px; margin-top:6px;">' +
+        pls.map(l => `<div style="padding:3px 0;">• ${nombreVarianteCompleto(l.variante_id)} — ${l.cantidad} uds</div>`).join('') + '</div>';
+    }
+
+    async function ejecutarAplicarPlantilla() {
+      const salidaId = parseInt(document.getElementById('aplicarPlantillaSalidaId').value);
+      const pid = parseInt(document.getElementById('aplicarPlantillaSelect').value);
+      if (!pid) { alert('Selecciona una plantilla'); return; }
+      const pLineas = plantillaLineas.filter(l => l.plantilla_id === pid);
+
+      const avisos = [];
+      let anadidos = 0;
+      for (const pl of pLineas) {
+        const disp = Math.max(0, disponibleParaSalida(pl.variante_id));
+        const aAnadir = Math.min(pl.cantidad, disp);
+        if (aAnadir <= 0) {
+          avisos.push(`• ${nombreVarianteCompleto(pl.variante_id)}: 0 de ${pl.cantidad} (sin stock disponible)`);
+          continue;
+        }
+        const existente = salidaLineas.find(l => l.salida_id === salidaId && l.variante_id === pl.variante_id);
+        if (existente) {
+          await sb.from('salida_lineas').update({ cantidad: existente.cantidad + aAnadir }).eq('id', existente.id);
+          existente.cantidad += aAnadir;
+        } else {
+          const id = idUnico();
+          await sb.from('salida_lineas').insert({ id, salida_id: salidaId, variante_id: pl.variante_id, cantidad: aAnadir });
+          salidaLineas.push({ id, salida_id: salidaId, variante_id: pl.variante_id, cantidad: aAnadir });
+        }
+        anadidos++;
+        if (aAnadir < pl.cantidad) avisos.push(`• ${nombreVarianteCompleto(pl.variante_id)}: ${aAnadir} de ${pl.cantidad} (resto sin stock)`);
+      }
+
+      cerrarModalAdmin('modalAplicarPlantilla');
+      if (avisos.length) {
+        alert(`Plantilla aplicada (${anadidos} artículo(s) añadidos).\n\nOjo, no se pudo añadir todo:\n${avisos.join('\n')}`);
+      } else {
+        toast('✅ Plantilla aplicada al pedido');
+      }
+      await cargarSalidasTabla();
+      setTimeout(() => toggleContenidoSalida(salidaId), 120);
     }
 
     // ── INIT ────────────────────────────────
