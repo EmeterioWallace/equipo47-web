@@ -545,6 +545,11 @@
       </div>
 
       <div class="card" style="margin-top: 20px;">
+        <h3>📤 Devoluciones pendientes</h3>
+        <div id="avisos-devoluciones"><p style="color: var(--muted);">Comprobando...</p></div>
+      </div>
+
+      <div class="card" style="margin-top: 20px;">
         <h3>ℹ️ Información del sistema</h3>
         <p>✓ Conexión a Supabase activa</p>
         <p>✓ Almacén Madrid v2 funcionando</p>
@@ -1327,7 +1332,7 @@
       const productosD = await obtenerProductos();
       const cajasD = await obtenerCajas();
       const palesD = await obtenerPales();
-      const salidasD = (await sb.from('salidas').select('estado')).data || [];
+      const salidasD = (await sb.from('salidas').select('*')).data || [];
       const salidasFuera = salidasD.filter(s => s.estado === 'fuera').length;
       const variantesD = await obtenerVariantes();
 
@@ -1352,6 +1357,43 @@
             <span class="badge badge-${cero ? 'danger' : 'warning'}">${v.stock_total || 0} uds (mín. ${v.stock_minimo})</span>
           </div>`;
         }).join('');
+      }
+
+      // Avisos de devoluciones pendientes
+      const contDev = document.getElementById('avisos-devoluciones');
+      const hoyStr = new Date().toISOString().slice(0, 10);
+      const limiteProx = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
+      const fuera = salidasD.filter(s => s.estado === 'fuera' && s.fecha_devolucion);
+      const vencidas = fuera.filter(s => s.fecha_devolucion < hoyStr)
+        .sort((a, b) => a.fecha_devolucion.localeCompare(b.fecha_devolucion));
+      const proximas = fuera.filter(s => s.fecha_devolucion >= hoyStr && s.fecha_devolucion <= limiteProx)
+        .sort((a, b) => a.fecha_devolucion.localeCompare(b.fecha_devolucion));
+
+      const diasEntre = (f) => Math.round((new Date(hoyStr) - new Date(f)) / 86400000);
+      const formateaSalida = (s, vencida) => {
+        const quien = s.destinatario ? ` · ${s.tipo === 'prestamo' ? 'lo tiene' : 'resp.'}: <strong>${s.destinatario}</strong>` : '';
+        if (vencida) {
+          const dias = diasEntre(s.fecha_devolucion);
+          return `<div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border);">
+            <span style="font-size:13px;">🔴 <strong>${s.evento || 'Salida'}</strong>${quien}</span>
+            <span class="badge badge-danger">${dias} día(s) de retraso</span>
+          </div>`;
+        }
+        const dias = -diasEntre(s.fecha_devolucion);
+        const cuando = dias === 0 ? 'hoy' : (dias === 1 ? 'mañana' : `en ${dias} días`);
+        return `<div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border);">
+          <span style="font-size:13px;">🟡 <strong>${s.evento || 'Salida'}</strong>${quien}</span>
+          <span class="badge badge-warning">vence ${cuando}</span>
+        </div>`;
+      };
+
+      if (!vencidas.length && !proximas.length) {
+        contDev.innerHTML = '<p style="color: var(--success);">✓ No hay devoluciones próximas ni vencidas</p>';
+      } else {
+        let h = '';
+        if (vencidas.length) h += '<p style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:var(--danger); margin:4px 0;">Vencidas</p>' + vencidas.map(s => formateaSalida(s, true)).join('');
+        if (proximas.length) h += '<p style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted); margin:12px 0 4px;">Próximas (3 días)</p>' + proximas.map(s => formateaSalida(s, false)).join('');
+        contDev.innerHTML = h;
       }
 
       const connected = await testConexionSupabase();
