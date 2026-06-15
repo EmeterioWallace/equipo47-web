@@ -771,7 +771,10 @@
           <h1>CLIENTES</h1>
           <p>Clientes del portal y qué material puede ver cada uno</p>
         </div>
-        <button class="btn btn-primary" onclick="nuevoCliente()">➕ Nuevo cliente</button>
+        <div style="display:flex; gap:10px;">
+          <button class="btn btn-ghost" onclick="mostrarGestionPlantillasVis()">📋 Plantillas de material</button>
+          <button class="btn btn-primary" onclick="nuevoCliente()">➕ Nuevo cliente</button>
+        </div>
       </div>
       <div id="clientes-tabla" class="loading">Cargando...</div>
     </section>
@@ -1467,7 +1470,6 @@
         <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
           <button class="btn btn-ghost btn-sm" onclick="mostrarAplicarPlantillaVis()">📋 Aplicar plantilla</button>
           <button class="btn btn-ghost btn-sm" onclick="guardarVisibilidadComoPlantilla()">⭐ Guardar como plantilla</button>
-          <button class="btn btn-ghost btn-sm" onclick="mostrarGestionPlantillasVis()">⚙️ Gestionar plantillas</button>
         </div>
         <div style="display:flex; gap:8px; margin-bottom:16px;">
           <select id="visProductoSelect" style="flex:1;"><option value="">Añadir un producto...</option></select>
