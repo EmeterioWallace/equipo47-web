@@ -1441,7 +1441,9 @@
           <textarea id="clienteNotas" rows="2" placeholder="Observaciones internas..."></textarea>
         </div>
         <div class="form-group">
-          <label><input type="checkbox" id="clienteActivo" checked> Cliente activo</label>
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+            <input type="checkbox" id="clienteActivo" checked style="width:auto; margin:0;"> Cliente activo
+          </label>
         </div>
       </div>
       <div class="modal-footer">
@@ -1462,6 +1464,11 @@
         <p style="font-size:13px; color:var(--muted); margin-bottom:14px;">
           Elige qué material ve este cliente. El <strong>tope</strong> es lo máximo que se le muestra y puede pedir (oculta tu stock real). Al añadir un producto, cada variante entra con el máximo por defecto; recórtalo si no quieres enseñar todo.
         </p>
+        <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
+          <button class="btn btn-ghost btn-sm" onclick="mostrarAplicarPlantillaVis()">📋 Aplicar plantilla</button>
+          <button class="btn btn-ghost btn-sm" onclick="guardarVisibilidadComoPlantilla()">⭐ Guardar como plantilla</button>
+          <button class="btn btn-ghost btn-sm" onclick="mostrarGestionPlantillasVis()">⚙️ Gestionar plantillas</button>
+        </div>
         <div style="display:flex; gap:8px; margin-bottom:16px;">
           <select id="visProductoSelect" style="flex:1;"><option value="">Añadir un producto...</option></select>
           <button class="btn btn-success" onclick="anadirProductoVisibilidad()">+ Añadir</button>
@@ -1469,7 +1476,40 @@
         <div id="visLista"></div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" onclick="cerrarModalAdmin('modalVisibilidad')">Cerrar</button>
+        <button type="button" class="btn btn-secondary" onclick="cerrarVisibilidad()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL APLICAR PLANTILLA DE VISIBILIDAD -->
+  <div id="modalAplicarPlantillaVis" class="modal">
+    <div class="modal-content" style="max-width: 480px;">
+      <div class="modal-header"><h2>📋 Aplicar plantilla de material</h2></div>
+      <div class="modal-body">
+        <p style="font-size:13px; color:var(--muted); margin-bottom:14px;">Se añadirá al cliente el material de la plantilla con sus topes. Los productos que el cliente ya tenga no se tocan.</p>
+        <div class="form-group">
+          <label>Plantilla *</label>
+          <select id="aplicarPlantillaVisSelect" onchange="previewPlantillaVisSel()"><option value="">Seleccionar plantilla...</option></select>
+        </div>
+        <div id="previewPlantillaVis" style="font-size:13px;"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModalAdmin('modalAplicarPlantillaVis')">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="ejecutarAplicarPlantillaVis()">📋 Aplicar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL GESTIÓN DE PLANTILLAS DE VISIBILIDAD -->
+  <div id="modalPlantillasVis" class="modal">
+    <div class="modal-content" style="max-width: 600px;">
+      <div class="modal-header"><h2>📋 Plantillas de material</h2></div>
+      <div class="modal-body">
+        <p style="font-size:13px; color:var(--muted); margin-bottom:14px;">Packs de material reutilizables. Se crean con "⭐ Guardar como plantilla" desde el material visible de un cliente.</p>
+        <div id="listaPlantillasVis"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModalAdmin('modalPlantillasVis')">Cerrar</button>
       </div>
     </div>
   </div>
@@ -4335,15 +4375,23 @@
     // ════════════════════════════════════════
     let clientes = [];
     let clienteVisibilidad = [];
+    let plantillasVis = [];
+    let plantillaVisLineas = [];
 
     async function cargarClientesTabla() {
       const cont = document.getElementById('clientes-tabla');
       cont.innerHTML = '<div class="loading">Cargando...</div>';
       clientes = (await sb.from('clientes').select('*').order('nombre')).data || [];
       clienteVisibilidad = (await sb.from('cliente_visibilidad').select('*')).data || [];
+      await cargarPlantillasVis();
       if (!productos.length) productos = await obtenerProductos();
       if (!variantes.length) variantes = await obtenerVariantes();
       renderClientes();
+    }
+
+    async function cargarPlantillasVis() {
+      plantillasVis = (await sb.from('plantillas_visibilidad').select('*').order('nombre')).data || [];
+      plantillaVisLineas = (await sb.from('plantilla_visibilidad_lineas').select('*')).data || [];
     }
 
     function etiquetaVariante(v) {
@@ -4446,6 +4494,11 @@
       abrirModalAdmin('modalVisibilidad');
     }
 
+    function cerrarVisibilidad() {
+      cerrarModalAdmin('modalVisibilidad');
+      renderClientes();
+    }
+
     function renderVisibilidad() {
       const clienteId = parseInt(document.getElementById('visClienteId').value);
       const vis = clienteVisibilidad.filter(v => v.cliente_id === clienteId);
@@ -4526,6 +4579,107 @@
       for (const v of aQuitar) await sb.from('cliente_visibilidad').delete().eq('id', v.id);
       clienteVisibilidad = (await sb.from('cliente_visibilidad').select('*')).data || [];
       renderVisibilidad();
+    }
+
+    // ── Plantillas de visibilidad (packs) ───
+    async function guardarVisibilidadComoPlantilla() {
+      const clienteId = parseInt(document.getElementById('visClienteId').value);
+      const vis = clienteVisibilidad.filter(v => v.cliente_id === clienteId);
+      if (!vis.length) { alert('Este cliente no tiene material que guardar como plantilla'); return; }
+      const nombre = prompt('Nombre de la plantilla (ej: Pack carreras):');
+      if (!nombre || !nombre.trim()) return;
+      const id = Date.now();
+      const { error } = await sb.from('plantillas_visibilidad').insert({ id, nombre: nombre.trim() });
+      if (error) { alert('❌ Error: ' + error.message); return; }
+      const lineas = vis.map(v => ({ id: idUnico(), plantilla_id: id, variante_id: v.variante_id, tope: v.tope }));
+      const { error: e2 } = await sb.from('plantilla_visibilidad_lineas').insert(lineas);
+      if (e2) { alert('❌ Error al guardar el contenido: ' + e2.message); return; }
+      toast('⭐ Plantilla guardada');
+      await cargarPlantillasVis();
+    }
+
+    async function mostrarAplicarPlantillaVis() {
+      await cargarPlantillasVis();
+      if (!plantillasVis.length) { alert('No hay plantillas guardadas todavía.\n\nCrea una con "⭐ Guardar como plantilla".'); return; }
+      document.getElementById('aplicarPlantillaVisSelect').innerHTML = '<option value="">Seleccionar plantilla...</option>' +
+        plantillasVis.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+      document.getElementById('previewPlantillaVis').innerHTML = '';
+      abrirModalAdmin('modalAplicarPlantillaVis');
+    }
+
+    function previewPlantillaVisSel() {
+      const pid = parseInt(document.getElementById('aplicarPlantillaVisSelect').value);
+      const cont = document.getElementById('previewPlantillaVis');
+      if (!pid) { cont.innerHTML = ''; return; }
+      const lineas = plantillaVisLineas.filter(l => l.plantilla_id === pid);
+      cont.innerHTML = '<div style="background:var(--card); padding:10px 12px; border-radius:8px; margin-top:6px; max-height:200px; overflow:auto;">' +
+        lineas.map(l => {
+          const v = variantes.find(x => x.id === l.variante_id);
+          const p = v ? productos.find(pr => pr.id === v.producto_id) : null;
+          return `<div style="padding:3px 0; font-size:13px;">• ${p ? p.nombre : '?'} · ${etiquetaVariante(v)} — tope ${l.tope}</div>`;
+        }).join('') + '</div>';
+    }
+
+    async function ejecutarAplicarPlantillaVis() {
+      const clienteId = parseInt(document.getElementById('visClienteId').value);
+      const pid = parseInt(document.getElementById('aplicarPlantillaVisSelect').value);
+      if (!pid) { alert('Selecciona una plantilla'); return; }
+      const lineas = plantillaVisLineas.filter(l => l.plantilla_id === pid);
+      const yaVis = clienteVisibilidad.filter(v => v.cliente_id === clienteId).map(v => v.variante_id);
+
+      const nuevas = lineas.filter(l => !yaVis.includes(l.variante_id));
+      if (!nuevas.length) { alert('El cliente ya tiene todo el material de esta plantilla'); cerrarModalAdmin('modalAplicarPlantillaVis'); return; }
+      const filas = nuevas.map(l => ({ id: idUnico(), cliente_id: clienteId, variante_id: l.variante_id, tope: l.tope }));
+      const { error } = await sb.from('cliente_visibilidad').insert(filas);
+      if (error) { alert('❌ Error: ' + error.message); return; }
+      cerrarModalAdmin('modalAplicarPlantillaVis');
+      toast(`✅ Plantilla aplicada (${filas.length} añadidas)`);
+      clienteVisibilidad = (await sb.from('cliente_visibilidad').select('*')).data || [];
+      renderVisibilidad();
+    }
+
+    async function mostrarGestionPlantillasVis() {
+      await cargarPlantillasVis();
+      renderListaPlantillasVis();
+      abrirModalAdmin('modalPlantillasVis');
+    }
+
+    function renderListaPlantillasVis() {
+      const cont = document.getElementById('listaPlantillasVis');
+      if (!plantillasVis.length) {
+        cont.innerHTML = '<p style="text-align:center; color:var(--muted); padding:20px;">No hay plantillas todavía.</p>';
+        return;
+      }
+      cont.innerHTML = plantillasVis.map(p => {
+        const n = plantillaVisLineas.filter(l => l.plantilla_id === p.id).length;
+        return `<div style="display:flex; justify-content:space-between; align-items:center; background:var(--card); border:1px solid var(--border); border-radius:8px; padding:12px; margin-bottom:10px;">
+          <span><strong>${p.nombre}</strong> <span style="color:var(--muted); font-size:12px;">· ${n} variante(s)</span></span>
+          <span style="display:flex; gap:5px;">
+            <button class="btn btn-ghost btn-small" onclick="renombrarPlantillaVis(${p.id})">✏️</button>
+            <button class="btn btn-danger btn-small" onclick="eliminarPlantillaVis(${p.id})">🗑️</button>
+          </span>
+        </div>`;
+      }).join('');
+    }
+
+    async function renombrarPlantillaVis(id) {
+      const p = plantillasVis.find(x => x.id === id);
+      const nuevo = prompt('Nuevo nombre:', p?.nombre);
+      if (!nuevo || !nuevo.trim()) return;
+      await sb.from('plantillas_visibilidad').update({ nombre: nuevo.trim() }).eq('id', id);
+      toast('✓ Renombrada');
+      await cargarPlantillasVis();
+      renderListaPlantillasVis();
+    }
+
+    async function eliminarPlantillaVis(id) {
+      const p = plantillasVis.find(x => x.id === id);
+      if (!confirmar(`¿Eliminar la plantilla "${p?.nombre}"?`)) return;
+      await sb.from('plantilla_visibilidad_lineas').delete().eq('plantilla_id', id);
+      await sb.from('plantillas_visibilidad').delete().eq('id', id);
+      toast('✓ Plantilla eliminada');
+      await cargarPlantillasVis();
+      renderListaPlantillasVis();
     }
 
     // ── REGISTRO DE ACTIVIDAD ───────────────
