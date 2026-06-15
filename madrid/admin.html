@@ -4003,7 +4003,7 @@
           <td colspan="5" style="background: var(--card); padding:0;">
             <div style="padding:12px 16px 14px 40px;">
               <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px 24px; font-size:13px; margin-bottom:12px;">
-                <div><span style="color:var(--muted); font-size:11px; text-transform:uppercase;">Tracking</span><br>${r.tracking || '—'}</div>
+                <div><span style="color:var(--muted); font-size:11px; text-transform:uppercase;">Tracking</span><br>${r.tracking ? `${r.tracking} <button class="btn btn-ghost btn-small" style="margin-left:6px;" onclick="seguirEnvio('${(r.tracking||'').replace(/'/g,'')}', '${(r.transportista||'').replace(/'/g,'')}')">🔍 Seguir envío</button>` : '—'}</div>
                 <div><span style="color:var(--muted); font-size:11px; text-transform:uppercase;">Transportista</span><br>${r.transportista || '—'}</div>
                 <div><span style="color:var(--muted); font-size:11px; text-transform:uppercase;">Bultos esperados</span><br>${r.num_bultos ?? '—'}</div>
                 <div><span style="color:var(--muted); font-size:11px; text-transform:uppercase;">Cantidad esperada</span><br>${r.cantidad_esperada || '—'}</div>
@@ -4164,6 +4164,40 @@
       toast('✓ Eliminada');
       await cargarRecepcionesTabla();
       setTimeout(() => toggleContenidoRecepcion(recepcionId), 120);
+    }
+
+    // Copia el tracking al portapapeles y abre la web de seguimiento
+    function seguirEnvio(tracking, transportista) {
+      if (!tracking) { alert('Esta recepción no tiene número de seguimiento'); return; }
+
+      // Copiar el tracking al portapapeles (por si hay que pegarlo)
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(tracking).then(
+          () => toast('📋 Tracking copiado: ' + tracking),
+          () => {}
+        );
+      }
+
+      // Enlaces directos por transportista conocido
+      const t = (transportista || '').toLowerCase();
+      let url;
+      if (t.includes('ups')) {
+        url = `https://www.ups.com/track?loc=es_ES&tracknum=${encodeURIComponent(tracking)}`;
+      } else if (t.includes('seur')) {
+        url = `https://www.seur.com/livetracking/?segOnlineIdentificador=${encodeURIComponent(tracking)}`;
+      } else if (t.includes('mrw')) {
+        url = `https://www.mrw.es/seguimiento_envios/MRW_resultados_consultas.asp?modo=nacional&envio=${encodeURIComponent(tracking)}`;
+      } else if (t.includes('correos')) {
+        url = `https://www.correos.es/es/es/herramientas/localizador/envios/detalle?tracking-number=${encodeURIComponent(tracking)}`;
+      } else if (t.includes('gls')) {
+        url = `https://mygls.gls-spain.es/e/${encodeURIComponent(tracking)}`;
+      } else if (t.includes('dhl')) {
+        url = `https://www.dhl.com/es-es/home/seguimiento.html?tracking-id=${encodeURIComponent(tracking)}`;
+      } else {
+        // Transportista no reconocido: buscador general (el tracking ya está copiado para pegar)
+        url = `https://www.aftership.com/es/track/${encodeURIComponent(tracking)}`;
+      }
+      window.open(url, '_blank');
     }
 
     // ── AUTENTICACIÓN (Supabase Auth) ───────
