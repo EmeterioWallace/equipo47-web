@@ -485,6 +485,10 @@
         <span class="icon">📤</span>
         <span>Salidas</span>
       </div>
+      <div class="nav-item" onclick="mostrarPagina('recepciones')">
+        <span class="icon">📥</span>
+        <span>Recepciones</span>
+      </div>
       <div class="nav-item" onclick="mostrarPagina('importar')">
         <span class="icon">📥</span>
         <span>Importar datos</span>
@@ -547,6 +551,11 @@
       <div class="card" style="margin-top: 20px;">
         <h3>📤 Devoluciones pendientes</h3>
         <div id="avisos-devoluciones"><p style="color: var(--muted);">Comprobando...</p></div>
+      </div>
+
+      <div class="card" style="margin-top: 20px;">
+        <h3>📥 Recepciones pendientes</h3>
+        <div id="avisos-recepciones"><p style="color: var(--muted);">Comprobando...</p></div>
       </div>
 
       <div class="card" style="margin-top: 20px;">
@@ -686,6 +695,33 @@
       </div>
 
       <div id="salidas-tabla" class="loading">Cargando...</div>
+    </section>
+
+    <!-- RECEPCIONES -->
+    <section class="page" id="recepciones-page">
+      <div class="page-header">
+        <div>
+          <h1>RECEPCIONES</h1>
+          <p>Seguimiento de mercancía que va a llegar a la nave</p>
+        </div>
+        <button class="btn btn-primary" onclick="nuevaRecepcion()">➕ Nueva recepción</button>
+      </div>
+
+      <div class="form-row" style="margin-bottom: 20px;">
+        <div class="form-group">
+          <label>Ver</label>
+          <select id="filtroEstadoRecepcion" onchange="renderRecepciones()">
+            <option value="activas">Pendientes y en curso</option>
+            <option value="pendiente">Solo pendientes</option>
+            <option value="parcial">Recibidas parcialmente</option>
+            <option value="correcto">Recibidas correctamente</option>
+            <option value="cerrado">Cerradas</option>
+            <option value="todas">Todas</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="recepciones-tabla" class="loading">Cargando...</div>
     </section>
 
     <!-- IMPORTAR DATOS -->
@@ -1273,6 +1309,64 @@
     </div>
   </div>
 
+  <!-- MODAL RECEPCIÓN -->
+  <div id="modalRecepcion" class="modal">
+    <div class="modal-content" style="max-width: 620px;">
+      <div class="modal-header">
+        <h2 id="tituloModalRecepcion">Nueva Recepción</h2>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="recepcionId">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Proveedor / Remitente *</label>
+            <input type="text" id="recProveedor" placeholder="Ej: ASICS, proveedor textil...">
+          </div>
+          <div class="form-group">
+            <label>Cliente (si es para uno)</label>
+            <input type="text" id="recCliente" placeholder="Ej: Carrera de la Mujer (opcional)">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Descripción del contenido *</label>
+          <input type="text" id="recDescripcion" placeholder="Ej: 200 camisetas técnicas azules">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nº de seguimiento / tracking</label>
+            <input type="text" id="recTracking" placeholder="Tracking">
+          </div>
+          <div class="form-group">
+            <label>Transportista</label>
+            <input type="text" id="recTransportista" placeholder="Ej: SEUR, MRW...">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nº de bultos esperados</label>
+            <input type="number" id="recBultos" min="0" placeholder="Ej: 3">
+          </div>
+          <div class="form-group">
+            <label>Cantidad esperada</label>
+            <input type="text" id="recCantidad" placeholder="Ej: 200 uds">
+          </div>
+          <div class="form-group">
+            <label>Fecha estimada de llegada</label>
+            <input type="date" id="recFechaEstimada">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Observaciones iniciales</label>
+          <textarea id="recObservaciones" rows="2" placeholder="Notas..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModalAdmin('modalRecepcion')">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="guardarRecepcion()">💾 Guardar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL CATEGORÍAS -->
   <div id="modalCategorias" class="modal">
     <div class="modal-content" style="max-width: 600px;">
@@ -1349,6 +1443,7 @@
       if (pagina === 'cajas') cargarCajasTabla();
       if (pagina === 'sueltos') cargarSueltosTabla();
       if (pagina === 'salidas') cargarSalidasTabla();
+      if (pagina === 'recepciones') cargarRecepcionesTabla();
     }
 
     // ── DASHBOARD ───────────────────────────
@@ -1418,6 +1513,24 @@
         if (vencidas.length) h += '<p style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:var(--danger); margin:4px 0;">Vencidas</p>' + vencidas.map(s => formateaSalida(s, true)).join('');
         if (proximas.length) h += '<p style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted); margin:12px 0 4px;">Próximas (3 días)</p>' + proximas.map(s => formateaSalida(s, false)).join('');
         contDev.innerHTML = h;
+      }
+
+      // Avisos de recepciones pendientes
+      const contRec = document.getElementById('avisos-recepciones');
+      const recs = (await sb.from('recepciones').select('*')).data || [];
+      const pendientesRec = recs.filter(r => r.estado === 'pendiente' || r.estado === 'parcial')
+        .sort((a, b) => (a.fecha_estimada || '9999').localeCompare(b.fecha_estimada || '9999'));
+      if (!pendientesRec.length) {
+        contRec.innerHTML = '<p style="color: var(--success);">✓ No hay recepciones pendientes</p>';
+      } else {
+        contRec.innerHTML = pendientesRec.map(r => {
+          const llegaHoy = r.fecha_estimada && r.fecha_estimada <= hoyStr;
+          const quien = r.cliente ? ` → ${r.cliente}` : (r.proveedor ? ` · ${r.proveedor}` : '');
+          return `<div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border);">
+            <span style="font-size:13px;">${llegaHoy ? '🔴' : '📦'} <strong>${r.descripcion || 'Pedido'}</strong>${quien}</span>
+            <span class="badge badge-${llegaHoy ? 'danger' : 'warning'}">${r.fecha_estimada ? 'llega ' + fechaCorta(r.fecha_estimada) : 'sin fecha'}</span>
+          </div>`;
+        }).join('');
       }
 
       const connected = await testConexionSupabase();
@@ -3805,6 +3918,252 @@
       }
       await cargarSalidasTabla();
       setTimeout(() => toggleContenidoSalida(salidaId), 120);
+    }
+
+    // ════════════════════════════════════════
+    //  MÓDULO RECEPCIONES (mercancía entrante)
+    // ════════════════════════════════════════
+    let recepciones = [];
+    let recepcionIncidencias = [];
+
+    async function cargarRecepcionesTabla() {
+      const cont = document.getElementById('recepciones-tabla');
+      cont.innerHTML = '<div class="loading">Cargando...</div>';
+      recepciones = (await sb.from('recepciones').select('*').order('fecha_estimada', { ascending: true })).data || [];
+      recepcionIncidencias = (await sb.from('recepcion_incidencias').select('*').order('created_at', { ascending: true })).data || [];
+      renderRecepciones();
+    }
+
+    function badgeEstadoRecepcion(e) {
+      if (e === 'pendiente') return '<span class="badge badge-warning">🕐 Pendiente</span>';
+      if (e === 'parcial') return '<span class="badge" style="background:#1e40af;color:#fff;">◐ Parcial</span>';
+      if (e === 'correcto') return '<span class="badge badge-success">✓ Correcto</span>';
+      if (e === 'cerrado') return '<span class="badge" style="background:#555;color:#fff;">🔒 Cerrada</span>';
+      return `<span class="badge">${e}</span>`;
+    }
+
+    function renderRecepciones() {
+      const cont = document.getElementById('recepciones-tabla');
+      const filtro = document.getElementById('filtroEstadoRecepcion').value;
+      let lista = recepciones.slice();
+      if (filtro === 'activas') lista = lista.filter(r => r.estado === 'pendiente' || r.estado === 'parcial');
+      else if (filtro !== 'todas') lista = lista.filter(r => r.estado === filtro);
+
+      if (!lista.length) {
+        cont.innerHTML = `<div class="empty"><div class="empty-icon">📥</div><p>No hay recepciones que mostrar. Crea una con "Nueva recepción".</p></div>`;
+        return;
+      }
+
+      const hoy = new Date().toISOString().slice(0, 10);
+      let html = `<table><thead><tr>
+        <th>Pedido</th><th>Proveedor / Cliente</th><th>Llegada prevista</th><th>Estado</th><th>Acciones</th>
+        </tr></thead><tbody>`;
+
+      for (const r of lista) {
+        const incs = recepcionIncidencias.filter(i => i.recepcion_id === r.id);
+        const flecha = `<span id="flecha-rec-${r.id}" style="display:inline-block; width:14px; color: var(--accent);">▶</span>`;
+        const pendienteHoy = (r.estado === 'pendiente' || r.estado === 'parcial') && r.fecha_estimada && r.fecha_estimada <= hoy;
+        const fechaTxt = `${fechaCorta(r.fecha_estimada)}${pendienteHoy ? ' <span style="color:var(--danger);">⚠️</span>' : ''}`;
+        const quien = r.cliente ? `${r.proveedor || '—'} <span style="color:var(--muted);">→ ${r.cliente}</span>` : (r.proveedor || '—');
+
+        html += `<tr onclick="toggleContenidoRecepcion(${r.id})" style="cursor:pointer;">
+          <td>${flecha} <strong>${r.descripcion || '(sin descripción)'}</strong>${incs.length ? ` <span style="font-size:11px; color:var(--danger);">⚠️ ${incs.length}</span>` : ''}</td>
+          <td style="font-size:13px;">${quien}</td>
+          <td style="font-size:12px;">${fechaTxt}</td>
+          <td>${badgeEstadoRecepcion(r.estado)}</td>
+          <td>
+            <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); mostrarModalRecepcion(${r.id})">✏️</button>
+            <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); eliminarRecepcionAdmin(${r.id})">🗑️</button>
+          </td>
+        </tr>`;
+
+        // Desglose
+        const cerrada = r.estado === 'cerrado';
+        const incidenciasHtml = incs.length
+          ? incs.map(i => `<div style="display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px solid var(--border);">
+              <span style="font-size:13px;">⚠️ ${i.texto} <span style="color:var(--muted); font-size:11px;">· ${fechaCorta((i.created_at||'').slice(0,10))}</span></span>
+              <button class="btn btn-danger btn-small" onclick="eliminarIncidencia(${i.id}, ${r.id})">🗑️</button>
+            </div>`).join('')
+          : '<p style="color:var(--muted); font-size:12px;">Sin incidencias registradas</p>';
+
+        let botonesEstado = '';
+        if (r.estado === 'pendiente' || r.estado === 'parcial') {
+          botonesEstado = `
+            <button class="btn btn-primary btn-small" onclick="cambiarEstadoRecepcion(${r.id}, 'correcto')">✓ Recibido correctamente</button>
+            <button class="btn btn-secondary btn-small" onclick="cambiarEstadoRecepcion(${r.id}, 'parcial')">◐ Recibido parcial</button>`;
+        }
+        if (r.estado === 'correcto' || r.estado === 'parcial') {
+          botonesEstado += ` <button class="btn btn-ghost btn-small" onclick="cambiarEstadoRecepcion(${r.id}, 'cerrado')">🔒 Cerrar</button>`;
+        }
+        if (cerrada) {
+          botonesEstado = `<button class="btn btn-ghost btn-small" onclick="cambiarEstadoRecepcion(${r.id}, 'pendiente')">↩️ Reabrir</button>`;
+        }
+
+        html += `<tr id="contenido-rec-${r.id}" style="display:none;">
+          <td colspan="5" style="background: var(--card); padding:0;">
+            <div style="padding:12px 16px 14px 40px;">
+              <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px 24px; font-size:13px; margin-bottom:12px;">
+                <div><span style="color:var(--muted); font-size:11px; text-transform:uppercase;">Tracking</span><br>${r.tracking || '—'}</div>
+                <div><span style="color:var(--muted); font-size:11px; text-transform:uppercase;">Transportista</span><br>${r.transportista || '—'}</div>
+                <div><span style="color:var(--muted); font-size:11px; text-transform:uppercase;">Bultos esperados</span><br>${r.num_bultos ?? '—'}</div>
+                <div><span style="color:var(--muted); font-size:11px; text-transform:uppercase;">Cantidad esperada</span><br>${r.cantidad_esperada || '—'}</div>
+              </div>
+              ${r.observaciones ? `<p style="font-size:12px; color:var(--muted); margin-bottom:12px;">📝 ${r.observaciones}</p>` : ''}
+
+              ${!cerrada ? `<div style="background:var(--dark); padding:10px 12px; border-radius:8px; margin-bottom:12px;">
+                <div style="font-size:11px; text-transform:uppercase; color:var(--muted); margin-bottom:8px;">Seguimiento de la recepción</div>
+                <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                  <label style="font-size:13px;">Bultos recibidos: <input type="number" id="seg-bultos-${r.id}" min="0" value="${r.bultos_recibidos ?? ''}" style="width:60px; padding:4px; border:1px solid var(--border); border-radius:4px; background:var(--card); color:var(--text);"> de ${r.num_bultos ?? '?'}</label>
+                  <label style="font-size:13px;">¿Coincide el contenido?
+                    <select id="seg-coincide-${r.id}" style="padding:4px; border:1px solid var(--border); border-radius:4px; background:var(--card); color:var(--text);">
+                      <option value="">—</option>
+                      <option value="si" ${r.contenido_coincide === 'si' ? 'selected' : ''}>Sí</option>
+                      <option value="no" ${r.contenido_coincide === 'no' ? 'selected' : ''}>No</option>
+                    </select>
+                  </label>
+                  <button class="btn btn-secondary btn-small" onclick="guardarSeguimientoRecepcion(${r.id})">Guardar seguimiento</button>
+                </div>
+              </div>` : `<p style="font-size:12px; color:var(--muted); margin-bottom:8px;">Recibido el ${fechaCorta(r.fecha_recepcion)} · ${r.bultos_recibidos ?? '—'}/${r.num_bultos ?? '—'} bultos · contenido ${r.contenido_coincide === 'si' ? 'correcto' : (r.contenido_coincide === 'no' ? 'con diferencias' : 'sin confirmar')}</p>`}
+
+              <div style="margin-bottom:10px;">
+                <div style="font-size:11px; text-transform:uppercase; color:var(--muted); margin-bottom:6px;">Incidencias / anotaciones</div>
+                ${incidenciasHtml}
+                <div style="display:flex; gap:8px; margin-top:8px;">
+                  <input type="text" id="inc-texto-${r.id}" placeholder="Ej: 3 camisetas con costura defectuosa" style="flex:1; padding:6px; border:1px solid var(--border); border-radius:4px; background:var(--card); color:var(--text);">
+                  <button class="btn btn-success btn-small" onclick="anadirIncidencia(${r.id})">+ Añadir</button>
+                </div>
+              </div>
+
+              <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:10px;">${botonesEstado}</div>
+            </div>
+          </td>
+        </tr>`;
+      }
+      html += '</tbody></table>';
+      cont.innerHTML = html;
+    }
+
+    function toggleContenidoRecepcion(id) {
+      const fila = document.getElementById('contenido-rec-' + id);
+      const flecha = document.getElementById('flecha-rec-' + id);
+      if (!fila) return;
+      const abierto = fila.style.display !== 'none';
+      fila.style.display = abierto ? 'none' : 'table-row';
+      if (flecha) flecha.textContent = abierto ? '▶' : '▼';
+    }
+
+    function nuevaRecepcion() { mostrarModalRecepcion(); }
+
+    function mostrarModalRecepcion(id = null) {
+      const campos = ['recProveedor','recCliente','recDescripcion','recTracking','recTransportista','recBultos','recCantidad','recFechaEstimada','recObservaciones'];
+      if (id) {
+        const r = recepciones.find(x => x.id === id);
+        document.getElementById('tituloModalRecepcion').textContent = 'Editar Recepción';
+        document.getElementById('recepcionId').value = r.id;
+        document.getElementById('recProveedor').value = r.proveedor || '';
+        document.getElementById('recCliente').value = r.cliente || '';
+        document.getElementById('recDescripcion').value = r.descripcion || '';
+        document.getElementById('recTracking').value = r.tracking || '';
+        document.getElementById('recTransportista').value = r.transportista || '';
+        document.getElementById('recBultos').value = r.num_bultos ?? '';
+        document.getElementById('recCantidad').value = r.cantidad_esperada || '';
+        document.getElementById('recFechaEstimada').value = r.fecha_estimada || '';
+        document.getElementById('recObservaciones').value = r.observaciones || '';
+      } else {
+        document.getElementById('tituloModalRecepcion').textContent = 'Nueva Recepción';
+        document.getElementById('recepcionId').value = '';
+        campos.forEach(c => document.getElementById(c).value = '');
+      }
+      abrirModalAdmin('modalRecepcion');
+    }
+
+    async function guardarRecepcion() {
+      const proveedor = document.getElementById('recProveedor').value.trim();
+      const descripcion = document.getElementById('recDescripcion').value.trim();
+      if (!proveedor) { alert('❌ Indica el proveedor o remitente'); return; }
+      if (!descripcion) { alert('❌ Indica una descripción del contenido'); return; }
+
+      const datos = {
+        proveedor,
+        cliente: document.getElementById('recCliente').value.trim() || null,
+        descripcion,
+        tracking: document.getElementById('recTracking').value.trim() || null,
+        transportista: document.getElementById('recTransportista').value.trim() || null,
+        num_bultos: parseInt(document.getElementById('recBultos').value) || null,
+        cantidad_esperada: document.getElementById('recCantidad').value.trim() || null,
+        fecha_estimada: document.getElementById('recFechaEstimada').value || null,
+        observaciones: document.getElementById('recObservaciones').value.trim() || null
+      };
+
+      const idStr = document.getElementById('recepcionId').value;
+      if (idStr) {
+        const { error } = await sb.from('recepciones').update(datos).eq('id', parseInt(idStr));
+        if (error) { alert('❌ Error: ' + error.message); return; }
+        toast('✅ Recepción actualizada');
+      } else {
+        const id = Date.now();
+        const { error } = await sb.from('recepciones').insert({ id, estado: 'pendiente', ...datos });
+        if (error) { alert('❌ Error: ' + error.message); return; }
+        toast('✅ Recepción registrada');
+      }
+      cerrarModalAdmin('modalRecepcion');
+      await cargarRecepcionesTabla();
+    }
+
+    async function eliminarRecepcionAdmin(id) {
+      const r = recepciones.find(x => x.id === id);
+      if (!confirmar(`¿Eliminar la recepción "${r?.descripcion}" y sus incidencias?`)) return;
+      await sb.from('recepcion_incidencias').delete().eq('recepcion_id', id);
+      const { error } = await sb.from('recepciones').delete().eq('id', id);
+      if (error) { toast('❌ Error'); return; }
+      toast('✓ Recepción eliminada');
+      await cargarRecepcionesTabla();
+    }
+
+    async function cambiarEstadoRecepcion(id, estado) {
+      const datos = { estado };
+      if ((estado === 'correcto' || estado === 'parcial')) {
+        const r = recepciones.find(x => x.id === id);
+        if (!r.fecha_recepcion) datos.fecha_recepcion = new Date().toISOString().slice(0, 10);
+      }
+      const { error } = await sb.from('recepciones').update(datos).eq('id', id);
+      if (error) { toast('❌ Error'); return; }
+      toast('✅ Estado actualizado');
+      await cargarRecepcionesTabla();
+      setTimeout(() => toggleContenidoRecepcion(id), 120);
+    }
+
+    async function guardarSeguimientoRecepcion(id) {
+      const bultos = parseInt(document.getElementById('seg-bultos-' + id).value);
+      const coincide = document.getElementById('seg-coincide-' + id).value || null;
+      const { error } = await sb.from('recepciones').update({
+        bultos_recibidos: isNaN(bultos) ? null : bultos,
+        contenido_coincide: coincide
+      }).eq('id', id);
+      if (error) { toast('❌ Error'); return; }
+      toast('✓ Seguimiento guardado');
+      await cargarRecepcionesTabla();
+      setTimeout(() => toggleContenidoRecepcion(id), 120);
+    }
+
+    async function anadirIncidencia(recepcionId) {
+      const input = document.getElementById('inc-texto-' + recepcionId);
+      const texto = input.value.trim();
+      if (!texto) { alert('Escribe la incidencia'); return; }
+      const id = idUnico();
+      const { error } = await sb.from('recepcion_incidencias').insert({ id, recepcion_id: recepcionId, texto });
+      if (error) { alert('❌ Error: ' + error.message); return; }
+      toast('✓ Incidencia añadida');
+      await cargarRecepcionesTabla();
+      setTimeout(() => toggleContenidoRecepcion(recepcionId), 120);
+    }
+
+    async function eliminarIncidencia(id, recepcionId) {
+      if (!confirmar('¿Eliminar esta incidencia?')) return;
+      await sb.from('recepcion_incidencias').delete().eq('id', id);
+      toast('✓ Eliminada');
+      await cargarRecepcionesTabla();
+      setTimeout(() => toggleContenidoRecepcion(recepcionId), 120);
     }
 
     // ── AUTENTICACIÓN (Supabase Auth) ───────
