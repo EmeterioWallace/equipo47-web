@@ -315,6 +315,17 @@
 
       const items = carrito.map(c => ({ variante_id: c.variante_id, cantidad: c.cantidad }));
 
+      // Comprobar disponibilidad por fechas (sin revelar números)
+      const { data: noDisp, error: errDisp } = await sb.rpc('comprobar_disponibilidad', {
+        p_recogida: recogida, p_devolucion: devolucion, p_items: items
+      });
+      if (!errDisp && noDisp && noDisp.length) {
+        const lista = noDisp.map(x => '• ' + x.articulo).join('\n');
+        const seguir = confirm('⚠️ No hay disponibilidad para esas fechas en:\n\n' + lista +
+          '\n\nPuedes cambiar las fechas o reducir cantidades. ¿Enviar la solicitud igualmente para que Equipo 47 la valore?');
+        if (!seguir) return;
+      }
+
       if (editandoId) {
         const { error } = await sb.rpc('editar_solicitud', {
           p_solicitud_id: editandoId, p_evento: evento, p_recogida: recogida,
