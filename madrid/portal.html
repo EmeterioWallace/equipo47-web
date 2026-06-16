@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal de Clientes · Equipo 47</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --azul: #1e40af; --azul-claro: #3b82f6; --verde: #16a34a;
+      --texto: #1a1a1a; --suave: #667085; --borde: #e4e7ec;
+      --fondo: #f8f9fb; --tarjeta: #ffffff; --amarillo: #f0c000; --rojo: #d33;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background: var(--fondo); color: var(--texto); }
+    .oculto { display: none !important; }
+
+    /* Login */
+    #login-overlay { position: fixed; inset: 0; background: #0f1117; z-index: 9999; display: flex; align-items: center; justify-content: center; }
+    .login-card { background: #fff; padding: 32px; border-radius: 14px; width: 350px; max-width: 90%; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
+    .login-card h2 { font-size: 20px; margin-bottom: 4px; }
+    .login-card p.sub { font-size: 13px; color: var(--suave); margin-bottom: 20px; }
+    .campo { margin-bottom: 14px; }
+    .campo label { display: block; font-size: 13px; color: #444; margin-bottom: 4px; font-weight: 500; }
+    .campo input, .campo textarea, .campo select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; font-family: inherit; }
+    .error { color: var(--rojo); font-size: 13px; margin-bottom: 12px; }
+
+    /* Cabecera */
+    header { background: var(--azul); color: #fff; padding: 14px 22px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+    header h1 { font-size: 18px; }
+    header .quien { font-size: 13px; opacity: 0.9; }
+    .btn { padding: 9px 16px; border: none; border-radius: 7px; font-size: 14px; cursor: pointer; font-family: inherit; font-weight: 500; }
+    .btn-primary { background: var(--azul); color: #fff; }
+    .btn-verde { background: var(--verde); color: #fff; }
+    .btn-claro { background: #fff; color: var(--azul); border: 1px solid #fff; }
+    .btn-ghost { background: transparent; color: var(--suave); border: 1px solid var(--borde); }
+    .btn-sm { padding: 5px 10px; font-size: 13px; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Pestañas */
+    .tabs { display: flex; gap: 6px; padding: 0 22px; background: #fff; border-bottom: 1px solid var(--borde); }
+    .tab { padding: 14px 18px; cursor: pointer; border-bottom: 3px solid transparent; font-size: 14px; color: var(--suave); font-weight: 500; }
+    .tab.activa { color: var(--azul); border-bottom-color: var(--azul); }
+
+    main { max-width: 1100px; margin: 0 auto; padding: 22px; }
+    .layout { display: grid; grid-template-columns: 1fr 360px; gap: 22px; align-items: start; }
+    @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+
+    .panel { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 12px; padding: 18px; margin-bottom: 18px; }
+    .panel h3 { font-size: 15px; margin-bottom: 14px; }
+
+    .filtros { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+    .filtros input, .filtros select { padding: 9px 12px; border: 1px solid var(--borde); border-radius: 7px; font-size: 14px; font-family: inherit; }
+    .filtros input { flex: 1; min-width: 160px; }
+
+    .item { display: flex; justify-content: space-between; align-items: center; padding: 11px 0; border-bottom: 1px solid var(--borde); gap: 12px; }
+    .item:last-child { border-bottom: none; }
+    .item .info { flex: 1; }
+    .item .nombre { font-size: 14px; font-weight: 500; }
+    .item .meta { font-size: 12px; color: var(--suave); margin-top: 2px; }
+    .item .disp { font-size: 12px; color: var(--verde); font-weight: 600; }
+    .item .add { display: flex; align-items: center; gap: 6px; }
+    .item .add input { width: 60px; padding: 6px; border: 1px solid var(--borde); border-radius: 6px; text-align: center; font-size: 14px; }
+
+    .cat-titulo { font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--suave); margin: 16px 0 6px; font-weight: 600; }
+    .cat-titulo:first-child { margin-top: 0; }
+
+    /* Carrito */
+    .carrito-item { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--borde); gap: 8px; }
+    .carrito-item .ci-info { flex: 1; font-size: 13px; }
+    .carrito-item input { width: 56px; padding: 5px; border: 1px solid var(--borde); border-radius: 5px; text-align: center; }
+    .vacio { color: var(--suave); font-size: 13px; text-align: center; padding: 20px 0; }
+
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .b-pend { background: #fef3c7; color: #92400e; }
+    .b-acep { background: #dcfce7; color: #166534; }
+    .b-rech { background: #fee2e2; color: #991b1b; }
+
+    .solicitud { border: 1px solid var(--borde); border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+    .solicitud .cab { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px; }
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1a1a1a; color: #fff; padding: 12px 22px; border-radius: 8px; font-size: 14px; z-index: 10000; opacity: 0; transition: opacity 0.3s; }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+
+  <!-- LOGIN -->
+  <div id="login-overlay">
+    <div class="login-card">
+      <h2>🎪 Portal de Clientes</h2>
+      <p class="sub">Equipo 47 · Accede para hacer tu pedido de material</p>
+      <div class="campo">
+        <label>Email</label>
+        <input type="email" id="loginEmail" placeholder="tu@email.com" autocomplete="username">
+      </div>
+      <div class="campo">
+        <label>Contraseña</label>
+        <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter') entrar()">
+      </div>
+      <div id="loginError" class="error oculto"></div>
+      <button class="btn btn-primary" style="width:100%;" onclick="entrar()">Entrar</button>
+    </div>
+  </div>
+
+  <!-- APP -->
+  <div id="app" class="oculto">
+    <header>
+      <div>
+        <h1>🎪 Portal de Clientes · Equipo 47</h1>
+        <div class="quien" id="quienSoy"></div>
+      </div>
+      <button class="btn btn-claro btn-sm" onclick="salir()">Cerrar sesión</button>
+    </header>
+
+    <div class="tabs">
+      <div class="tab activa" id="tab-pedido" onclick="cambiarTab('pedido')">🛒 Nuevo pedido</div>
+      <div class="tab" id="tab-mis" onclick="cambiarTab('mis')">📋 Mis pedidos</div>
+    </div>
+
+    <!-- NUEVO PEDIDO -->
+    <main id="vista-pedido">
+      <div class="layout">
+        <div>
+          <div class="panel">
+            <h3>Material disponible</h3>
+            <div class="filtros">
+              <input type="text" id="buscar" placeholder="🔍 Buscar material..." onkeyup="renderCatalogo()">
+              <select id="filtroCat" onchange="renderCatalogo()"><option value="">Todas las categorías</option></select>
+            </div>
+            <div id="catalogo"><p class="vacio">Cargando catálogo...</p></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="panel">
+            <h3>🛒 Tu pedido</h3>
+            <div id="carrito"><p class="vacio">Aún no has añadido material.</p></div>
+          </div>
+          <div class="panel">
+            <h3>Datos del evento</h3>
+            <div class="campo">
+              <label>Nombre del evento / destino *</label>
+              <input type="text" id="evNombre" placeholder="Ej: Carrera de la Mujer Madrid">
+            </div>
+            <div class="campo">
+              <label>Recogida (fecha y hora) *</label>
+              <input type="datetime-local" id="evRecogida">
+            </div>
+            <div class="campo">
+              <label>Devolución (fecha y hora) *</label>
+              <input type="datetime-local" id="evDevolucion">
+            </div>
+            <div class="campo">
+              <label>Notas (opcional)</label>
+              <textarea id="evNotas" rows="2" placeholder="Cualquier detalle que debamos saber..."></textarea>
+            </div>
+            <button class="btn btn-verde" style="width:100%;" onclick="enviarSolicitud()">📨 Enviar solicitud</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- MIS PEDIDOS -->
+    <main id="vista-mis" class="oculto">
+      <div class="panel">
+        <h3>📋 Mis pedidos</h3>
+        <div id="misSolicitudes"><p class="vacio">Cargando...</p></div>
+      </div>
+    </main>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <!-- SCRIPTS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase.js"></script>
+  <script>
+    let catalogo = [];
+    let carrito = [];
+
+    function toast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg; t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2600);
+    }
+
+    // ── LOGIN ───────────────────────────────
+    async function entrar() {
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const err = document.getElementById('loginError');
+      err.classList.add('oculto');
+      if (!email || !password) { err.textContent = 'Escribe email y contraseña'; err.classList.remove('oculto'); return; }
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) { err.textContent = '❌ Email o contraseña incorrectos'; err.classList.remove('oculto'); return; }
+      arrancar();
+    }
+
+    async function salir() {
+      await sb.auth.signOut();
+      location.reload();
+    }
+
+    async function arrancar() {
+      document.getElementById('login-overlay').classList.add('oculto');
+      document.getElementById('app').classList.remove('oculto');
+      const { data: { session } } = await sb.auth.getSession();
+      document.getElementById('quienSoy').textContent = session?.user?.email || '';
+      await cargarCatalogo();
+    }
+
+    // ── CATÁLOGO ────────────────────────────
+    async function cargarCatalogo() {
+      const { data, error } = await sb.rpc('mi_catalogo');
+      if (error) { document.getElementById('catalogo').innerHTML = '<p class="vacio">No se pudo cargar el catálogo.</p>'; return; }
+      catalogo = data || [];
+      if (!catalogo.length) {
+        document.getElementById('catalogo').innerHTML = '<p class="vacio">No hay material asignado a tu cuenta todavía. Ponte en contacto con Equipo 47.</p>';
+        return;
+      }
+      // Rellenar filtro de categorías
+      const cats = [...new Set(catalogo.map(c => c.categoria))].sort();
+      document.getElementById('filtroCat').innerHTML = '<option value="">Todas las categorías</option>' +
+        cats.map(c => `<option value="${c}">${c}</option>`).join('');
+      renderCatalogo();
+    }
+
+    function renderCatalogo() {
+      const cont = document.getElementById('catalogo');
+      const txt = document.getElementById('buscar').value.toLowerCase();
+      const cat = document.getElementById('filtroCat').value;
+      let lista = catalogo.slice();
+      if (cat) lista = lista.filter(c => c.categoria === cat);
+      if (txt) lista = lista.filter(c => (c.producto + ' ' + c.variante).toLowerCase().includes(txt));
+
+      if (!lista.length) { cont.innerHTML = '<p class="vacio">Sin resultados.</p>'; return; }
+
+      // Agrupar por categoría
+      const porCat = {};
+      lista.forEach(c => { (porCat[c.categoria] = porCat[c.categoria] || []).push(c); });
+
+      let html = '';
+      for (const cat in porCat) {
+        html += `<div class="cat-titulo">${cat}</div>`;
+        for (const it of porCat[cat]) {
+          const enCarrito = carrito.find(x => x.variante_id === it.variante_id);
+          html += `<div class="item">
+            <div class="info">
+              <div class="nombre">${it.producto}</div>
+              <div class="meta">${it.variante} · <span class="disp">${it.disponible} disponibles</span></div>
+            </div>
+            <div class="add">
+              <input type="number" min="1" max="${it.disponible}" id="cant-${it.variante_id}" placeholder="0" ${enCarrito ? `value="${enCarrito.cantidad}"` : ''}>
+              <button class="btn btn-primary btn-sm" onclick="anadirCarrito(${it.variante_id})">${enCarrito ? 'Actualizar' : 'Añadir'}</button>
+            </div>
+          </div>`;
+        }
+      }
+      cont.innerHTML = html;
+    }
+
+    function anadirCarrito(varId) {
+      const it = catalogo.find(c => c.variante_id === varId);
+      const cant = parseInt(document.getElementById('cant-' + varId).value);
+      if (!cant || cant < 1) { toast('Indica una cantidad'); return; }
+      if (cant > it.disponible) { toast('Máximo disponible: ' + it.disponible); return; }
+      const existente = carrito.find(x => x.variante_id === varId);
+      if (existente) { existente.cantidad = cant; toast('Cantidad actualizada'); }
+      else { carrito.push({ variante_id: varId, producto: it.producto, variante: it.variante, disponible: it.disponible, cantidad: cant }); toast('Añadido al pedido'); }
+      renderCarrito();
+      renderCatalogo();
+    }
+
+    function renderCarrito() {
+      const cont = document.getElementById('carrito');
+      if (!carrito.length) { cont.innerHTML = '<p class="vacio">Aún no has añadido material.</p>'; return; }
+      cont.innerHTML = carrito.map(c => `
+        <div class="carrito-item">
+          <div class="ci-info"><strong>${c.producto}</strong><br><span style="color:var(--suave);">${c.variante}</span></div>
+          <input type="number" min="1" max="${c.disponible}" value="${c.cantidad}" onchange="cambiarCantidadCarrito(${c.variante_id}, this.value)">
+          <button class="btn btn-ghost btn-sm" onclick="quitarCarrito(${c.variante_id})">✕</button>
+        </div>`).join('');
+    }
+
+    function cambiarCantidadCarrito(varId, valor) {
+      const c = carrito.find(x => x.variante_id === varId);
+      let n = parseInt(valor);
+      if (!n || n < 1) n = 1;
+      if (n > c.disponible) { n = c.disponible; toast('Máximo: ' + c.disponible); }
+      c.cantidad = n;
+      renderCarrito();
+    }
+
+    function quitarCarrito(varId) {
+      carrito = carrito.filter(x => x.variante_id !== varId);
+      renderCarrito();
+      renderCatalogo();
+    }
+
+    // ── ENVIAR SOLICITUD ────────────────────
+    async function enviarSolicitud() {
+      const evento = document.getElementById('evNombre').value.trim();
+      const recogida = document.getElementById('evRecogida').value;
+      const devolucion = document.getElementById('evDevolucion').value;
+      const notas = document.getElementById('evNotas').value.trim();
+
+      if (!carrito.length) { toast('Añade material a tu pedido primero'); return; }
+      if (!evento) { toast('Indica el nombre del evento'); return; }
+      if (!recogida || !devolucion) { toast('Indica las fechas de recogida y devolución'); return; }
+      if (devolucion < recogida) { toast('La devolución no puede ser antes de la recogida'); return; }
+
+      const items = carrito.map(c => ({ variante_id: c.variante_id, cantidad: c.cantidad }));
+      const { error } = await sb.rpc('crear_solicitud', {
+        p_evento: evento, p_recogida: recogida, p_devolucion: devolucion, p_notas: notas || null, p_items: items
+      });
+      if (error) { toast('❌ ' + (error.message || 'No se pudo enviar')); return; }
+
+      toast('✅ ¡Solicitud enviada! Equipo 47 la revisará.');
+      carrito = [];
+      document.getElementById('evNombre').value = '';
+      document.getElementById('evRecogida').value = '';
+      document.getElementById('evDevolucion').value = '';
+      document.getElementById('evNotas').value = '';
+      renderCarrito();
+      renderCatalogo();
+    }
+
+    // ── MIS PEDIDOS ─────────────────────────
+    function cambiarTab(t) {
+      document.getElementById('tab-pedido').classList.toggle('activa', t === 'pedido');
+      document.getElementById('tab-mis').classList.toggle('activa', t === 'mis');
+      document.getElementById('vista-pedido').classList.toggle('oculto', t !== 'pedido');
+      document.getElementById('vista-mis').classList.toggle('oculto', t !== 'mis');
+      if (t === 'mis') cargarMisSolicitudes();
+    }
+
+    function fmtFecha(f) {
+      if (!f) return '—';
+      return new Date(f).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+
+    function badgeEstado(e) {
+      if (e === 'aceptada') return '<span class="badge b-acep">✓ Aceptada</span>';
+      if (e === 'rechazada') return '<span class="badge b-rech">✕ Rechazada</span>';
+      return '<span class="badge b-pend">🕐 Pendiente</span>';
+    }
+
+    async function cargarMisSolicitudes() {
+      const cont = document.getElementById('misSolicitudes');
+      cont.innerHTML = '<p class="vacio">Cargando...</p>';
+      const { data, error } = await sb.rpc('mis_solicitudes');
+      if (error) { cont.innerHTML = '<p class="vacio">No se pudieron cargar tus pedidos.</p>'; return; }
+      if (!data || !data.length) { cont.innerHTML = '<p class="vacio">Todavía no has hecho ningún pedido.</p>'; return; }
+      cont.innerHTML = data.map(s => {
+        const items = (s.items || []).map(i => `<div style="font-size:13px; padding:2px 0;">• ${i.producto} · ${i.variante} — <strong>${i.cantidad}</strong></div>`).join('');
+        return `<div class="solicitud">
+          <div class="cab">
+            <strong>${s.evento || '(sin nombre)'}</strong>
+            ${badgeEstado(s.estado)}
+          </div>
+          <div style="font-size:12px; color:var(--suave); margin-bottom:8px;">
+            Recogida: ${fmtFecha(s.fecha_recogida)} · Devolución: ${fmtFecha(s.fecha_devolucion)}
+          </div>
+          ${items}
+          ${s.notas_admin ? `<div style="margin-top:8px; font-size:13px; background:#f8f9fb; padding:8px; border-radius:6px;">💬 <strong>Equipo 47:</strong> ${s.notas_admin}</div>` : ''}
+        </div>`;
+      }).join('');
+    }
+
+    // ── INIT ────────────────────────────────
+    document.addEventListener('DOMContentLoaded', async () => {
+      const { data: { session } } = await sb.auth.getSession();
+      if (session) arrancar();
+      else document.getElementById('login-overlay').classList.remove('oculto');
+    });
+  </script>
+</body>
+</html>
