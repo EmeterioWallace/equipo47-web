@@ -137,6 +137,9 @@
           </div>
           <div class="panel">
             <h3>Datos del evento</h3>
+            <div id="bannerEdicion" class="oculto" style="background:#fef3c7; color:#92400e; padding:10px 12px; border-radius:8px; margin-bottom:14px; font-size:13px;">
+              ✏️ Estás <strong>editando un pedido</strong> existente. <a href="#" onclick="cancelarEdicion(); return false;" style="color:#92400e; font-weight:600;">Cancelar edición</a>
+            </div>
             <div class="campo">
               <label>Nombre del evento / destino *</label>
               <input type="text" id="evNombre" placeholder="Ej: Carrera de la Mujer Madrid">
@@ -153,7 +156,7 @@
               <label>Notas (opcional)</label>
               <textarea id="evNotas" rows="2" placeholder="Cualquier detalle que debamos saber..."></textarea>
             </div>
-            <button class="btn btn-verde" style="width:100%;" onclick="enviarSolicitud()">📨 Enviar solicitud</button>
+            <button class="btn btn-verde" style="width:100%;" id="btnEnviar" onclick="enviarSolicitud()">📨 Enviar solicitud</button>
           </div>
         </div>
       </div>
@@ -176,6 +179,8 @@
   <script>
     let catalogo = [];
     let carrito = [];
+    let misSolicitudesData = [];
+    let editandoId = null;
 
     function toast(msg) {
       const t = document.getElementById('toast');
@@ -296,7 +301,7 @@
       renderCatalogo();
     }
 
-    // ── ENVIAR SOLICITUD ────────────────────
+    // ── ENVIAR / GUARDAR SOLICITUD ──────────
     async function enviarSolicitud() {
       const evento = document.getElementById('evNombre').value.trim();
       const recogida = document.getElementById('evRecogida').value;
@@ -309,19 +314,84 @@
       if (devolucion < recogida) { toast('La devolución no puede ser antes de la recogida'); return; }
 
       const items = carrito.map(c => ({ variante_id: c.variante_id, cantidad: c.cantidad }));
-      const { error } = await sb.rpc('crear_solicitud', {
-        p_evento: evento, p_recogida: recogida, p_devolucion: devolucion, p_notas: notas || null, p_items: items
-      });
-      if (error) { toast('❌ ' + (error.message || 'No se pudo enviar')); return; }
 
-      toast('✅ ¡Solicitud enviada! Equipo 47 la revisará.');
+      if (editandoId) {
+        const { error } = await sb.rpc('editar_solicitud', {
+          p_solicitud_id: editandoId, p_evento: evento, p_recogida: recogida,
+          p_devolucion: devolucion, p_notas: notas || null, p_items: items
+        });
+        if (error) { toast('❌ ' + (error.message || 'No se pudo guardar')); return; }
+        toast('✅ Pedido actualizado');
+      } else {
+        const { error } = await sb.rpc('crear_solicitud', {
+          p_evento: evento, p_recogida: recogida, p_devolucion: devolucion, p_notas: notas || null, p_items: items
+        });
+        if (error) { toast('❌ ' + (error.message || 'No se pudo enviar')); return; }
+        toast('✅ ¡Solicitud enviada! Equipo 47 la revisará.');
+      }
+
+      limpiarFormulario();
+      renderCarrito();
+      renderCatalogo();
+    }
+
+    function limpiarFormulario() {
       carrito = [];
+      editandoId = null;
       document.getElementById('evNombre').value = '';
       document.getElementById('evRecogida').value = '';
       document.getElementById('evDevolucion').value = '';
       document.getElementById('evNotas').value = '';
+      document.getElementById('bannerEdicion').classList.add('oculto');
+      document.getElementById('btnEnviar').textContent = '📨 Enviar solicitud';
+    }
+
+    function cancelarEdicion() {
+      limpiarFormulario();
       renderCarrito();
       renderCatalogo();
+      toast('Edición cancelada');
+    }
+
+    function editarPedido(solId) {
+      const s = misSolicitudesData.find(x => x.id === solId);
+      if (!s) return;
+      if (s.estado !== 'pendiente') { toast('Este pedido ya no se puede editar'); return; }
+
+      // Reconstruir el carrito desde los items del pedido
+      carrito = [];
+      (s.items || []).forEach(it => {
+        const enCat = catalogo.find(c => c.variante_id === it.variante_id);
+        carrito.push({
+          variante_id: it.variante_id,
+          producto: it.producto,
+          variante: it.variante,
+          disponible: enCat ? enCat.disponible : it.cantidad,
+          cantidad: it.cantidad
+        });
+      });
+
+      document.getElementById('evNombre').value = s.evento || '';
+      document.getElementById('evRecogida').value = s.fecha_recogida ? s.fecha_recogida.slice(0, 16) : '';
+      document.getElementById('evDevolucion').value = s.fecha_devolucion ? s.fecha_devolucion.slice(0, 16) : '';
+      document.getElementById('evNotas').value = s.notas || '';
+
+      editandoId = solId;
+      document.getElementById('bannerEdicion').classList.remove('oculto');
+      document.getElementById('btnEnviar').textContent = '💾 Guardar cambios';
+
+      cambiarTab('pedido');
+      renderCarrito();
+      renderCatalogo();
+      toast('Editando pedido — ajusta lo que necesites');
+    }
+
+    async function cancelarPedido(solId) {
+      if (!confirm('¿Seguro que quieres cancelar este pedido? No se puede deshacer.')) return;
+      const { error } = await sb.rpc('cancelar_solicitud', { p_solicitud_id: solId });
+      if (error) { toast('❌ ' + (error.message || 'No se pudo cancelar')); return; }
+      toast('Pedido cancelado');
+      cargarMisSolicitudes();
     }
 
     // ── MIS PEDIDOS ─────────────────────────
@@ -349,9 +419,16 @@
       cont.innerHTML = '<p class="vacio">Cargando...</p>';
       const { data, error } = await sb.rpc('mis_solicitudes');
       if (error) { cont.innerHTML = '<p class="vacio">No se pudieron cargar tus pedidos.</p>'; return; }
-      if (!data || !data.length) { cont.innerHTML = '<p class="vacio">Todavía no has hecho ningún pedido.</p>'; return; }
-      cont.innerHTML = data.map(s => {
+      misSolicitudesData = data || [];
+      if (!misSolicitudesData.length) { cont.innerHTML = '<p class="vacio">Todavía no has hecho ningún pedido.</p>'; return; }
+      cont.innerHTML = misSolicitudesData.map(s => {
         const items = (s.items || []).map(i => `<div style="font-size:13px; padding:2px 0;">• ${i.producto} · ${i.variante} — <strong>${i.cantidad}</strong></div>`).join('');
+        const acciones = s.estado === 'pendiente'
+          ? `<div style="margin-top:10px; display:flex; gap:8px;">
+               <button class="btn btn-primary btn-sm" onclick="editarPedido(${s.id})">✏️ Editar</button>
+               <button class="btn btn-ghost btn-sm" onclick="cancelarPedido(${s.id})">✕ Cancelar pedido</button>
+             </div>`
+          : '';
         return `<div class="solicitud">
           <div class="cab">
             <strong>${s.evento || '(sin nombre)'}</strong>
@@ -362,6 +439,7 @@
           </div>
           ${items}
           ${s.notas_admin ? `<div style="margin-top:8px; font-size:13px; background:#f8f9fb; padding:8px; border-radius:6px;">💬 <strong>Equipo 47:</strong> ${s.notas_admin}</div>` : ''}
+          ${acciones}
         </div>`;
       }).join('');
     }
