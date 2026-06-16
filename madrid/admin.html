@@ -4501,12 +4501,57 @@
       if (flecha) flecha.textContent = abierto ? '▶' : '▼';
     }
 
+    // Calcula conflictos de disponibilidad por fechas solapadas
+    async function conflictosDeSolicitud(s, items) {
+      const salidasAct = (await sb.from('salidas').select('*').in('estado', ['preparando', 'fuera'])).data || [];
+      const salLineas = (await sb.from('salida_lineas').select('*')).data || [];
+      const solsPend = solicitudes.filter(x => x.estado === 'pendiente' && x.id !== s.id);
+
+      const r1 = s.fecha_recogida ? s.fecha_recogida.slice(0, 10) : null;
+      const r2 = s.fecha_devolucion ? s.fecha_devolucion.slice(0, 10) : null;
+      // Solapan si una empieza antes de que la otra acabe (y viceversa). Si falta una fecha, somos conservadores.
+      const solapa = (a1, a2, b1, b2) => (!a1 || !a2 || !b1 || !b2) ? true : (a1 <= b2 && b1 <= a2);
+
+      const conflictos = [];
+      for (const it of items) {
+        const v = variantes.find(x => x.id === it.variante_id);
+        const stock = v ? (v.stock_total || 0) : 0;
+        let comprometido = 0;
+
+        const salIds = salidasAct.filter(sa => solapa(r1, r2, sa.fecha_salida, sa.fecha_devolucion)).map(sa => sa.id);
+        comprometido += salLineas.filter(l => l.variante_id === it.variante_id && salIds.includes(l.salida_id))
+          .reduce((a, l) => a + (l.cantidad || 0), 0);
+
+        for (const sp of solsPend) {
+          const sr1 = sp.fecha_recogida ? sp.fecha_recogida.slice(0, 10) : null;
+          const sr2 = sp.fecha_devolucion ? sp.fecha_devolucion.slice(0, 10) : null;
+          if (solapa(r1, r2, sr1, sr2)) {
+            comprometido += solicitudItems.filter(si => si.solicitud_id === sp.id && si.variante_id === it.variante_id)
+              .reduce((a, si) => a + (si.cantidad || 0), 0);
+          }
+        }
+
+        if (comprometido + it.cantidad > stock) {
+          conflictos.push({ variante: nombreVarianteCompleto(it.variante_id), pedido: it.cantidad, comprometido, stock });
+        }
+      }
+      return conflictos;
+    }
+
     async function aceptarSolicitud(id) {
       const s = solicitudes.find(x => x.id === id);
       const items = solicitudItems.filter(it => it.solicitud_id === id);
       if (!items.length) { alert('La solicitud no tiene artículos'); return; }
       const cli = clientes.find(c => c.id === s.cliente_id);
-      if (!confirmar(`¿Aceptar la solicitud de "${cli?.nombre}" para "${s.evento}"?\n\nSe creará una salida (en estado preparando) con ese material, que podrás ajustar luego en Salidas.`)) return;
+
+      const conflictos = await conflictosDeSolicitud(s, items);
+      let aviso = `¿Aceptar la solicitud de "${cli?.nombre}" para "${s.evento}"?\n\nSe creará una salida (en estado preparando) con ese material, que podrás ajustar luego en Salidas.`;
+      if (conflictos.length) {
+        aviso = `⚠️ POSIBLE CONFLICTO de disponibilidad en esas fechas:\n\n`
+          + conflictos.map(c => `• ${c.variante}: se piden ${c.pedido}, pero ya hay ${c.comprometido} comprometidas en fechas que se solapan (stock total: ${c.stock})`).join('\n')
+          + `\n\n¿Aceptar de todos modos? (Se creará la salida igualmente; tú decides.)`;
+      }
+      if (!confirmar(aviso)) return;
 
       const salidaId = Date.now();
       const fechaSalida = s.fecha_recogida ? s.fecha_recogida.slice(0, 10) : null;
