@@ -317,7 +317,7 @@
 
       // Comprobar disponibilidad por fechas (sin revelar números)
       const { data: noDisp, error: errDisp } = await sb.rpc('comprobar_disponibilidad', {
-        p_recogida: recogida, p_devolucion: devolucion, p_items: items
+        p_recogida: recogida, p_devolucion: devolucion, p_items: items, p_excluir_solicitud_id: editandoId || null
       });
       if (!errDisp && noDisp && noDisp.length) {
         const lista = noDisp.map(x => '• ' + x.articulo).join('\n');
