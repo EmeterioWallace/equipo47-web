@@ -497,6 +497,10 @@
         <span class="icon">👥</span>
         <span>Clientes</span>
       </div>
+      <div class="nav-item" onclick="mostrarPagina('solicitudes')">
+        <span class="icon">📨</span>
+        <span>Solicitudes</span>
+      </div>
       <div class="nav-item" onclick="mostrarPagina('importar')">
         <span class="icon">📥</span>
         <span>Importar datos</span>
@@ -564,6 +568,11 @@
       <div class="card" style="margin-top: 20px;">
         <h3>📥 Recepciones pendientes</h3>
         <div id="avisos-recepciones"><p style="color: var(--muted);">Comprobando...</p></div>
+      </div>
+
+      <div class="card" style="margin-top: 20px;">
+        <h3>📨 Solicitudes de clientes pendientes</h3>
+        <div id="avisos-solicitudes"><p style="color: var(--muted);">Comprobando...</p></div>
       </div>
 
       <div class="card" style="margin-top: 20px;">
@@ -777,6 +786,28 @@
         </div>
       </div>
       <div id="clientes-tabla" class="loading">Cargando...</div>
+    </section>
+
+    <!-- SOLICITUDES (del portal) -->
+    <section class="page" id="solicitudes-page">
+      <div class="page-header">
+        <div>
+          <h1>SOLICITUDES</h1>
+          <p>Pedidos que llegan desde el portal de clientes</p>
+        </div>
+      </div>
+      <div class="form-row" style="margin-bottom: 20px;">
+        <div class="form-group">
+          <label>Ver</label>
+          <select id="filtroEstadoSolicitud" onchange="renderSolicitudes()">
+            <option value="pendiente">Pendientes</option>
+            <option value="aceptada">Aceptadas</option>
+            <option value="rechazada">Rechazadas</option>
+            <option value="todas">Todas</option>
+          </select>
+        </div>
+      </div>
+      <div id="solicitudes-tabla" class="loading">Cargando...</div>
     </section>
 
     <!-- IMPORTAR DATOS -->
@@ -1595,6 +1626,7 @@
       if (pagina === 'recepciones') cargarRecepcionesTabla();
       if (pagina === 'actividad') cargarActividadTabla();
       if (pagina === 'clientes') cargarClientesTabla();
+      if (pagina === 'solicitudes') cargarSolicitudesTabla();
     }
 
     // ── DASHBOARD ───────────────────────────
@@ -1680,6 +1712,22 @@
           return `<div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border);">
             <span style="font-size:13px;">${llegaHoy ? '🔴' : '📦'} <strong>${r.descripcion || 'Pedido'}</strong>${quien}</span>
             <span class="badge badge-${llegaHoy ? 'danger' : 'warning'}">${r.fecha_estimada ? 'llega ' + fechaCorta(r.fecha_estimada) : 'sin fecha'}</span>
+          </div>`;
+        }).join('');
+      }
+
+      // Avisos de solicitudes de clientes pendientes
+      const contSol = document.getElementById('avisos-solicitudes');
+      const sols = (await sb.from('solicitudes').select('*').eq('estado', 'pendiente').order('created_at', { ascending: false })).data || [];
+      const clis = (await sb.from('clientes').select('id,nombre')).data || [];
+      if (!sols.length) {
+        contSol.innerHTML = '<p style="color: var(--success);">✓ No hay solicitudes pendientes</p>';
+      } else {
+        contSol.innerHTML = sols.map(s => {
+          const cli = clis.find(c => c.id === s.cliente_id);
+          return `<div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border);">
+            <span style="font-size:13px;">📨 <strong>${cli ? cli.nombre : 'Cliente'}</strong> · ${s.evento || '—'}</span>
+            <span class="badge badge-warning">pendiente</span>
           </div>`;
         }).join('');
       }
@@ -4370,6 +4418,130 @@
         url = `https://www.aftership.com/es/track/${encodeURIComponent(tracking)}`;
       }
       window.open(url, '_blank');
+    }
+
+    // ════════════════════════════════════════
+    //  MÓDULO SOLICITUDES (portal · Fase 4)
+    // ════════════════════════════════════════
+    let solicitudes = [];
+    let solicitudItems = [];
+
+    async function cargarSolicitudesTabla() {
+      const cont = document.getElementById('solicitudes-tabla');
+      cont.innerHTML = '<div class="loading">Cargando...</div>';
+      solicitudes = (await sb.from('solicitudes').select('*').order('created_at', { ascending: false })).data || [];
+      solicitudItems = (await sb.from('solicitud_items').select('*')).data || [];
+      clientes = (await sb.from('clientes').select('*')).data || [];
+      if (!productos.length) productos = await obtenerProductos();
+      if (!variantes.length) variantes = await obtenerVariantes();
+      renderSolicitudes();
+    }
+
+    function badgeEstadoSolicitud(e) {
+      if (e === 'aceptada') return '<span class="badge badge-success">✓ Aceptada</span>';
+      if (e === 'rechazada') return '<span class="badge badge-danger">✕ Rechazada</span>';
+      return '<span class="badge badge-warning">🕐 Pendiente</span>';
+    }
+
+    function renderSolicitudes() {
+      const cont = document.getElementById('solicitudes-tabla');
+      const filtro = document.getElementById('filtroEstadoSolicitud').value;
+      let lista = solicitudes.slice();
+      if (filtro !== 'todas') lista = lista.filter(s => s.estado === filtro);
+
+      if (!lista.length) {
+        cont.innerHTML = `<div class="empty"><div class="empty-icon">📨</div><p>No hay solicitudes que mostrar.</p></div>`;
+        return;
+      }
+
+      let html = `<table><thead><tr><th>Cliente / Evento</th><th>Recogida → Devolución</th><th>Artículos</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>`;
+      for (const s of lista) {
+        const cli = clientes.find(c => c.id === s.cliente_id);
+        const items = solicitudItems.filter(it => it.solicitud_id === s.id);
+        const flecha = `<span id="flecha-sol-${s.id}" style="display:inline-block; width:14px; color: var(--accent);">▶</span>`;
+
+        html += `<tr onclick="toggleContenidoSolicitud(${s.id})" style="cursor:pointer;">
+          <td>${flecha} <strong>${cli ? cli.nombre : '(cliente)'}</strong><br><span style="font-size:12px; color:var(--muted);">${s.evento || '—'}</span></td>
+          <td style="font-size:12px;">${fechaHora(s.fecha_recogida)}<br>→ ${fechaHora(s.fecha_devolucion)}</td>
+          <td>${items.length} art.</td>
+          <td>${badgeEstadoSolicitud(s.estado)}</td>
+          <td>
+            ${s.estado === 'pendiente' ? `
+              <button class="btn btn-success btn-sm" onclick="event.stopPropagation(); aceptarSolicitud(${s.id})">✓ Aceptar</button>
+              <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); rechazarSolicitud(${s.id})">✕ Rechazar</button>
+            ` : '<span style="font-size:11px; color:var(--muted);">—</span>'}
+          </td>
+        </tr>`;
+
+        const filasItems = items.length
+          ? items.map(it => `<div style="padding:5px 12px; border-bottom:1px solid var(--border); font-size:13px;">${nombreVarianteCompleto(it.variante_id)} — <strong>${it.cantidad}</strong></div>`).join('')
+          : '<p style="color:var(--muted); font-size:13px; padding:8px 12px;">Sin artículos</p>';
+
+        html += `<tr id="contenido-sol-${s.id}" style="display:none;">
+          <td colspan="5" style="background: var(--card); padding:0;">
+            <div style="padding:10px 16px 12px 40px;">
+              <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted); margin-bottom:6px;">Material solicitado</div>
+              ${filasItems}
+              ${s.notas ? `<p style="font-size:13px; margin-top:8px;">📝 <strong>Nota del cliente:</strong> ${s.notas}</p>` : ''}
+              ${s.notas_admin ? `<p style="font-size:13px; margin-top:6px;">💬 <strong>Vuestra respuesta:</strong> ${s.notas_admin}</p>` : ''}
+            </div>
+          </td>
+        </tr>`;
+      }
+      html += '</tbody></table>';
+      cont.innerHTML = html;
+    }
+
+    function toggleContenidoSolicitud(id) {
+      const fila = document.getElementById('contenido-sol-' + id);
+      const flecha = document.getElementById('flecha-sol-' + id);
+      if (!fila) return;
+      const abierto = fila.style.display !== 'none';
+      fila.style.display = abierto ? 'none' : 'table-row';
+      if (flecha) flecha.textContent = abierto ? '▶' : '▼';
+    }
+
+    async function aceptarSolicitud(id) {
+      const s = solicitudes.find(x => x.id === id);
+      const items = solicitudItems.filter(it => it.solicitud_id === id);
+      if (!items.length) { alert('La solicitud no tiene artículos'); return; }
+      const cli = clientes.find(c => c.id === s.cliente_id);
+      if (!confirmar(`¿Aceptar la solicitud de "${cli?.nombre}" para "${s.evento}"?\n\nSe creará una salida (en estado preparando) con ese material, que podrás ajustar luego en Salidas.`)) return;
+
+      const salidaId = Date.now();
+      const fechaSalida = s.fecha_recogida ? s.fecha_recogida.slice(0, 10) : null;
+      const fechaDev = s.fecha_devolucion ? s.fecha_devolucion.slice(0, 10) : null;
+      const { error: e1 } = await sb.from('salidas').insert({
+        id: salidaId,
+        evento: s.evento,
+        tipo: 'prestamo',
+        destinatario: cli?.nombre || null,
+        fecha_salida: fechaSalida,
+        fecha_devolucion: fechaDev,
+        estado: 'preparando',
+        notas: 'Generada desde solicitud del portal.' + (s.notas ? ' Nota del cliente: ' + s.notas : '')
+      });
+      if (e1) { alert('❌ Error al crear la salida: ' + e1.message); return; }
+
+      const lineas = items.map(it => ({ id: idUnico(), salida_id: salidaId, variante_id: it.variante_id, cantidad: it.cantidad }));
+      const { error: e2 } = await sb.from('salida_lineas').insert(lineas);
+      if (e2) { alert('❌ Error al crear los artículos de la salida: ' + e2.message); return; }
+
+      await sb.from('solicitudes').update({ estado: 'aceptada' }).eq('id', id);
+      toast('✅ Solicitud aceptada — salida creada');
+      registrarActividad('estado', 'solicitud', `Aceptó la solicitud de "${cli?.nombre}" (${s.evento}) y creó una salida`);
+      await cargarSolicitudesTabla();
+    }
+
+    async function rechazarSolicitud(id) {
+      const s = solicitudes.find(x => x.id === id);
+      const cli = clientes.find(c => c.id === s.cliente_id);
+      const nota = prompt('Motivo del rechazo (opcional, lo verá el cliente en su portal):');
+      if (nota === null) return;
+      await sb.from('solicitudes').update({ estado: 'rechazada', notas_admin: nota.trim() || null }).eq('id', id);
+      toast('Solicitud rechazada');
+      registrarActividad('estado', 'solicitud', `Rechazó la solicitud de "${cli?.nombre}" (${s.evento})`);
+      await cargarSolicitudesTabla();
     }
 
     // ════════════════════════════════════════
