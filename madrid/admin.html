@@ -446,6 +446,35 @@
         white-space: nowrap;
         flex-shrink: 0;
       }
+
+      /* Cabeceras de página: apilar título y acciones */
+      .page-header { flex-direction: column; align-items: stretch; gap: 12px; }
+
+      /* Filtros y formularios en una columna */
+      .form-row { flex-direction: column; }
+      .filtros { flex-direction: column; }
+      .filtros input, .filtros select { width: 100%; }
+
+      /* Tablas: permitir deslizar en horizontal sin desbordar la página */
+      .page > div[id$="-tabla"] { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+      /* Modales casi a pantalla completa y con scroll si son largos */
+      .modal-content { max-width: 95% !important; width: 95%; max-height: 90vh; overflow-y: auto; }
+
+      /* Botones más cómodos para el dedo */
+      .btn { padding: 11px 16px; }
+
+      /* Zapatillas en móvil */
+      .page-header > div:last-child { flex-direction: column; align-items: stretch; }
+      .zapa-modo { width: 100%; }
+      .zapa-modo-btn { flex: 1; }
+      #zapaBuscar { width: 100%; }
+      .zapa-tabs { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
+      .zapa-tab { flex-shrink: 0; }
+      .zapa-grid-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .zapa-grid { font-size: 12px; }
+      .zapa-grid th, .zapa-grid td { padding: 5px 6px; }
+      .zapa-stat { min-width: calc(50% - 8px); }
     }
 
     /* Buscador reutilizable sobre <select> */
@@ -979,10 +1008,11 @@
       </div>
 
       <div class="card" style="margin-top: 20px;">
-        <h3>⚠️ Peligro</h3>
-        <button class="btn btn-danger btn-sm" onclick="resetearBD()">🗑️ Borrar toda la BD</button>
-        <p style="font-size: 11px; color: var(--danger); margin-top: 12px;">
-          ⚠️ Esta acción es irreversible. Solo para testing.
+        <h3>💾 Copias de seguridad</h3>
+        <p style="font-size: 13px; color: var(--muted); line-height: 1.6;">
+          Supabase guarda automáticamente una copia diaria de toda la base de datos, así que tus datos están respaldados.
+          Además, la pantalla de <strong>Actividad</strong> deja constancia de cada cambio (quién lo hizo y cuándo),
+          lo que ayuda a localizar y entender cualquier error.
         </p>
       </div>
     </section>
@@ -2115,15 +2145,6 @@
       }
 
       exportarCSV(datos, tabla);
-    }
-
-    // ── RESET BD ────────────────────────────
-    async function resetearBD() {
-      if (!confirmar('⚠️ BORRAR TODA LA BD. Confirma con "OK"')) return;
-      const pass = prompt('Escribe "BORRAR" para confirmar:');
-      if (pass !== 'BORRAR') return;
-      
-      toast('Función de reset (a completar)');
     }
 
     // ── CARGAR TABLA DE PRODUCTOS ───────────
@@ -3293,7 +3314,7 @@
       const tlls = [...tallas].sort((a, b) => (parseFloat(a) || 0) - (parseFloat(b) || 0));
       const datos = (zapaModo === 'disponible') ? datosDisp : datosTot;
       const totFila = (zapaModo === 'disponible') ? dispGen : totGen;
-      let html = '<table class="zapa-grid"><thead><tr><th>Talla</th>';
+      let html = '<div class="zapa-grid-wrap"><table class="zapa-grid"><thead><tr><th>Talla</th>';
       gens.forEach(g => html += `<th>${g}</th>`);
       html += '</tr></thead><tbody>';
       tlls.forEach(t => {
@@ -3306,7 +3327,7 @@
       });
       html += '<tr class="tot"><td>Total</td>';
       gens.forEach(g => html += `<td>${totFila[g] || 0}</td>`);
-      html += '</tr></tbody></table>';
+      html += '</tr></tbody></table></div>';
       return { html, totGen, dispGen, total, disp, fuera: total - disp, gens };
     }
 
