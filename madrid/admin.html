@@ -66,6 +66,17 @@
       border-bottom: 1px solid var(--border);
     }
 
+    .sidebar-logo .marca-fila {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .sidebar-logo .marca-logo {
+      height: 32px;
+      width: auto;
+    }
+
     .sidebar-logo .e47 {
       font-family: 'Bebas Neue', sans-serif;
       font-size: 18px;
@@ -545,8 +556,10 @@
   <!-- SIDEBAR -->
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-logo">
-      <img src="/images/brand/logo.png" alt="E47" class="marca-logo" onerror="this.style.display='none'" style="height:42px; width:auto; margin-bottom:10px;">
-      <span class="e47">EQUIPO 47</span>
+      <div class="marca-fila">
+        <img src="/images/brand/logo.png" alt="E47" class="marca-logo" onerror="this.style.display='none'">
+        <span class="e47">EQUIPO 47</span>
+      </div>
       <span class="admin-tag">Almacén Madrid</span>
       <span class="badge-admin">ADMIN</span>
     </div>
