@@ -505,6 +505,25 @@
       .zapa-grid { font-size: 12px; }
       .zapa-grid th, .zapa-grid td { padding: 5px 6px; }
       .zapa-stat { min-width: calc(50% - 8px); }
+
+      /* Tablas dentro de modales: deslizables en horizontal */
+      .modal-content table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
+
+      /* Botones de formularios cómodos para el dedo */
+      .modal-footer { flex-wrap: wrap; gap: 8px; }
+      .modal-footer .btn { flex: 1; min-width: 130px; justify-content: center; }
+      .btn-sm, .btn-small { padding: 8px 12px; }
+
+      /* Acciones dentro de tablas: que no se aprieten */
+      td .btn { margin: 2px 0; }
+    }
+
+    /* Móvil estrecho */
+    @media (max-width: 480px) {
+      .main { padding: 14px; }
+      .page-header h1 { font-size: 24px; }
+      .zapa-stat { min-width: 100%; }
+      .stat-card .stat-value, .stat-value { font-size: 26px; }
     }
 
     /* Buscador reutilizable sobre <select> */
