@@ -23,6 +23,21 @@
       --danger: #E4002B;
     }
 
+    /* Tema claro (el oscuro es el de por defecto) */
+    body.tema-claro {
+      --black: #eef1f5;
+      --dark: #e4e8ee;
+      --card: #ffffff;
+      --border: #d4d9e0;
+      --text: #1a1a1a;
+      --muted: #667085;
+    }
+
+    /* Logo de marca teñido al azul de la app */
+    .marca-logo, .topbar-logo {
+      filter: brightness(0) saturate(100%) invert(70%) sepia(38%) saturate(1352%) hue-rotate(167deg) brightness(95%) contrast(91%);
+    }
+
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
@@ -530,6 +545,7 @@
   <!-- SIDEBAR -->
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-logo">
+      <img src="/images/brand/logo.png" alt="E47" class="marca-logo" onerror="this.style.display='none'" style="height:42px; width:auto; margin-bottom:10px;">
       <span class="e47">EQUIPO 47</span>
       <span class="admin-tag">Almacén Madrid</span>
       <span class="badge-admin">ADMIN</span>
@@ -597,6 +613,9 @@
       </div>
     </nav>
     <div class="sidebar-bottom">
+      <button class="btn btn-ghost btn-sm" onclick="toggleTemaAdmin()" id="btnTemaAdmin" style="width: 100%; justify-content: center; margin-bottom: 8px;">
+        ☀️ Tema claro
+      </button>
       <button class="btn btn-ghost btn-sm" onclick="cerrarSesionAuth()" style="width: 100%; justify-content: center;">
         🚪 Salir
       </button>
@@ -5385,7 +5404,22 @@
     }
 
     // ── INIT ────────────────────────────────
+    // ── TEMA CLARO / OSCURO (por defecto oscuro) ──
+    function aplicarTemaAdmin() {
+      const claro = localStorage.getItem('adminTema') === 'claro';
+      document.body.classList.toggle('tema-claro', claro);
+      const btn = document.getElementById('btnTemaAdmin');
+      if (btn) btn.textContent = claro ? '🌙 Tema oscuro' : '☀️ Tema claro';
+    }
+    function toggleTemaAdmin() {
+      const claro = document.body.classList.toggle('tema-claro');
+      localStorage.setItem('adminTema', claro ? 'claro' : 'oscuro');
+      const btn = document.getElementById('btnTemaAdmin');
+      if (btn) btn.textContent = claro ? '🌙 Tema oscuro' : '☀️ Tema claro';
+    }
+
     document.addEventListener('DOMContentLoaded', async () => {
+      aplicarTemaAdmin();
       const { data: { session } } = await sb.auth.getSession();
       if (session) {
         usuarioActual = session.user?.email || null;
