@@ -456,6 +456,26 @@
     .buscador-item { padding: 9px 12px; cursor: pointer; font-size: 14px; border-bottom: 1px solid var(--border); }
     .buscador-item:last-child { border-bottom: none; }
     .buscador-item:hover { background: var(--dark); }
+
+    /* Vista de zapatillas */
+    .zapa-resumen { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 22px; }
+    .zapa-stat { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 20px; flex: 1; min-width: 130px; }
+    .zapa-stat .num { font-size: 28px; font-weight: 700; color: var(--accent); font-family: 'Bebas Neue', sans-serif; letter-spacing: 1px; }
+    .zapa-stat .lab { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .zapa-subcat { font-size: 18px; margin: 24px 0 12px; font-family: 'Bebas Neue', sans-serif; letter-spacing: 1px; color: var(--text); border-bottom: 2px solid var(--accent); padding-bottom: 4px; }
+    .zapa-modelo { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+    .zapa-modelo-cab { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+    .zapa-foto { width: 64px; height: 64px; border-radius: 10px; background: var(--dark); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 28px; flex-shrink: 0; object-fit: cover; }
+    .zapa-modelo-nombre { font-size: 20px; font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.5px; }
+    .zapa-modelo-tot { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .zapa-modelo-tot strong { color: var(--text); }
+    .zapa-grid { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .zapa-grid th, .zapa-grid td { border: 1px solid var(--border); padding: 6px 8px; text-align: center; }
+    .zapa-grid th { background: var(--dark); color: var(--muted); font-weight: 600; font-size: 12px; }
+    .zapa-grid td.talla { background: var(--dark); color: var(--text); font-weight: 600; }
+    .zapa-grid td.cero { color: #555; }
+    .zapa-grid td.hay { color: var(--text); font-weight: 600; }
+    .zapa-grid tr.tot td { background: var(--dark); font-weight: 700; color: var(--accent); }
   </style>
 </head>
 <body>
@@ -474,6 +494,10 @@
       <div class="nav-item" onclick="mostrarPagina('productos')">
         <span class="icon">📦</span>
         <span>Productos</span>
+      </div>
+      <div class="nav-item" onclick="mostrarPagina('zapatillas')">
+        <span class="icon">👟</span>
+        <span>Zapatillas</span>
       </div>
       <div class="nav-item" onclick="mostrarPagina('ubicaciones')">
         <span class="icon">📍</span>
@@ -637,6 +661,19 @@
       </div>
 
       <div id="productos-tabla" class="loading">Cargando...</div>
+    </section>
+
+    <!-- ZAPATILLAS (vista de stock por talla y género) -->
+    <section class="page" id="zapatillas-page">
+      <div class="page-header">
+        <div>
+          <h1>ZAPATILLAS</h1>
+          <p>Stock por talla y género, de un vistazo</p>
+        </div>
+        <input type="text" id="zapaBuscar" placeholder="🔍 Buscar modelo..." onkeyup="renderZapatillas()" style="padding:10px 14px; border:1px solid var(--border); border-radius:8px; background:var(--dark); color:var(--text); font-size:14px; min-width:220px;">
+      </div>
+      <div id="zapatillas-resumen"></div>
+      <div id="zapatillas-contenido" class="loading">Cargando...</div>
     </section>
 
     <!-- UBICACIONES -->
@@ -1635,6 +1672,7 @@
       
       if (pagina === 'dashboard') cargarDashboard();
       if (pagina === 'productos') cargarProductosTabla();
+      if (pagina === 'zapatillas') cargarZapatillasVista();
       if (pagina === 'ubicaciones') cargarUbicacionesTabla();
       if (pagina === 'pales') cargarPalesTabla();
       if (pagina === 'cajas') cargarCajasTabla();
@@ -3160,6 +3198,130 @@
         .filter(s => s.variante_id === varianteId && s.id !== excluirStockId)
         .reduce((sum, s) => sum + (s.cantidad || 0), 0);
       return (v.stock_total || 0) - colocado;
+    }
+
+    // ════════════════════════════════════════
+    //  VISTA DE ZAPATILLAS (stock por talla/género)
+    // ════════════════════════════════════════
+    let zapaCategoria = null;
+    const ORDEN_GENERO = ['Hombre', 'Mujer', 'Unisex', 'Niño', 'Niña'];
+
+    async function cargarZapatillasVista() {
+      const cont = document.getElementById('zapatillas-contenido');
+      cont.innerHTML = '<div class="loading">Cargando...</div>';
+      if (typeof categorias === 'undefined' || !categorias || !categorias.length) categorias = await obtenerCategorias();
+      if (!productos.length) productos = await obtenerProductos();
+      if (!variantes.length) variantes = await obtenerVariantes();
+      zapaCategoria = (categorias || []).find(c => (c.nombre || '').toLowerCase().includes('zapatilla')) || null;
+      renderZapatillas();
+    }
+
+    function ordenarGeneros(gs) {
+      return gs.slice().sort((a, b) => {
+        let ia = ORDEN_GENERO.indexOf(a); if (ia < 0) ia = 99;
+        let ib = ORDEN_GENERO.indexOf(b); if (ib < 0) ib = 99;
+        return ia - ib || a.localeCompare(b, 'es');
+      });
+    }
+
+    function construirRejilla(modelo) {
+      const vars = variantes.filter(v => v.producto_id == modelo.id);
+      const datos = {}; const tallas = new Set(); const generos = new Set();
+      const totGen = {}; let total = 0;
+      vars.forEach(v => {
+        const partes = (v.valor || '').split('/').map(s => s.trim());
+        const talla = partes[0] || v.valor || '?';
+        const genero = partes.length >= 2 ? partes[1] : '—';
+        tallas.add(talla); generos.add(genero);
+        datos[talla] = datos[talla] || {};
+        datos[talla][genero] = (datos[talla][genero] || 0) + (v.stock_total || 0);
+        totGen[genero] = (totGen[genero] || 0) + (v.stock_total || 0);
+        total += (v.stock_total || 0);
+      });
+      const gens = ordenarGeneros([...generos]);
+      const tlls = [...tallas].sort((a, b) => (parseFloat(a) || 0) - (parseFloat(b) || 0));
+      let html = '<table class="zapa-grid"><thead><tr><th>Talla</th>';
+      gens.forEach(g => html += `<th>${g}</th>`);
+      html += '</tr></thead><tbody>';
+      tlls.forEach(t => {
+        html += `<tr><td class="talla">${t}</td>`;
+        gens.forEach(g => {
+          const n = (datos[t] && datos[t][g]) || 0;
+          html += `<td class="${n > 0 ? 'hay' : 'cero'}">${n}</td>`;
+        });
+        html += '</tr>';
+      });
+      html += '<tr class="tot"><td>Total</td>';
+      gens.forEach(g => html += `<td>${totGen[g] || 0}</td>`);
+      html += '</tr></tbody></table>';
+      return { html, totGen, total, gens };
+    }
+
+    function tarjetaModelo(md) {
+      const m = md.modelo; const r = md.rej;
+      const desglose = r.gens.map(g => `${g}: <strong>${r.totGen[g] || 0}</strong>`).join(' · ');
+      // Hueco de foto: el día que haya imágenes, se cambia el div por <img src="images/zapatillas/...">
+      const foto = `<div class="zapa-foto">👟</div>`;
+      return `<div class="zapa-modelo">
+        <div class="zapa-modelo-cab">
+          ${foto}
+          <div>
+            <div class="zapa-modelo-nombre">${m.nombre}</div>
+            <div class="zapa-modelo-tot">Total: <strong>${r.total}</strong> pares · ${desglose}</div>
+          </div>
+        </div>
+        ${r.html}
+      </div>`;
+    }
+
+    function renderZapatillas() {
+      const resumenEl = document.getElementById('zapatillas-resumen');
+      const cont = document.getElementById('zapatillas-contenido');
+      if (!zapaCategoria) {
+        resumenEl.innerHTML = '';
+        cont.innerHTML = '<div class="empty"><div class="empty-icon">👟</div><p>No encuentro la categoría "Zapatillas". Crea productos en esa categoría para verlos aquí.</p></div>';
+        return;
+      }
+      const filtro = (document.getElementById('zapaBuscar').value || '').toLowerCase().trim();
+      let modelos = productos.filter(p => p.categoria_id == zapaCategoria.id);
+      if (filtro) modelos = modelos.filter(m => (m.nombre || '').toLowerCase().includes(filtro));
+
+      const totG = {}; let totalG = 0;
+      const modelosData = modelos.map(m => {
+        const r = construirRejilla(m);
+        Object.keys(r.totGen).forEach(g => totG[g] = (totG[g] || 0) + r.totGen[g]);
+        totalG += r.total;
+        return { modelo: m, rej: r };
+      });
+
+      const gensG = ordenarGeneros(Object.keys(totG));
+      let resumen = '<div class="zapa-resumen">';
+      resumen += `<div class="zapa-stat"><div class="num">${totalG}</div><div class="lab">Pares en total</div></div>`;
+      gensG.forEach(g => resumen += `<div class="zapa-stat"><div class="num">${totG[g]}</div><div class="lab">${g}</div></div>`);
+      resumen += '</div>';
+      resumenEl.innerHTML = resumen;
+
+      if (!modelosData.length) {
+        cont.innerHTML = '<div class="empty"><p>No hay modelos que coincidan con la búsqueda.</p></div>';
+        return;
+      }
+
+      const subcats = zapaCategoria.subcategorias || [];
+      let html = '';
+      const usados = new Set();
+      subcats.forEach(sc => {
+        const delGrupo = modelosData.filter(md => md.modelo.subcategoria_id == sc.id);
+        if (!delGrupo.length) return;
+        delGrupo.forEach(md => usados.add(md.modelo.id));
+        html += `<div class="zapa-subcat">${sc.nombre}</div>`;
+        delGrupo.forEach(md => html += tarjetaModelo(md));
+      });
+      const sueltos = modelosData.filter(md => !usados.has(md.modelo.id));
+      if (sueltos.length) {
+        html += `<div class="zapa-subcat">Otros</div>`;
+        sueltos.forEach(md => html += tarjetaModelo(md));
+      }
+      cont.innerHTML = html;
     }
 
     // ── BUSCADOR reutilizable sobre <select> (texto + orden alfabético) ──
