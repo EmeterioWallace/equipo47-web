@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin — Almacén Madrid × Equipo 47</title>
+  <link rel="icon" type="image/png" href="/images/brand/logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
@@ -446,6 +447,15 @@
         flex-shrink: 0;
       }
     }
+
+    /* Buscador reutilizable sobre <select> */
+    .buscador-wrap { position: relative; }
+    .buscador-input { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--dark); color: var(--text); font-size: 14px; font-family: inherit; }
+    .buscador-input:focus { outline: none; border-color: var(--accent); }
+    .buscador-lista { position: absolute; top: 100%; left: 0; right: 0; z-index: 60; background: var(--card); border: 1px solid var(--border); border-radius: 8px; margin-top: 4px; max-height: 240px; overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+    .buscador-item { padding: 9px 12px; cursor: pointer; font-size: 14px; border-bottom: 1px solid var(--border); }
+    .buscador-item:last-child { border-bottom: none; }
+    .buscador-item:hover { background: var(--dark); }
   </style>
 </head>
 <body>
@@ -3152,6 +3162,75 @@
       return (v.stock_total || 0) - colocado;
     }
 
+    // ── BUSCADOR reutilizable sobre <select> (texto + orden alfabético) ──
+    function refrescarBuscador(selectId, placeholder) {
+      const sel = document.getElementById(selectId);
+      if (!sel) return;
+      // Reordenar opciones alfabéticamente (dejando el placeholder vacío arriba)
+      const opts = Array.from(sel.options);
+      const placeholderOpt = (opts[0] && opts[0].value === '') ? opts[0] : null;
+      const resto = (placeholderOpt ? opts.slice(1) : opts.slice());
+      resto.sort((a, b) => a.text.localeCompare(b.text, 'es', { sensitivity: 'base' }));
+      const valorActual = sel.value;
+      sel.innerHTML = '';
+      if (placeholderOpt) sel.appendChild(placeholderOpt);
+      resto.forEach(o => sel.appendChild(o));
+      sel.value = valorActual;
+
+      // Montar la interfaz del buscador una sola vez
+      let wrap = (sel.parentElement && sel.parentElement.classList.contains('buscador-wrap')) ? sel.parentElement : null;
+      if (!wrap) {
+        wrap = document.createElement('div');
+        wrap.className = 'buscador-wrap';
+        sel.parentNode.insertBefore(wrap, sel);
+        wrap.appendChild(sel);
+        sel.style.display = 'none';
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'buscador-input';
+        input.placeholder = placeholder || 'Buscar...';
+        input.autocomplete = 'off';
+        wrap.appendChild(input);
+
+        const lista = document.createElement('div');
+        lista.className = 'buscador-lista';
+        lista.style.display = 'none';
+        wrap.appendChild(lista);
+
+        const pintar = (filtro) => {
+          const f = (filtro || '').toLowerCase().trim();
+          lista.innerHTML = '';
+          Array.from(sel.options).forEach(o => {
+            if (!o.value) return;
+            if (f && !o.text.toLowerCase().includes(f)) return;
+            const item = document.createElement('div');
+            item.className = 'buscador-item';
+            item.textContent = o.text;
+            item.onmousedown = (e) => {
+              e.preventDefault();
+              sel.value = o.value;
+              input.value = o.text;
+              lista.style.display = 'none';
+              sel.dispatchEvent(new Event('change'));
+            };
+            lista.appendChild(item);
+          });
+          lista.style.display = lista.children.length ? 'block' : 'none';
+        };
+
+        input.addEventListener('focus', () => pintar(input.value));
+        input.addEventListener('input', () => pintar(input.value));
+        input.addEventListener('blur', () => setTimeout(() => { lista.style.display = 'none'; }, 150));
+        wrap._sync = () => {
+          const o = sel.options[sel.selectedIndex];
+          input.value = (o && o.value) ? o.text : '';
+        };
+        wrap._input = input;
+      }
+      if (wrap._sync) wrap._sync();
+    }
+
     function mostrarModalLinea(cajaId, lineaId = null) {
       // Cargar productos en el select
       const selProd = document.getElementById('lineaProducto');
@@ -3178,6 +3257,7 @@
         document.getElementById('lineaProducto').value = '';
         document.getElementById('lineaVariante').innerHTML = '<option value="">Seleccionar variante...</option>';
       }
+      refrescarBuscador('lineaProducto', 'Buscar producto...');
       abrirModalAdmin('modalLinea');
     }
 
@@ -3383,6 +3463,7 @@
         document.getElementById('sueltoUbicacion').value = '';
       }
       toggleDestinoSuelto();
+      refrescarBuscador('sueltoProducto', 'Buscar producto...');
       abrirModalAdmin('modalSuelto');
     }
 
@@ -3820,6 +3901,7 @@
         document.getElementById('lineaSalidaProducto').value = '';
         document.getElementById('lineaSalidaVariante').innerHTML = '<option value="">Seleccionar variante...</option>';
       }
+      refrescarBuscador('lineaSalidaProducto', 'Buscar producto...');
       abrirModalAdmin('modalLineaSalida');
     }
 
@@ -4739,6 +4821,7 @@
       document.getElementById('visClienteNombre').textContent = c?.nombre || '';
       document.getElementById('visProductoSelect').innerHTML = '<option value="">Añadir un producto...</option>' +
         productos.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+      refrescarBuscador('visProductoSelect', 'Buscar producto para añadir...');
       renderVisibilidad();
       abrirModalAdmin('modalVisibilidad');
     }
@@ -4801,6 +4884,7 @@
       toast('✓ Producto añadido');
       clienteVisibilidad = (await sb.from('cliente_visibilidad').select('*')).data || [];
       document.getElementById('visProductoSelect').value = '';
+      refrescarBuscador('visProductoSelect', 'Buscar producto para añadir...');
       renderVisibilidad();
     }
 
