@@ -416,36 +416,40 @@
     }
 
     /* RESPONSIVO */
+    /* Barra superior y menú móvil (ocultos en escritorio) */
+    .topbar-movil { display: none; }
+    .menu-overlay { display: none; }
+
     @media (max-width: 768px) {
+      /* Barra superior fija con logo y hamburguesa */
+      .topbar-movil {
+        display: flex; align-items: center; gap: 10px;
+        position: fixed; top: 0; left: 0; right: 0; height: 54px; z-index: 250;
+        background: var(--card); border-bottom: 1px solid var(--border); padding: 0 14px;
+      }
+      .topbar-logo { height: 30px; width: auto; }
+      .topbar-titulo { font-size: 15px; font-weight: 600; color: var(--text); flex: 1; }
+      .hamburguesa { background: none; border: none; color: var(--text); font-size: 26px; cursor: pointer; padding: 4px 8px; line-height: 1; }
+
+      /* Sidebar como panel deslizante desde la izquierda */
       .sidebar {
-        width: 100%;
-        height: auto;
-        flex-direction: row;
-        position: relative;
-        overflow-x: auto;
-        border-right: none;
-        border-bottom: 1px solid var(--border);
+        position: fixed; top: 0; left: 0; height: 100%; width: 260px;
+        flex-direction: column; overflow-y: auto;
+        border-right: 1px solid var(--border); border-bottom: none;
+        transform: translateX(-100%); transition: transform 0.25s ease; z-index: 300;
       }
+      .sidebar.abierto { transform: translateX(0); }
 
-      .main {
-        margin-left: 0;
-        margin-top: 0;
-        padding: 20px;
-      }
+      /* Fondo oscuro al abrir el menú */
+      .menu-overlay.activo { display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 280; }
 
-      .grid {
-        grid-template-columns: 1fr;
-      }
+      .nav { flex-direction: column; padding: 0; }
+      .nav-item { white-space: nowrap; flex-shrink: 0; }
 
-      .nav {
-        flex-direction: row;
-        padding: 0;
-      }
+      /* El contenido deja hueco para la barra superior */
+      .main { margin-left: 0; margin-top: 54px; padding: 20px; }
 
-      .nav-item {
-        white-space: nowrap;
-        flex-shrink: 0;
-      }
+      .grid { grid-template-columns: 1fr; }
 
       /* Cabeceras de página: apilar título y acciones */
       .page-header { flex-direction: column; align-items: stretch; gap: 12px; }
@@ -515,8 +519,16 @@
   </style>
 </head>
 <body>
+  <!-- BARRA SUPERIOR (solo móvil) -->
+  <div class="topbar-movil">
+    <img src="/images/brand/logo.png" alt="E47" class="topbar-logo" onerror="this.style.display='none'">
+    <span class="topbar-titulo">Almacén Madrid</span>
+    <button class="hamburguesa" onclick="toggleMenuMovil()" aria-label="Abrir menú">☰</button>
+  </div>
+  <div class="menu-overlay" id="menuOverlay" onclick="cerrarMenuMovil()"></div>
+
   <!-- SIDEBAR -->
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar">
     <div class="sidebar-logo">
       <span class="e47">EQUIPO 47</span>
       <span class="admin-tag">Almacén Madrid</span>
@@ -1707,12 +1719,22 @@
   <script src="js/utils.js"></script>
   <script>
     // ── NAVEGACIÓN ──────────────────────────
+    function toggleMenuMovil() {
+      document.getElementById('sidebar').classList.toggle('abierto');
+      document.getElementById('menuOverlay').classList.toggle('activo');
+    }
+    function cerrarMenuMovil() {
+      document.getElementById('sidebar').classList.remove('abierto');
+      document.getElementById('menuOverlay').classList.remove('activo');
+    }
+
     function mostrarPagina(pagina) {
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
       document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
       
       document.getElementById(`${pagina}-page`).classList.add('active');
       document.querySelector(`[onclick="mostrarPagina('${pagina}')"]`).classList.add('active');
+      cerrarMenuMovil();
       
       if (pagina === 'dashboard') cargarDashboard();
       if (pagina === 'productos') cargarProductosTabla();
