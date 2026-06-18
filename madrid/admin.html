@@ -562,6 +562,7 @@
     .zapa-grid td.hay { color: var(--text); font-weight: 600; }
     .zapa-grid tr.tot td { background: var(--dark); font-weight: 700; color: var(--accent); }
   </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
   <!-- BARRA SUPERIOR (solo móvil) -->
@@ -813,7 +814,10 @@
           <h1>CAJAS</h1>
           <p>Contenedores con su contenido — pueden ir en un palé o directas en una ubicación</p>
         </div>
-        <button class="btn btn-primary" onclick="mostrarModalCaja()">➕ Nueva caja</button>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-secondary" onclick="imprimirTodosQr()">🏷️ Imprimir QR (todas)</button>
+          <button class="btn btn-primary" onclick="mostrarModalCaja()">➕ Nueva caja</button>
+        </div>
       </div>
 
       <div class="form-row" style="margin-bottom: 20px;">
@@ -1547,11 +1551,74 @@
         <h2>📋 Plantillas de material</h2>
       </div>
       <div class="modal-body">
-        <p style="font-size:13px; color:var(--muted); margin-bottom:14px;">Listas de material recurrente (trail, asfalto...). Se crean guardando una salida como plantilla con el botón "⭐ Guardar plantilla".</p>
+        <p style="font-size:13px; color:var(--muted); margin-bottom:14px;">Listas de material recurrente (trail, asfalto...). Puedes crear una nueva desde cero, o guardar una salida como plantilla con el botón "⭐ Guardar plantilla".</p>
+        <button class="btn btn-success btn-sm" onclick="abrirEditorPlantilla()" style="margin-bottom:14px;">➕ Nueva plantilla</button>
         <div id="listaPlantillas"></div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" onclick="cerrarModalAdmin('modalPlantillas')">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL EDITOR DE PLANTILLA (crear / editar contenido) -->
+  <div id="modalEditarPlantilla" class="modal">
+    <div class="modal-content" style="max-width: 560px;">
+      <div class="modal-header">
+        <h2 id="tituloEditorPlant">Nueva plantilla</h2>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editorPlantId">
+        <div class="form-group">
+          <label>Nombre de la plantilla *</label>
+          <input type="text" id="editorPlantNombre" placeholder="Ej: Evento Trail">
+        </div>
+        <label style="font-size:13px; color:var(--muted); display:block; margin-bottom:6px;">Añadir artículo</label>
+        <select id="editorPlantProducto" onchange="cargarVariantesEditorPlant()" style="width:100%; margin-bottom:8px;">
+          <option value="">Producto...</option>
+        </select>
+        <div style="display:flex; gap:8px; margin-bottom:16px;">
+          <select id="editorPlantVariante" style="flex:1;"><option value="">Variante...</option></select>
+          <input type="number" id="editorPlantCantidad" min="1" value="1" style="width:72px; text-align:center;">
+          <button class="btn btn-success" onclick="anadirLineaEditorPlant()">➕</button>
+        </div>
+        <div id="editorPlantLineas"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModalAdmin('modalEditarPlantilla')">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="guardarEditorPlantilla()">💾 Guardar plantilla</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL QR DE CAJA (ver / imprimir) -->
+  <div id="modalQrCaja" class="modal">
+    <div class="modal-content" style="max-width: 380px;">
+      <div class="modal-header">
+        <h2>🏷️ QR de la caja</h2>
+      </div>
+      <div class="modal-body" style="text-align:center;">
+        <div id="qrCajaCodigo" style="font-size:18px; font-weight:700; margin-bottom:12px;"></div>
+        <div id="qrCajaCanvas" style="display:flex; justify-content:center; padding:10px; background:#fff; border-radius:10px; width:fit-content; margin:0 auto;"></div>
+        <p style="font-size:12px; color:var(--muted); margin-top:12px;">Escanea con la cámara del móvil para ver el contenido y la ubicación actualizados.</p>
+      </div>
+      <div class="modal-footer" style="flex-direction:column; gap:8px;">
+        <button type="button" class="btn btn-primary" style="width:100%;" onclick="imprimirEtiquetaCaja(false)">🖨️ Imprimir solo QR</button>
+        <button type="button" class="btn btn-secondary" style="width:100%;" onclick="imprimirEtiquetaCaja(true)">🖨️ Imprimir etiqueta con contenido</button>
+        <button type="button" class="btn btn-ghost" style="width:100%;" onclick="cerrarModalAdmin('modalQrCaja')">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL FICHA DE CAJA (consulta al escanear el QR) -->
+  <div id="modalFichaCaja" class="modal">
+    <div class="modal-content" style="max-width: 480px;">
+      <div class="modal-header">
+        <h2 id="fichaCajaTitulo">📦 Caja</h2>
+      </div>
+      <div class="modal-body" id="fichaCajaBody"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModalAdmin('modalFichaCaja')">Cerrar</button>
       </div>
     </div>
   </div>
@@ -3150,6 +3217,7 @@
             <td>${lineas.length}</td>
             <td><span class="badge badge-${totalUds === 0 ? 'warning' : 'success'}">${totalUds} uds</span></td>
             <td>
+              <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); mostrarQrCaja(${c.id})" title="Código QR">🏷️</button>
               <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); mostrarModalCaja(${c.id})">✏️</button>
               <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); eliminarCajaAdmin(${c.id})">🗑️</button>
             </td>
@@ -3192,6 +3260,123 @@
       const abierto = fila.style.display !== 'none';
       fila.style.display = abierto ? 'none' : 'table-row';
       if (flecha) flecha.textContent = abierto ? '▶' : '▼';
+    }
+
+    // ── CÓDIGOS QR DE CAJAS ─────────────────
+    let qrCajaActual = null;
+
+    function qrUrlCaja(caja) {
+      return `${location.origin}/madrid/admin.html?caja=${caja.id}`;
+    }
+
+    function contenidoCaja(id) {
+      return stockItems.filter(s => s.caja_id === id)
+        .map(l => ({ nombre: nombreVarianteCompleto(l.variante_id), cantidad: l.cantidad || 0 }));
+    }
+
+    function qrDataUrl(text, size = 200) {
+      const tmp = document.createElement('div');
+      tmp.style.display = 'none';
+      document.body.appendChild(tmp);
+      try {
+        new QRCode(tmp, { text, width: size, height: size, correctLevel: QRCode.CorrectLevel.M });
+      } catch (e) { console.error('QR:', e); }
+      const canvas = tmp.querySelector('canvas');
+      let url = '';
+      if (canvas) url = canvas.toDataURL('image/png');
+      else { const img = tmp.querySelector('img'); if (img) url = img.src; }
+      document.body.removeChild(tmp);
+      return url;
+    }
+
+    function mostrarQrCaja(id) {
+      const c = cajas.find(x => x.id === id);
+      if (!c) return;
+      if (typeof QRCode === 'undefined') { alert('No se pudo cargar el generador de QR (¿sin conexión?). Inténtalo de nuevo conectado a internet.'); return; }
+      qrCajaActual = c;
+      document.getElementById('qrCajaCodigo').textContent = c.codigo || 'Caja';
+      const cont = document.getElementById('qrCajaCanvas');
+      cont.innerHTML = '';
+      new QRCode(cont, { text: qrUrlCaja(c), width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M });
+      abrirModalAdmin('modalQrCaja');
+    }
+
+    function imprimirEtiquetaCaja(conContenido) {
+      if (!qrCajaActual) return;
+      imprimirEtiquetas([qrCajaActual], conContenido);
+    }
+
+    function imprimirTodosQr() {
+      if (!cajas.length) { alert('No hay cajas para imprimir.'); return; }
+      if (typeof QRCode === 'undefined') { alert('No se pudo cargar el generador de QR (¿sin conexión?).'); return; }
+      imprimirEtiquetas(cajas, true);
+    }
+
+    function imprimirEtiquetas(listaCajas, conContenido) {
+      const tarjetas = listaCajas.map(c => {
+        const url = qrDataUrl(qrUrlCaja(c), 200);
+        const ubic = ubicacionFisicaCaja(c).replace(/<[^>]+>/g, '');
+        let contenidoHtml = '';
+        if (conContenido) {
+          const items = contenidoCaja(c.id);
+          contenidoHtml = items.length
+            ? '<ul class="cont">' + items.map(i => `<li>${i.nombre} — ${i.cantidad} uds</li>`).join('') + '</ul>'
+            : '<p class="vacia">Caja vacía</p>';
+        }
+        return `<div class="etiqueta">
+          <img src="${url}" class="qr">
+          <div class="info">
+            <div class="cod">${c.codigo || 'Caja'}</div>
+            <div class="ubi">${ubic}</div>
+            ${contenidoHtml}
+          </div>
+        </div>`;
+      }).join('');
+
+      const win = window.open('', '_blank');
+      win.document.write(`<!DOCTYPE html><html><head><title>Etiquetas QR</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 10px; }
+          .etiqueta { display: inline-flex; align-items: flex-start; gap: 12px; border: 1px solid #999; border-radius: 8px; padding: 12px; margin: 6px; width: 330px; vertical-align: top; page-break-inside: avoid; }
+          .qr { width: 110px; height: 110px; flex-shrink: 0; }
+          .cod { font-size: 18px; font-weight: bold; }
+          .ubi { font-size: 12px; color: #555; margin: 4px 0; }
+          .cont { margin: 6px 0 0; padding-left: 16px; font-size: 11px; }
+          .cont li { margin-bottom: 2px; }
+          .vacia { font-size: 11px; color: #999; }
+        </style></head><body>${tarjetas}</body></html>`);
+      win.document.close();
+      setTimeout(() => { win.print(); }, 400);
+    }
+
+    // Ficha de la caja al escanear el QR (consulta)
+    async function abrirFichaCaja(id) {
+      if (!cajas.length || !stockItems.length) await cargarCajasTabla();
+      const c = cajas.find(x => x.id === id);
+      if (!c) { alert('No se encontró esa caja.'); return; }
+      document.getElementById('fichaCajaTitulo').textContent = '📦 ' + (c.codigo || 'Caja');
+      const items = contenidoCaja(c.id);
+      const totalUds = items.reduce((s, i) => s + i.cantidad, 0);
+      const contenidoHtml = items.length
+        ? items.map(i => `<div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border); font-size:14px;"><span>${i.nombre}</span><strong>${i.cantidad} uds</strong></div>`).join('')
+        : '<p style="color:var(--muted); text-align:center; padding:14px;">Caja vacía</p>';
+      document.getElementById('fichaCajaBody').innerHTML = `
+        <div style="margin-bottom:14px;">
+          <div style="font-size:12px; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted);">Dónde está guardada</div>
+          <div style="font-size:15px; margin-top:3px;">${ubicacionFisicaCaja(c)}</div>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <span style="font-size:12px; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted);">Contenido</span>
+          <span class="badge badge-${totalUds === 0 ? 'warning' : 'success'}">${totalUds} uds</span>
+        </div>
+        ${contenidoHtml}`;
+      abrirModalAdmin('modalFichaCaja');
+    }
+
+    async function procesarQrEntrante() {
+      const cajaId = new URLSearchParams(location.search).get('caja');
+      if (!cajaId) return;
+      await abrirFichaCaja(parseInt(cajaId));
     }
 
     // ── MODAL CAJA (contenedor) ─────────────
@@ -4467,7 +4652,7 @@
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
             <strong style="font-size:15px;">${p.nombre}</strong>
             <span style="display:flex; gap:5px;">
-              <button class="btn btn-ghost btn-small" onclick="renombrarPlantilla(${p.id})">✏️</button>
+              <button class="btn btn-ghost btn-small" onclick="abrirEditorPlantilla(${p.id})">✏️ Editar</button>
               <button class="btn btn-danger btn-small" onclick="eliminarPlantilla(${p.id})">🗑️</button>
             </span>
           </div>
@@ -4492,6 +4677,102 @@
       await sb.from('plantilla_lineas').delete().eq('plantilla_id', id);
       await sb.from('plantillas').delete().eq('id', id);
       toast('✓ Plantilla eliminada');
+      await cargarPlantillas();
+      renderListaPlantillas();
+    }
+
+    // ── EDITOR DE PLANTILLAS (crear desde cero / editar contenido) ──
+    let editorPlantLineas = [];  // [{ variante_id, cantidad }]
+
+    function abrirEditorPlantilla(id = null) {
+      document.getElementById('editorPlantProducto').innerHTML = '<option value="">Producto...</option>' +
+        productos.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+      document.getElementById('editorPlantVariante').innerHTML = '<option value="">Variante...</option>';
+      document.getElementById('editorPlantCantidad').value = 1;
+      if (id) {
+        const p = plantillas.find(x => x.id === id);
+        document.getElementById('tituloEditorPlant').textContent = 'Editar plantilla';
+        document.getElementById('editorPlantId').value = id;
+        document.getElementById('editorPlantNombre').value = p?.nombre || '';
+        editorPlantLineas = plantillaLineas.filter(l => l.plantilla_id === id).map(l => ({ variante_id: l.variante_id, cantidad: l.cantidad }));
+      } else {
+        document.getElementById('tituloEditorPlant').textContent = 'Nueva plantilla';
+        document.getElementById('editorPlantId').value = '';
+        document.getElementById('editorPlantNombre').value = '';
+        editorPlantLineas = [];
+      }
+      refrescarBuscador('editorPlantProducto', 'Buscar producto...');
+      renderEditorPlantLineas();
+      abrirModalAdmin('modalEditarPlantilla');
+    }
+
+    function cargarVariantesEditorPlant() {
+      const prodId = parseInt(document.getElementById('editorPlantProducto').value);
+      const vs = variantes.filter(v => v.producto_id === prodId);
+      document.getElementById('editorPlantVariante').innerHTML = '<option value="">Variante...</option>' +
+        vs.map(v => `<option value="${v.id}">${etiquetaVariante(v)}</option>`).join('');
+    }
+
+    function anadirLineaEditorPlant() {
+      const varId = parseInt(document.getElementById('editorPlantVariante').value);
+      const cant = parseInt(document.getElementById('editorPlantCantidad').value);
+      if (!varId) { alert('Elige una variante'); return; }
+      if (!cant || cant < 1) { alert('Indica una cantidad válida'); return; }
+      const ex = editorPlantLineas.find(l => l.variante_id === varId);
+      if (ex) ex.cantidad = cant; else editorPlantLineas.push({ variante_id: varId, cantidad: cant });
+      document.getElementById('editorPlantCantidad').value = 1;
+      renderEditorPlantLineas();
+    }
+
+    function renderEditorPlantLineas() {
+      const cont = document.getElementById('editorPlantLineas');
+      if (!editorPlantLineas.length) {
+        cont.innerHTML = '<p style="color:var(--muted); font-size:13px; text-align:center; padding:12px;">Sin artículos todavía. Añádelos arriba.</p>';
+        return;
+      }
+      cont.innerHTML = editorPlantLineas.map((l, i) => `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border);">
+          <span style="font-size:13px;">${nombreVarianteCompleto(l.variante_id)}</span>
+          <span style="display:flex; align-items:center; gap:8px;">
+            <input type="number" min="1" value="${l.cantidad}" onchange="cambiarCantEditorPlant(${i}, this.value)" style="width:64px; text-align:center; padding:4px; border:1px solid var(--border); border-radius:5px; background:var(--dark); color:var(--text);">
+            <button class="btn btn-danger btn-small" onclick="quitarLineaEditorPlant(${i})">🗑️</button>
+          </span>
+        </div>`).join('');
+    }
+
+    function cambiarCantEditorPlant(i, val) {
+      let n = parseInt(val); if (!n || n < 1) n = 1;
+      editorPlantLineas[i].cantidad = n;
+    }
+
+    function quitarLineaEditorPlant(i) {
+      editorPlantLineas.splice(i, 1);
+      renderEditorPlantLineas();
+    }
+
+    async function guardarEditorPlantilla() {
+      const nombre = document.getElementById('editorPlantNombre').value.trim();
+      if (!nombre) { alert('Indica el nombre de la plantilla'); return; }
+      if (!editorPlantLineas.length) { alert('Añade al menos un artículo a la plantilla'); return; }
+      const idStr = document.getElementById('editorPlantId').value;
+      if (idStr) {
+        const id = parseInt(idStr);
+        await sb.from('plantillas').update({ nombre }).eq('id', id);
+        await sb.from('plantilla_lineas').delete().eq('plantilla_id', id);
+        const pls = editorPlantLineas.map(l => ({ id: idUnico(), plantilla_id: id, variante_id: l.variante_id, cantidad: l.cantidad }));
+        const { error } = await sb.from('plantilla_lineas').insert(pls);
+        if (error) { alert('❌ Error al guardar: ' + error.message); return; }
+        toast('✓ Plantilla actualizada');
+      } else {
+        const id = Date.now();
+        const { error } = await sb.from('plantillas').insert({ id, nombre });
+        if (error) { alert('❌ Error: ' + error.message); return; }
+        const pls = editorPlantLineas.map(l => ({ id: idUnico(), plantilla_id: id, variante_id: l.variante_id, cantidad: l.cantidad }));
+        const { error: e2 } = await sb.from('plantilla_lineas').insert(pls);
+        if (e2) { alert('❌ Error al guardar el contenido: ' + e2.message); return; }
+        toast('⭐ Plantilla creada');
+      }
+      cerrarModalAdmin('modalEditarPlantilla');
       await cargarPlantillas();
       renderListaPlantillas();
     }
@@ -5427,6 +5708,7 @@
       usuarioActual = data.user?.email || email;
       document.getElementById('login-overlay').style.display = 'none';
       cargarDashboard();
+      procesarQrEntrante();
     }
 
     async function cerrarSesionAuth() {
@@ -5457,6 +5739,7 @@
         usuarioActual = session.user?.email || null;
         document.getElementById('login-overlay').style.display = 'none';
         cargarDashboard();
+        procesarQrEntrante();
       } else {
         document.getElementById('login-overlay').style.display = 'flex';
       }
