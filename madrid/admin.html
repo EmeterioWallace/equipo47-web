@@ -588,6 +588,10 @@
         <span class="icon">📊</span>
         <span>Dashboard</span>
       </div>
+      <div class="nav-item" onclick="mostrarPagina('calendario')">
+        <span class="icon">📅</span>
+        <span>Calendario</span>
+      </div>
       <div class="nav-item" onclick="mostrarPagina('productos')">
         <span class="icon">📦</span>
         <span>Productos</span>
@@ -733,6 +737,20 @@
         <p>✓ Equipo 47 · Madrid funcionando</p>
         <p id="db-status" style="color: var(--success);">Comprobando BD...</p>
       </div>
+    </section>
+
+    <!-- CALENDARIO Y EVENTOS -->
+    <section class="page" id="calendario-page">
+      <div class="page-header">
+        <div>
+          <h1>CALENDARIO</h1>
+          <p>Eventos, salidas, devoluciones y recepciones. Crea aquí los eventos (con o sin material).</p>
+        </div>
+        <button class="btn btn-primary" onclick="mostrarModalEvento()">➕ Nuevo evento</button>
+      </div>
+      <div id="calendario-vista"></div>
+      <h3 style="margin:24px 0 12px; font-family:'Bebas Neue',sans-serif; letter-spacing:1px;">Eventos registrados</h3>
+      <div id="eventos-lista" class="loading">Cargando...</div>
     </section>
 
     <!-- PRODUCTOS -->
@@ -1690,7 +1708,8 @@
         <h2>👷 Convocar persona</h2>
       </div>
       <div class="modal-body">
-        <input type="hidden" id="convocarSalidaId">
+        <input type="hidden" id="convocarTipo">
+        <input type="hidden" id="convocarId">
         <div class="form-group">
           <label>Persona del equipo</label>
           <select id="convocarPersona"><option value="">Elegir del equipo...</option></select>
@@ -1706,6 +1725,45 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" onclick="cerrarModalAdmin('modalConvocar')">Cancelar</button>
         <button type="button" class="btn btn-primary" onclick="anadirConvocatoria()">Convocar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL CREAR / EDITAR EVENTO -->
+  <div id="modalEvento" class="modal">
+    <div class="modal-content" style="max-width: 480px;">
+      <div class="modal-header">
+        <h2 id="tituloModalEvento">Nuevo evento</h2>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="eventoId">
+        <div class="form-group">
+          <label>Nombre del evento *</label>
+          <input type="text" id="eventoNombre" placeholder="Ej: Carrera de la Mujer">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Fecha inicio *</label>
+            <input type="date" id="eventoFechaInicio">
+          </div>
+          <div class="form-group">
+            <label>Fecha fin</label>
+            <input type="date" id="eventoFechaFin">
+            <p style="font-size:11px; color:var(--muted); margin-top:4px;">Déjala vacía si es de un solo día.</p>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Lugar</label>
+          <input type="text" id="eventoLugar" placeholder="Opcional">
+        </div>
+        <div class="form-group">
+          <label>Notas</label>
+          <textarea id="eventoNotas" rows="2" placeholder="Opcional"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModalAdmin('modalEvento')">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="guardarEvento()">💾 Guardar</button>
       </div>
     </div>
   </div>
@@ -1985,6 +2043,7 @@
       if (pagina === 'clientes') cargarClientesTabla();
       if (pagina === 'solicitudes') cargarSolicitudesTabla();
       if (pagina === 'equipo') cargarEquipoTabla();
+      if (pagina === 'calendario') cargarCalendario();
     }
 
     // ── DASHBOARD ───────────────────────────
@@ -4462,7 +4521,7 @@
           <div style="margin-top:14px; padding-top:12px; border-top:1px solid var(--border);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
               <span style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted);">👷 Personas convocadas (${convocados.length})</span>
-              <button class="btn btn-success btn-small" onclick="mostrarModalConvocar(${s.id})">+ Convocar persona</button>
+              <button class="btn btn-success btn-small" onclick="mostrarModalConvocar('salida', ${s.id})">+ Convocar persona</button>
             </div>
             ${convocados.length ? convocados.map(ep => `
               <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--border); font-size:13px;">
@@ -5598,9 +5657,10 @@
       return ep.nombre_externo || 'Colaborador';
     }
 
-    function mostrarModalConvocar(salidaId) {
-      document.getElementById('convocarSalidaId').value = salidaId;
-      const yaConvocados = new Set(eventoPersonas.filter(ep => ep.salida_id === salidaId && ep.persona_id).map(ep => ep.persona_id));
+    function mostrarModalConvocar(tipo, id) {
+      document.getElementById('convocarTipo').value = tipo;
+      document.getElementById('convocarId').value = id;
+      const yaConvocados = new Set(eventoPersonas.filter(ep => (tipo === 'salida' ? ep.salida_id === id : ep.evento_id === id) && ep.persona_id).map(ep => ep.persona_id));
       const disponibles = personasEquipo.filter(p => p.activo !== false && !yaConvocados.has(p.id));
       document.getElementById('convocarPersona').innerHTML = '<option value="">Elegir del equipo...</option>' +
         disponibles.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
@@ -5609,27 +5669,149 @@
     }
 
     async function anadirConvocatoria() {
-      const salidaId = parseInt(document.getElementById('convocarSalidaId').value);
+      const tipo = document.getElementById('convocarTipo').value;
+      const id = parseInt(document.getElementById('convocarId').value);
       const personaId = document.getElementById('convocarPersona').value;
       const externo = document.getElementById('convocarExterno').value.trim();
       if (!personaId && !externo) { alert('Elige una persona del equipo o escribe un colaborador puntual'); return; }
+      const base = tipo === 'salida' ? { salida_id: id, evento_id: null } : { salida_id: null, evento_id: id };
       const registros = [];
-      if (personaId) registros.push({ id: idUnico(), salida_id: salidaId, persona_id: parseInt(personaId), nombre_externo: null });
-      if (externo) registros.push({ id: idUnico(), salida_id: salidaId, persona_id: null, nombre_externo: externo });
+      if (personaId) registros.push({ id: idUnico(), ...base, persona_id: parseInt(personaId), nombre_externo: null });
+      if (externo) registros.push({ id: idUnico(), ...base, persona_id: null, nombre_externo: externo });
       const { error } = await sb.from('evento_personas').insert(registros);
       if (error) { alert('❌ ' + error.message); return; }
       toast('✓ Convocatoria añadida');
       cerrarModalAdmin('modalConvocar');
-      await cargarSalidasTabla();
-      setTimeout(() => toggleContenidoSalida(salidaId), 120);
+      if (tipo === 'salida') {
+        await cargarSalidasTabla();
+        setTimeout(() => toggleContenidoSalida(id), 120);
+      } else {
+        await cargarEventos();
+      }
     }
 
     async function quitarConvocatoria(id) {
       const ep = eventoPersonas.find(x => x.id === id);
       await sb.from('evento_personas').delete().eq('id', id);
       toast('✓ Persona quitada del evento');
-      await cargarSalidasTabla();
-      if (ep) setTimeout(() => toggleContenidoSalida(ep.salida_id), 120);
+      if (ep && ep.evento_id) {
+        await cargarEventos();
+      } else {
+        await cargarSalidasTabla();
+        if (ep) setTimeout(() => toggleContenidoSalida(ep.salida_id), 120);
+      }
+    }
+
+    // ════════════════════════════════════════
+    //  EVENTOS (sin material) y CALENDARIO
+    // ════════════════════════════════════════
+    let eventos = [];
+
+    async function cargarCalendario() {
+      document.getElementById('eventos-lista').innerHTML = '<div class="loading">Cargando...</div>';
+      eventos = (await sb.from('eventos').select('*').order('fecha_inicio')).data || [];
+      eventoPersonas = (await sb.from('evento_personas').select('*')).data || [];
+      personasEquipo = (await sb.from('personas_equipo').select('*').order('nombre')).data || [];
+      renderEventosLista();
+    }
+
+    async function cargarEventos() {
+      eventos = (await sb.from('eventos').select('*').order('fecha_inicio')).data || [];
+      eventoPersonas = (await sb.from('evento_personas').select('*')).data || [];
+      renderEventosLista();
+    }
+
+    function renderEventosLista() {
+      const cont = document.getElementById('eventos-lista');
+      if (!eventos.length) {
+        cont.innerHTML = '<div class="empty"><div class="empty-icon">📅</div><p>No hay eventos todavía. Crea uno con "Nuevo evento".</p></div>';
+        return;
+      }
+      cont.innerHTML = eventos.map(e => {
+        const convocados = eventoPersonas.filter(ep => ep.evento_id === e.id);
+        const fechas = (e.fecha_fin && e.fecha_fin !== e.fecha_inicio)
+          ? `${fechaCorta(e.fecha_inicio)} → ${fechaCorta(e.fecha_fin)}`
+          : fechaCorta(e.fecha_inicio);
+        return `<div class="card" style="margin-bottom:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;">
+            <div>
+              <h3 style="margin:0;">${e.nombre}</h3>
+              <p style="font-size:13px; color:var(--muted); margin:4px 0;">📅 ${fechas}${e.lugar ? ' · 📍 ' + e.lugar : ''}</p>
+              ${e.notas ? `<p style="font-size:13px; margin:4px 0;">📝 ${e.notas}</p>` : ''}
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button class="btn btn-ghost btn-sm" onclick="mostrarModalEvento(${e.id})">✏️</button>
+              <button class="btn btn-danger btn-sm" onclick="eliminarEvento(${e.id})">🗑️</button>
+            </div>
+          </div>
+          <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
+              <span style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted);">👷 Personas convocadas (${convocados.length})</span>
+              <button class="btn btn-success btn-small" onclick="mostrarModalConvocar('evento', ${e.id})">+ Convocar persona</button>
+            </div>
+            ${convocados.length ? convocados.map(ep => `
+              <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--border); font-size:13px;">
+                <span>${nombreConvocado(ep)}${ep.persona_id ? '' : ' <span style="font-size:11px; color:var(--muted);">(colaborador puntual)</span>'}</span>
+                <button class="btn btn-danger btn-small" onclick="quitarConvocatoria(${ep.id})">🗑️</button>
+              </div>`).join('') : '<p style="font-size:12px; color:var(--muted);">Nadie convocado todavía.</p>'}
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function mostrarModalEvento(id = null) {
+      if (id) {
+        const e = eventos.find(x => x.id === id);
+        document.getElementById('tituloModalEvento').textContent = 'Editar evento';
+        document.getElementById('eventoId').value = id;
+        document.getElementById('eventoNombre').value = e?.nombre || '';
+        document.getElementById('eventoFechaInicio').value = e?.fecha_inicio || '';
+        document.getElementById('eventoFechaFin').value = (e?.fecha_fin && e.fecha_fin !== e.fecha_inicio) ? e.fecha_fin : '';
+        document.getElementById('eventoLugar').value = e?.lugar || '';
+        document.getElementById('eventoNotas').value = e?.notas || '';
+      } else {
+        document.getElementById('tituloModalEvento').textContent = 'Nuevo evento';
+        document.getElementById('eventoId').value = '';
+        document.getElementById('eventoNombre').value = '';
+        document.getElementById('eventoFechaInicio').value = '';
+        document.getElementById('eventoFechaFin').value = '';
+        document.getElementById('eventoLugar').value = '';
+        document.getElementById('eventoNotas').value = '';
+      }
+      abrirModalAdmin('modalEvento');
+    }
+
+    async function guardarEvento() {
+      const nombre = document.getElementById('eventoNombre').value.trim();
+      const fechaInicio = document.getElementById('eventoFechaInicio').value;
+      if (!nombre) { alert('Indica el nombre del evento'); return; }
+      if (!fechaInicio) { alert('Indica la fecha de inicio'); return; }
+      let fechaFin = document.getElementById('eventoFechaFin').value || fechaInicio;
+      if (fechaFin < fechaInicio) { alert('La fecha de fin no puede ser anterior a la de inicio'); return; }
+      const lugar = document.getElementById('eventoLugar').value.trim() || null;
+      const notas = document.getElementById('eventoNotas').value.trim() || null;
+      const idStr = document.getElementById('eventoId').value;
+      const datos = { nombre, fecha_inicio: fechaInicio, fecha_fin: fechaFin, lugar, notas };
+      if (idStr) {
+        const { error } = await sb.from('eventos').update(datos).eq('id', parseInt(idStr));
+        if (error) { alert('❌ ' + error.message); return; }
+        toast('✓ Evento actualizado');
+      } else {
+        const { error } = await sb.from('eventos').insert({ id: Date.now(), ...datos });
+        if (error) { alert('❌ ' + error.message); return; }
+        toast('✓ Evento creado');
+      }
+      cerrarModalAdmin('modalEvento');
+      await cargarCalendario();
+    }
+
+    async function eliminarEvento(id) {
+      const e = eventos.find(x => x.id === id);
+      if (!confirmar(`¿Eliminar el evento "${e?.nombre}"? Se quitarán también sus convocatorias.`)) return;
+      await sb.from('evento_personas').delete().eq('evento_id', id);
+      await sb.from('eventos').delete().eq('id', id);
+      toast('✓ Evento eliminado');
+      await cargarCalendario();
     }
 
     async function cargarClientesTabla() {
