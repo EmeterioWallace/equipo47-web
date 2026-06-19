@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin — Almacén Madrid × Equipo 47</title>
+  <title>Admin — Madrid × Equipo 47</title>
   <link rel="icon" type="image/png" href="/images/brand/logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -568,7 +568,7 @@
   <!-- BARRA SUPERIOR (solo móvil) -->
   <div class="topbar-movil">
     <img src="/images/brand/logo.png" alt="E47" class="topbar-logo" onerror="this.style.display='none'">
-    <span class="topbar-titulo">Almacén Madrid</span>
+    <span class="topbar-titulo">Madrid</span>
     <button class="hamburguesa" onclick="toggleMenuMovil()" aria-label="Abrir menú">☰</button>
   </div>
   <div class="menu-overlay" id="menuOverlay" onclick="cerrarMenuMovil()"></div>
@@ -580,7 +580,7 @@
         <img src="/images/brand/logo.png" alt="E47" class="marca-logo" onerror="this.style.display='none'">
         <span class="e47">EQUIPO 47</span>
       </div>
-      <span class="admin-tag">Almacén Madrid</span>
+      <span class="admin-tag">Madrid</span>
       <span class="badge-admin">ADMIN</span>
     </div>
     <nav class="nav">
@@ -632,6 +632,10 @@
         <span class="icon">📨</span>
         <span>Solicitudes</span>
       </div>
+      <div class="nav-item" onclick="mostrarPagina('equipo')">
+        <span class="icon">👷</span>
+        <span>Equipo</span>
+      </div>
       <div class="nav-item" onclick="mostrarPagina('importar')">
         <span class="icon">📥</span>
         <span>Importar datos</span>
@@ -646,6 +650,10 @@
       </div>
     </nav>
     <div class="sidebar-bottom">
+      <div id="usuarioConectado" style="display:flex; align-items:center; gap:8px; padding:8px 10px; margin-bottom:8px; background:var(--dark); border:1px solid var(--border); border-radius:8px; font-size:12px;">
+        <span style="font-size:16px;">👤</span>
+        <span id="usuarioConectadoEmail" style="color:var(--text); word-break:break-all; line-height:1.3;">—</span>
+      </div>
       <button class="btn btn-ghost btn-sm" onclick="toggleTemaAdmin()" id="btnTemaAdmin" style="width: 100%; justify-content: center; margin-bottom: 8px;">
         ☀️ Tema claro
       </button>
@@ -662,8 +670,13 @@
       <div class="page-header">
         <div>
           <h1>DASHBOARD</h1>
-          <p>Resumen del almacén</p>
+          <p>Resumen general</p>
         </div>
+      </div>
+
+      <div id="mis-eventos-aviso" style="display:none; background:var(--card); border:1px solid var(--warning); border-left:4px solid var(--warning); border-radius:10px; padding:16px 18px; margin-bottom:20px;">
+        <h3 style="margin:0 0 10px; color:var(--warning);">📣 Estás convocado</h3>
+        <div id="mis-eventos-lista"></div>
       </div>
 
       <div class="grid">
@@ -686,6 +699,11 @@
           <h3>📤 Salidas</h3>
           <p id="stat-salidas" style="font-size: 32px; color: var(--accent); margin: 12px 0;">—</p>
           <p>Salidas pendientes</p>
+        </div>
+        <div class="card">
+          <h3>📥 Recepciones</h3>
+          <p id="stat-recepciones" style="font-size: 32px; color: var(--accent); margin: 12px 0;">—</p>
+          <p>Total de recepciones</p>
         </div>
       </div>
 
@@ -712,7 +730,7 @@
       <div class="card" style="margin-top: 20px;">
         <h3>ℹ️ Información del sistema</h3>
         <p>✓ Conexión a Supabase activa</p>
-        <p>✓ Almacén Madrid v2 funcionando</p>
+        <p>✓ Equipo 47 · Madrid funcionando</p>
         <p id="db-status" style="color: var(--success);">Comprobando BD...</p>
       </div>
     </section>
@@ -859,8 +877,9 @@
         <div class="form-group">
           <label>Ver</label>
           <select id="filtroEstadoSalida" onchange="renderSalidas()">
-            <option value="activas">Activas (preparando + fuera)</option>
+            <option value="activas">Activas (preparando + preparado + fuera)</option>
             <option value="preparando">Solo preparando</option>
+            <option value="preparado">Solo preparado</option>
             <option value="fuera">Solo fuera</option>
             <option value="devuelta">Devueltas</option>
             <option value="todas">Todas</option>
@@ -972,6 +991,18 @@
         </div>
       </div>
       <div id="solicitudes-tabla" class="loading">Cargando...</div>
+    </section>
+
+    <!-- EQUIPO (personas que pueden ser convocadas a eventos) -->
+    <section class="page" id="equipo-page">
+      <div class="page-header">
+        <div>
+          <h1>EQUIPO</h1>
+          <p>Personas que puedes convocar a los eventos. Su email debe ser el mismo con el que inician sesión, para que reciban el aviso.</p>
+        </div>
+        <button class="btn btn-primary" onclick="mostrarModalPersona()">➕ Nueva persona</button>
+      </div>
+      <div id="equipo-tabla" class="loading">Cargando...</div>
     </section>
 
     <!-- IMPORTAR DATOS -->
@@ -1623,6 +1654,62 @@
     </div>
   </div>
 
+  <!-- MODAL PERSONA DEL EQUIPO -->
+  <div id="modalPersona" class="modal">
+    <div class="modal-content" style="max-width: 440px;">
+      <div class="modal-header">
+        <h2 id="tituloModalPersona">Nueva persona</h2>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="personaId">
+        <div class="form-group">
+          <label>Nombre *</label>
+          <input type="text" id="personaNombre" placeholder="Ej: Juan Pérez">
+        </div>
+        <div class="form-group">
+          <label>Email de acceso</label>
+          <input type="email" id="personaEmail" placeholder="el mismo con el que inicia sesión">
+          <p style="font-size:11px; color:var(--muted); margin-top:4px;">Necesario para que reciba el aviso de los eventos a los que se le convoque.</p>
+        </div>
+        <label style="display:flex; align-items:center; gap:8px; font-size:14px; cursor:pointer;">
+          <input type="checkbox" id="personaActivo" checked style="width:auto;">
+          Persona activa
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModalAdmin('modalPersona')">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="guardarPersona()">💾 Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL CONVOCAR PERSONA A UNA SALIDA -->
+  <div id="modalConvocar" class="modal">
+    <div class="modal-content" style="max-width: 440px;">
+      <div class="modal-header">
+        <h2>👷 Convocar persona</h2>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="convocarSalidaId">
+        <div class="form-group">
+          <label>Persona del equipo</label>
+          <select id="convocarPersona"><option value="">Elegir del equipo...</option></select>
+          <p style="font-size:11px; color:var(--muted); margin-top:4px;">Recibirá un aviso cuando entre en la app.</p>
+        </div>
+        <p style="text-align:center; color:var(--muted); font-size:12px; margin:14px 0;">— o —</p>
+        <div class="form-group">
+          <label>Colaborador puntual (sin cuenta)</label>
+          <input type="text" id="convocarExterno" placeholder="Nombre de la persona">
+          <p style="font-size:11px; color:var(--muted); margin-top:4px;">No recibirá aviso (no tiene usuario), solo queda anotado en el evento.</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModalAdmin('modalConvocar')">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="anadirConvocatoria()">Convocar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL RECEPCIÓN -->
   <div id="modalRecepcion" class="modal">
     <div class="modal-content" style="max-width: 620px;">
@@ -1897,21 +1984,54 @@
       if (pagina === 'actividad') cargarActividadTabla();
       if (pagina === 'clientes') cargarClientesTabla();
       if (pagina === 'solicitudes') cargarSolicitudesTabla();
+      if (pagina === 'equipo') cargarEquipoTabla();
     }
 
     // ── DASHBOARD ───────────────────────────
+    async function mostrarMisEventos() {
+      const aviso = document.getElementById('mis-eventos-aviso');
+      const lista = document.getElementById('mis-eventos-lista');
+      if (!aviso || !lista) return;
+      if (!usuarioActual) { aviso.style.display = 'none'; return; }
+      // ¿El usuario que ha entrado es una persona del equipo?
+      const personas = (await sb.from('personas_equipo').select('id').eq('email', usuarioActual.toLowerCase())).data || [];
+      if (!personas.length) { aviso.style.display = 'none'; return; }
+      const misIds = personas.map(p => p.id);
+      const convoc = (await sb.from('evento_personas').select('salida_id').in('persona_id', misIds)).data || [];
+      if (!convoc.length) { aviso.style.display = 'none'; return; }
+      const salidaIds = [...new Set(convoc.map(c => c.salida_id))];
+      const hoy = new Date().toISOString().slice(0, 10);
+      const misSalidas = (await sb.from('salidas').select('*').in('id', salidaIds)).data || [];
+      const proximos = misSalidas
+        .filter(s => !s.fecha_salida || s.fecha_salida >= hoy)
+        .sort((a, b) => (a.fecha_salida || '').localeCompare(b.fecha_salida || ''));
+      if (!proximos.length) { aviso.style.display = 'none'; return; }
+      lista.innerHTML = proximos.map(s => {
+        const esHoy = s.fecha_salida === hoy;
+        return `<div style="display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-bottom:1px solid var(--border); font-size:14px;">
+          <span><strong>${s.evento || 'Evento'}</strong>${esHoy ? ' <span class="badge badge-warning">¡Hoy!</span>' : ''}</span>
+          <span style="color:var(--muted); font-size:13px;">${s.fecha_salida ? fechaCorta(s.fecha_salida) : 'sin fecha'}</span>
+        </div>`;
+      }).join('');
+      aviso.style.display = 'block';
+    }
+
     async function cargarDashboard() {
       const productosD = await obtenerProductos();
       const cajasD = await obtenerCajas();
       const palesD = await obtenerPales();
       const salidasD = (await sb.from('salidas').select('*')).data || [];
       const salidasFuera = salidasD.filter(s => s.estado === 'fuera').length;
+      const recepcionesD = (await sb.from('recepciones').select('id')).data || [];
       const variantesD = await obtenerVariantes();
 
       document.getElementById('stat-productos').textContent = productosD.length;
       document.getElementById('stat-cajas').textContent = cajasD.length;
       document.getElementById('stat-pales').textContent = palesD.length;
       document.getElementById('stat-salidas').textContent = salidasFuera;
+      document.getElementById('stat-recepciones').textContent = recepcionesD.length;
+
+      mostrarMisEventos();
 
       // Avisos de stock bajo (por variante)
       const bajos = variantesD.filter(v => (v.stock_minimo || 0) > 0 && (v.stock_total || 0) <= v.stock_minimo);
@@ -3539,8 +3659,8 @@
       await cargarCategoriasGlobal();  // carga categorías CON sus subcategorías anidadas
       if (!productos.length) productos = await obtenerProductos();
       if (!variantes.length) variantes = await obtenerVariantes();
-      // Calcular lo comprometido en salidas activas (preparando + fuera)
-      const salidasAct = (await sb.from('salidas').select('id,estado').in('estado', ['preparando', 'fuera'])).data || [];
+      // Calcular lo comprometido en salidas activas (preparando + preparado + fuera)
+      const salidasAct = (await sb.from('salidas').select('id,estado').in('estado', ['preparando', 'preparado', 'fuera'])).data || [];
       const salLineas = (await sb.from('salida_lineas').select('variante_id,cantidad,salida_id')).data || [];
       const salIds = new Set(salidasAct.map(s => s.id));
       zapaComprometido = {};
@@ -4218,6 +4338,7 @@
     // ════════════════════════════════════════
     let salidas = [];
     let salidaLineas = [];
+    let eventoPersonas = [];
     let plantillas = [];
     let plantillaLineas = [];
 
@@ -4226,6 +4347,8 @@
       cont.innerHTML = '<div class="loading">Cargando...</div>';
       salidas = (await sb.from('salidas').select('*').order('created_at', { ascending: false })).data || [];
       salidaLineas = (await sb.from('salida_lineas').select('*')).data || [];
+      eventoPersonas = (await sb.from('evento_personas').select('*')).data || [];
+      personasEquipo = (await sb.from('personas_equipo').select('*').order('nombre')).data || [];
       await cargarPlantillas();
       if (!productos.length) productos = await obtenerProductos();
       if (!variantes.length) variantes = await obtenerVariantes();
@@ -4239,6 +4362,7 @@
 
     function badgeEstadoSalida(estado) {
       if (estado === 'preparando') return '<span class="badge badge-warning">🛒 Preparando</span>';
+      if (estado === 'preparado') return '<span class="badge" style="background:#0d9488; color:#fff;">📦 Preparado</span>';
       if (estado === 'fuera') return '<span class="badge" style="background:#1e40af; color:#fff;">📤 Fuera</span>';
       if (estado === 'devuelta') return '<span class="badge badge-success">✓ Devuelta</span>';
       return `<span class="badge">${estado}</span>`;
@@ -4253,7 +4377,7 @@
     function disponibleParaSalida(varianteId, excluirLineaId = null) {
       const v = variantes.find(x => x.id === varianteId);
       if (!v) return 0;
-      const activas = new Set(salidas.filter(s => s.estado === 'preparando' || s.estado === 'fuera').map(s => s.id));
+      const activas = new Set(salidas.filter(s => s.estado === 'preparando' || s.estado === 'preparado' || s.estado === 'fuera').map(s => s.id));
       const comprometido = salidaLineas
         .filter(l => l.variante_id === varianteId && activas.has(l.salida_id) && l.id !== excluirLineaId)
         .reduce((sum, l) => sum + (l.cantidad || 0), 0);
@@ -4265,7 +4389,7 @@
       const filtro = document.getElementById('filtroEstadoSalida').value;
 
       let lista = salidas.slice();
-      if (filtro === 'activas') lista = lista.filter(s => s.estado === 'preparando' || s.estado === 'fuera');
+      if (filtro === 'activas') lista = lista.filter(s => s.estado === 'preparando' || s.estado === 'preparado' || s.estado === 'fuera');
       else if (filtro !== 'todas') lista = lista.filter(s => s.estado === filtro);
 
       if (!lista.length) {
@@ -4298,7 +4422,7 @@
         </tr>`;
 
         // Contenido desplegable
-        const editable = s.estado === 'preparando' || s.estado === 'fuera';
+        const editable = s.estado === 'preparando' || s.estado === 'preparado' || s.estado === 'fuera';
         const filasLineas = lineas.length
           ? lineas.map(l => `
               <div style="display:flex; justify-content:space-between; align-items:center; padding:7px 12px; border-bottom:1px solid var(--border);">
@@ -4317,7 +4441,13 @@
             <button class="btn btn-success btn-small" onclick="mostrarModalLineaSalida(${s.id})">+ Añadir artículo</button>
             <button class="btn btn-ghost btn-small" onclick="mostrarAplicarPlantilla(${s.id})">📋 Aplicar plantilla</button>
             <button class="btn btn-ghost btn-small" onclick="guardarComoPlantilla(${s.id})">⭐ Guardar plantilla</button>
-            <button class="btn btn-primary btn-small" onclick="finalizarSalida(${s.id})">✓ Finalizar (marcar como fuera)</button>`;
+            <button class="btn btn-secondary btn-small" onclick="marcarPreparado(${s.id})">📦 Marcar como preparado</button>
+            <button class="btn btn-primary btn-small" onclick="finalizarSalida(${s.id})">📤 Marcar como salida</button>`;
+        } else if (s.estado === 'preparado') {
+          acciones += `
+            <button class="btn btn-success btn-small" onclick="mostrarModalLineaSalida(${s.id})">+ Añadir artículo</button>
+            <button class="btn btn-ghost btn-small" onclick="volverAPreparando(${s.id})">↩️ Volver a preparando</button>
+            <button class="btn btn-primary btn-small" onclick="finalizarSalida(${s.id})">📤 Marcar como salida (ha salido)</button>`;
         } else if (s.estado === 'fuera') {
           acciones += `
             <button class="btn btn-success btn-small" onclick="mostrarModalLineaSalida(${s.id})">+ Añadir artículo</button>
@@ -4326,6 +4456,20 @@
         } else {
           acciones += `<span style="font-size:12px; color:var(--muted);">Devuelta el ${fechaCorta(s.fecha_devolucion_real)}</span>`;
         }
+
+        const convocados = eventoPersonas.filter(ep => ep.salida_id === s.id);
+        const personasHtml = `
+          <div style="margin-top:14px; padding-top:12px; border-top:1px solid var(--border);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
+              <span style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted);">👷 Personas convocadas (${convocados.length})</span>
+              <button class="btn btn-success btn-small" onclick="mostrarModalConvocar(${s.id})">+ Convocar persona</button>
+            </div>
+            ${convocados.length ? convocados.map(ep => `
+              <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--border); font-size:13px;">
+                <span>${nombreConvocado(ep)}${ep.persona_id ? '' : ' <span style="font-size:11px; color:var(--muted);">(colaborador puntual)</span>'}</span>
+                <button class="btn btn-danger btn-small" onclick="quitarConvocatoria(${ep.id})">🗑️</button>
+              </div>`).join('') : '<p style="font-size:12px; color:var(--muted);">Nadie convocado todavía.</p>'}
+          </div>`;
 
         html += `<tr id="contenido-salida-${s.id}" style="display:none;">
           <td colspan="5" style="background: var(--card); padding:0;">
@@ -4336,6 +4480,7 @@
               </div>
               ${s.notas ? `<p style="font-size:12px; color:var(--muted); margin-bottom:8px;">📝 ${s.notas}</p>` : ''}
               ${filasLineas}
+              ${personasHtml}
             </div>
           </td>
         </tr>`;
@@ -4527,6 +4672,28 @@
     }
 
     // ── CAMBIOS DE ESTADO ───────────────────
+    async function marcarPreparado(id) {
+      const lineas = salidaLineas.filter(l => l.salida_id === id);
+      if (!lineas.length) { alert('❌ Añade al menos un artículo antes de marcar como preparado'); return; }
+      const { error } = await sb.from('salidas').update({ estado: 'preparado' }).eq('id', id);
+      if (error) { toast('❌ Error'); return; }
+      toast('📦 Salida marcada como preparada');
+      const sp = salidas.find(x => x.id === id);
+      registrarActividad('estado', 'salida', `Marcó como PREPARADA la salida "${sp?.evento}"`);
+      await cargarSalidasTabla();
+      setTimeout(() => toggleContenidoSalida(id), 120);
+    }
+
+    async function volverAPreparando(id) {
+      const { error } = await sb.from('salidas').update({ estado: 'preparando' }).eq('id', id);
+      if (error) { toast('❌ Error'); return; }
+      toast('↩️ Vuelta a preparando');
+      const sp = salidas.find(x => x.id === id);
+      registrarActividad('estado', 'salida', `Devolvió a PREPARANDO la salida "${sp?.evento}"`);
+      await cargarSalidasTabla();
+      setTimeout(() => toggleContenidoSalida(id), 120);
+    }
+
     async function finalizarSalida(id) {
       const lineas = salidaLineas.filter(l => l.salida_id === id);
       if (!lineas.length) { alert('❌ Añade al menos un artículo antes de finalizar'); return; }
@@ -4616,7 +4783,7 @@
         </style></head><body>
         <button onclick="window.print()" style="float:right; padding:10px 18px; background:#1a1a1a; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:14px;">🖨️ Imprimir</button>
         <h1>Albarán de salida</h1>
-        <div class="sub">Equipo 47 · Almacén Madrid · Generado el ${hoy}</div>
+        <div class="sub">Equipo 47 · Madrid · Generado el ${hoy}</div>
         <div class="datos">
           <div><strong>Evento / Destino</strong>${s.evento || '—'}</div>
           <div><strong>Tipo</strong>${tipoTxt}</div>
@@ -5343,6 +5510,128 @@
     let plantillasVis = [];
     let plantillaVisLineas = [];
 
+    // ════════════════════════════════════════
+    //  EQUIPO (personas convocables a eventos)
+    // ════════════════════════════════════════
+    let personasEquipo = [];
+
+    async function cargarEquipoTabla() {
+      const cont = document.getElementById('equipo-tabla');
+      cont.innerHTML = '<div class="loading">Cargando...</div>';
+      personasEquipo = (await sb.from('personas_equipo').select('*').order('nombre')).data || [];
+      renderEquipo();
+    }
+
+    function renderEquipo() {
+      const cont = document.getElementById('equipo-tabla');
+      if (!personasEquipo.length) {
+        cont.innerHTML = '<div class="empty"><div class="empty-icon">👷</div><p>Aún no hay personas. Añade a tu equipo con "Nueva persona".</p></div>';
+        return;
+      }
+      let html = '<table><thead><tr><th>Nombre</th><th>Email de acceso</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>';
+      personasEquipo.forEach(p => {
+        html += `<tr>
+          <td><strong>${p.nombre}</strong></td>
+          <td style="font-size:13px; color:var(--muted);">${p.email || '<em>sin email</em>'}</td>
+          <td>${p.activo ? '<span class="badge badge-success">Activa</span>' : '<span class="badge">Inactiva</span>'}</td>
+          <td>
+            <button class="btn btn-ghost btn-sm" onclick="mostrarModalPersona(${p.id})">✏️</button>
+            <button class="btn btn-danger btn-sm" onclick="eliminarPersona(${p.id})">🗑️</button>
+          </td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+      cont.innerHTML = html;
+    }
+
+    function mostrarModalPersona(id = null) {
+      if (id) {
+        const p = personasEquipo.find(x => x.id === id);
+        document.getElementById('tituloModalPersona').textContent = 'Editar persona';
+        document.getElementById('personaId').value = id;
+        document.getElementById('personaNombre').value = p?.nombre || '';
+        document.getElementById('personaEmail').value = p?.email || '';
+        document.getElementById('personaActivo').checked = p?.activo !== false;
+      } else {
+        document.getElementById('tituloModalPersona').textContent = 'Nueva persona';
+        document.getElementById('personaId').value = '';
+        document.getElementById('personaNombre').value = '';
+        document.getElementById('personaEmail').value = '';
+        document.getElementById('personaActivo').checked = true;
+      }
+      abrirModalAdmin('modalPersona');
+    }
+
+    async function guardarPersona() {
+      const nombre = document.getElementById('personaNombre').value.trim();
+      if (!nombre) { alert('Indica el nombre'); return; }
+      const email = document.getElementById('personaEmail').value.trim().toLowerCase() || null;
+      const activo = document.getElementById('personaActivo').checked;
+      const idStr = document.getElementById('personaId').value;
+      if (idStr) {
+        const { error } = await sb.from('personas_equipo').update({ nombre, email, activo }).eq('id', parseInt(idStr));
+        if (error) { alert('❌ ' + error.message); return; }
+        toast('✓ Persona actualizada');
+      } else {
+        const { error } = await sb.from('personas_equipo').insert({ id: Date.now(), nombre, email, activo });
+        if (error) { alert('❌ ' + error.message); return; }
+        toast('✓ Persona añadida');
+      }
+      cerrarModalAdmin('modalPersona');
+      await cargarEquipoTabla();
+    }
+
+    async function eliminarPersona(id) {
+      const p = personasEquipo.find(x => x.id === id);
+      if (!confirmar(`¿Eliminar a "${p?.nombre}"? Se quitará también de los eventos a los que esté convocada.`)) return;
+      await sb.from('personas_equipo').delete().eq('id', id);
+      toast('✓ Persona eliminada');
+      await cargarEquipoTabla();
+    }
+
+    // ── Convocatorias (personas en una salida/evento) ──
+    function nombreConvocado(ep) {
+      if (ep.persona_id) {
+        const p = personasEquipo.find(x => x.id === ep.persona_id);
+        return p ? p.nombre : 'Persona del equipo';
+      }
+      return ep.nombre_externo || 'Colaborador';
+    }
+
+    function mostrarModalConvocar(salidaId) {
+      document.getElementById('convocarSalidaId').value = salidaId;
+      const yaConvocados = new Set(eventoPersonas.filter(ep => ep.salida_id === salidaId && ep.persona_id).map(ep => ep.persona_id));
+      const disponibles = personasEquipo.filter(p => p.activo !== false && !yaConvocados.has(p.id));
+      document.getElementById('convocarPersona').innerHTML = '<option value="">Elegir del equipo...</option>' +
+        disponibles.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+      document.getElementById('convocarExterno').value = '';
+      abrirModalAdmin('modalConvocar');
+    }
+
+    async function anadirConvocatoria() {
+      const salidaId = parseInt(document.getElementById('convocarSalidaId').value);
+      const personaId = document.getElementById('convocarPersona').value;
+      const externo = document.getElementById('convocarExterno').value.trim();
+      if (!personaId && !externo) { alert('Elige una persona del equipo o escribe un colaborador puntual'); return; }
+      const registros = [];
+      if (personaId) registros.push({ id: idUnico(), salida_id: salidaId, persona_id: parseInt(personaId), nombre_externo: null });
+      if (externo) registros.push({ id: idUnico(), salida_id: salidaId, persona_id: null, nombre_externo: externo });
+      const { error } = await sb.from('evento_personas').insert(registros);
+      if (error) { alert('❌ ' + error.message); return; }
+      toast('✓ Convocatoria añadida');
+      cerrarModalAdmin('modalConvocar');
+      await cargarSalidasTabla();
+      setTimeout(() => toggleContenidoSalida(salidaId), 120);
+    }
+
+    async function quitarConvocatoria(id) {
+      const ep = eventoPersonas.find(x => x.id === id);
+      await sb.from('evento_personas').delete().eq('id', id);
+      toast('✓ Persona quitada del evento');
+      await cargarSalidasTabla();
+      if (ep) setTimeout(() => toggleContenidoSalida(ep.salida_id), 120);
+    }
+
     async function cargarClientesTabla() {
       const cont = document.getElementById('clientes-tabla');
       cont.innerHTML = '<div class="loading">Cargando...</div>';
@@ -5755,6 +6044,11 @@
 
     // ── REGISTRO DE ACTIVIDAD ───────────────
     let usuarioActual = null;
+
+    function mostrarUsuarioConectado() {
+      const el = document.getElementById('usuarioConectadoEmail');
+      if (el) el.textContent = usuarioActual || '—';
+    }
     let actividadLista = [];
 
     async function cargarActividadTabla() {
@@ -5834,6 +6128,7 @@
         return;
       }
       usuarioActual = data.user?.email || email;
+      mostrarUsuarioConectado();
       document.getElementById('login-overlay').style.display = 'none';
       cargarDashboard();
       procesarQrEntrante();
@@ -5865,6 +6160,7 @@
       const { data: { session } } = await sb.auth.getSession();
       if (session) {
         usuarioActual = session.user?.email || null;
+        mostrarUsuarioConectado();
         document.getElementById('login-overlay').style.display = 'none';
         cargarDashboard();
         procesarQrEntrante();
