@@ -2063,6 +2063,7 @@
     }
 
     function mostrarPagina(pagina) {
+      if (!puedeVerPagina(pagina)) { pagina = 'dashboard'; }
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
       document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
       
@@ -5755,6 +5756,43 @@
       return p.rol || 'consulta';
     }
 
+    // ── Visibilidad del menú según rol (Fase 2A) ──
+    // Jerarquía: consulta < operario < responsable < gestor < admin
+    const NIVEL_ROL = { consulta: 1, operario: 2, responsable: 3, gestor: 4, admin: 5 };
+    // Nivel mínimo para ver cada pestaña
+    const NIVEL_PAGINA = {
+      dashboard: 1, calendario: 1, productos: 1, zapatillas: 1,
+      ubicaciones: 1, pales: 1, cajas: 1, sueltos: 1,
+      salidas: 2, recepciones: 2, solicitudes: 2,
+      actividad: 4, clientes: 4,
+      equipo: 5, importar: 5, exportar: 5, configuracion: 5
+    };
+    let rolActual = 'consulta';
+
+    async function determinarRolActual() {
+      if (esAdminBlindado(usuarioActual)) { rolActual = 'admin'; return; }
+      try {
+        const { data } = await sb.from('personas_equipo').select('rol').eq('email', (usuarioActual || '').toLowerCase()).limit(1);
+        rolActual = (data && data[0] && data[0].rol) ? data[0].rol : 'consulta';
+      } catch (e) { rolActual = 'consulta'; }
+    }
+
+    function nivelActual() { return NIVEL_ROL[rolActual] || 1; }
+
+    function puedeVerPagina(pagina) {
+      return nivelActual() >= (NIVEL_PAGINA[pagina] ?? 1);
+    }
+
+    function aplicarVisibilidadMenu() {
+      const nivel = nivelActual();
+      document.querySelectorAll('.nav-item').forEach(item => {
+        const m = (item.getAttribute('onclick') || '').match(/mostrarPagina\('([a-z]+)'\)/);
+        if (!m) return;
+        const min = NIVEL_PAGINA[m[1]] ?? 1;
+        item.style.display = (nivel >= min) ? '' : 'none';
+      });
+    }
+
     async function cargarEquipoTabla() {
       const cont = document.getElementById('equipo-tabla');
       cont.innerHTML = '<div class="loading">Cargando...</div>';
@@ -6661,6 +6699,8 @@
       }
       usuarioActual = data.user?.email || email;
       mostrarUsuarioConectado();
+      await determinarRolActual();
+      aplicarVisibilidadMenu();
       document.getElementById('login-overlay').style.display = 'none';
       cargarDashboard();
       procesarQrEntrante();
@@ -6693,6 +6733,8 @@
       if (session) {
         usuarioActual = session.user?.email || null;
         mostrarUsuarioConectado();
+        await determinarRolActual();
+        aplicarVisibilidadMenu();
         document.getElementById('login-overlay').style.display = 'none';
         cargarDashboard();
         procesarQrEntrante();
