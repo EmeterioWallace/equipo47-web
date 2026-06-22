@@ -562,6 +562,10 @@
     .zapa-grid td.hay { color: var(--text); font-weight: 600; }
     .zapa-grid tr.tot td { background: var(--dark); font-weight: 700; color: var(--accent); }
 
+    /* Visibilidad de botones de acción según rol (Fase 2B) */
+    body:not(.cap-inv) .acc-inv { display: none !important; }
+    body:not(.cap-ops) .acc-ops { display: none !important; }
+
     /* Calendario */
     .cal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; gap:10px; flex-wrap:wrap; }
     .cal-nav { display:flex; align-items:center; gap:8px; }
@@ -783,7 +787,7 @@
           <h1>CALENDARIO</h1>
           <p>Eventos, salidas, devoluciones y recepciones. Crea aquí los eventos (con o sin material).</p>
         </div>
-        <button class="btn btn-primary" onclick="mostrarModalEvento()">➕ Nuevo evento</button>
+        <button class="btn btn-primary acc-ops" onclick="mostrarModalEvento()">➕ Nuevo evento</button>
       </div>
       <div id="calendario-vista"></div>
       <h3 style="margin:24px 0 12px; font-family:'Bebas Neue',sans-serif; letter-spacing:1px;">Eventos registrados</h3>
@@ -798,8 +802,8 @@
           <p>Gestiona el catálogo de productos</p>
         </div>
         <div style="display: flex; gap: 10px;">
-          <button class="btn btn-ghost" onclick="mostrarModalCategorias()">🏷️ Categorías</button>
-          <button class="btn btn-primary" onclick="mostrarModalProducto()">➕ Nuevo producto</button>
+          <button class="btn btn-ghost acc-inv" onclick="mostrarModalCategorias()">🏷️ Categorías</button>
+          <button class="btn btn-primary acc-inv" onclick="mostrarModalProducto()">➕ Nuevo producto</button>
         </div>
       </div>
 
@@ -863,7 +867,7 @@
           <h1>UBICACIONES</h1>
           <p>Sitios físicos del almacén (estanterías, armarios, pasillos)</p>
         </div>
-        <button class="btn btn-primary" onclick="mostrarModalUbicacion()">➕ Nueva ubicación</button>
+        <button class="btn btn-primary acc-inv" onclick="mostrarModalUbicacion()">➕ Nueva ubicación</button>
       </div>
       <div id="ubicaciones-tabla" class="loading">Cargando...</div>
     </section>
@@ -877,7 +881,7 @@
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <button class="btn btn-secondary" onclick="imprimirTodosQrPales()">🏷️ Imprimir QR (todos)</button>
-          <button class="btn btn-primary" onclick="mostrarModalPale()">➕ Nuevo palé</button>
+          <button class="btn btn-primary acc-inv" onclick="mostrarModalPale()">➕ Nuevo palé</button>
         </div>
       </div>
       <div id="pales-tabla" class="loading">Cargando...</div>
@@ -892,7 +896,7 @@
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <button class="btn btn-secondary" onclick="imprimirTodosQr()">🏷️ Imprimir QR (todas)</button>
-          <button class="btn btn-primary" onclick="mostrarModalCaja()">➕ Nueva caja</button>
+          <button class="btn btn-primary acc-inv" onclick="mostrarModalCaja()">➕ Nueva caja</button>
         </div>
       </div>
 
@@ -913,7 +917,7 @@
           <h1>MATERIAL SUELTO</h1>
           <p>Stock sin caja — colocado directamente en un palé o en una ubicación (ej. un carro voluminoso)</p>
         </div>
-        <button class="btn btn-primary" onclick="mostrarModalSuelto()">➕ Colocar material</button>
+        <button class="btn btn-primary acc-inv" onclick="mostrarModalSuelto()">➕ Colocar material</button>
       </div>
       <div id="sueltos-tabla" class="loading">Cargando...</div>
     </section>
@@ -926,8 +930,8 @@
           <p>Material que sale a eventos o préstamos — se prepara como un carrito y vuelve</p>
         </div>
         <div style="display:flex; gap:10px;">
-          <button class="btn btn-ghost" onclick="mostrarModalPlantillas()">📋 Plantillas</button>
-          <button class="btn btn-primary" onclick="nuevaSalida()">➕ Nueva salida</button>
+          <button class="btn btn-ghost acc-ops" onclick="mostrarModalPlantillas()">📋 Plantillas</button>
+          <button class="btn btn-primary acc-ops" onclick="nuevaSalida()">➕ Nueva salida</button>
         </div>
       </div>
 
@@ -955,7 +959,7 @@
           <h1>RECEPCIONES</h1>
           <p>Seguimiento de mercancía que va a llegar a la nave</p>
         </div>
-        <button class="btn btn-primary" onclick="nuevaRecepcion()">➕ Nueva recepción</button>
+        <button class="btn btn-primary acc-ops" onclick="nuevaRecepcion()">➕ Nueva recepción</button>
       </div>
 
       <div class="form-row" style="margin-bottom: 20px;">
@@ -2816,7 +2820,7 @@
       toast(`${anadidas} variante(s) generada(s)`);
     }
 
-    function anadirVarianteManual() {
+    function anadirVarianteManual() { if (!exigeCap('inv')) return;
       const tipo = prompt('Tipo de la variante (ej: Talla):');
       if (!tipo || !tipo.trim()) return;
       const valor = prompt('Valor (ej: M):');
@@ -2851,14 +2855,14 @@
     function setVarCampo(i, campo, valor) {
       variantesTemporales[i][campo] = Math.max(0, parseInt(valor) || 0);
     }
-    function eliminarVarianteModal(i) {
+    function eliminarVarianteModal(i) { if (!exigeCap('inv')) return;
       if (confirm('¿Eliminar esta variante?')) {
         variantesTemporales.splice(i, 1);
         actualizarListaVariantesModal();
       }
     }
 
-    async function guardarProducto() {
+    async function guardarProducto() { if (!exigeCap('inv')) return;
       const nombre = document.getElementById('productoNombre').value.trim();
       if (!nombre) { alert('❌ El nombre del producto es obligatorio'); return; }
 
@@ -2955,7 +2959,7 @@
       await cargarProductosTabla();
     }
 
-    async function eliminarProductoAdmin(id) {
+    async function eliminarProductoAdmin(id) { if (!exigeCap('inv')) return;
       const p = productos.find(x => x.id === id);
       if (!confirmar(`¿Eliminar "${p?.nombre}" y todas sus variantes y cajas?`)) return;
 
@@ -3035,7 +3039,7 @@
       abrirModalAdmin('modalCategorias');
     }
 
-    async function guardarCategoria() {
+    async function guardarCategoria() { if (!exigeCap('inv')) return;
       const nombre = document.getElementById('nuevaCategoriaNombre').value.trim();
       if (!nombre) { alert('❌ Escribe un nombre'); return; }
       if (categorias.some(c => c.nombre.toLowerCase() === nombre.toLowerCase())) {
@@ -3047,7 +3051,7 @@
       cargarFiltroCategorias();
     }
 
-    async function guardarSubcategoria() {
+    async function guardarSubcategoria() { if (!exigeCap('inv')) return;
       const catId = parseInt(document.getElementById('subcategoriaCategoriaPadre').value);
       const nombre = document.getElementById('nuevaSubcategoriaNombre').value.trim();
       if (!catId) { alert('❌ Selecciona una categoría padre'); return; }
@@ -3063,7 +3067,7 @@
       await mostrarModalCategorias();
     }
 
-    async function eliminarCategoria(id) {
+    async function eliminarCategoria(id) { if (!exigeCap('inv')) return;
       const enUso = productos.filter(p => p.categoria_id == id);
       if (enUso.length) {
         alert(`❌ No se puede borrar. ${enUso.length} producto(s) usan esta categoría.`);
@@ -3077,7 +3081,7 @@
       cargarFiltroCategorias();
     }
 
-    async function eliminarSubcategoria(catId, subId) {
+    async function eliminarSubcategoria(catId, subId) { if (!exigeCap('inv')) return;
       const enUso = productos.filter(p => p.subcategoria_id == subId);
       if (enUso.length) {
         alert(`❌ No se puede borrar. ${enUso.length} producto(s) usan esta subcategoría.`);
@@ -3208,7 +3212,7 @@
       abrirModalAdmin('modalUbicacion');
     }
 
-    async function guardarUbicacion() {
+    async function guardarUbicacion() { if (!exigeCap('inv')) return;
       const nombre = document.getElementById('ubicacionNombre').value.trim();
       if (!nombre) { alert('❌ El nombre es obligatorio'); return; }
 
@@ -3233,7 +3237,7 @@
       await cargarUbicacionesTabla();
     }
 
-    async function eliminarUbicacionAdmin(id) {
+    async function eliminarUbicacionAdmin(id) { if (!exigeCap('inv')) return;
       const u = ubicaciones.find(x => x.id === id);
 
       // Comprobar si hay palés, cajas o stock en esta ubicación
@@ -3339,7 +3343,7 @@
       document.getElementById('paleCodigo').value = 'PAL-' + n;
     }
 
-    async function guardarPale() {
+    async function guardarPale() { if (!exigeCap('inv')) return;
       const codigo = document.getElementById('paleCodigo').value.trim() || ('PAL-' + Date.now());
       const ubicacion_id = parseInt(document.getElementById('paleUbicacion').value) || null;
       const descripcion = document.getElementById('paleDescripcion').value.trim() || null;
@@ -3363,7 +3367,7 @@
       await cargarPalesTabla();
     }
 
-    async function eliminarPaleAdmin(id) {
+    async function eliminarPaleAdmin(id) { if (!exigeCap('inv')) return;
       const p = pales.find(x => x.id === id);
 
       const { data: cajas } = await sb.from('cajas').select('id').eq('pale_id', id);
@@ -3784,7 +3788,7 @@
       document.getElementById('cajaCodigo').value = 'C-' + n;
     }
 
-    async function guardarCaja() {
+    async function guardarCaja() { if (!exigeCap('inv')) return;
       const codigo = document.getElementById('cajaCodigo').value.trim() || ('C-' + Date.now());
       const tipo = document.getElementById('cajaUbicacionTipo').value;
       const descripcion = document.getElementById('cajaDescripcion').value.trim() || null;
@@ -3817,7 +3821,7 @@
       await cargarCajasTabla();
     }
 
-    async function eliminarCajaAdmin(id) {
+    async function eliminarCajaAdmin(id) { if (!exigeCap('inv')) return;
       const c = cajas.find(x => x.id === id);
       const lineas = stockItems.filter(s => s.caja_id === id);
 
@@ -4174,7 +4178,7 @@
       document.getElementById('lineaCantidad').value = max;
     }
 
-    async function guardarLinea() {
+    async function guardarLinea() { if (!exigeCap('inv')) return;
       const cajaId = parseInt(document.getElementById('lineaCajaId').value);
       const varId = parseInt(document.getElementById('lineaVariante').value);
       const cantidad = parseInt(document.getElementById('lineaCantidad').value);
@@ -4209,7 +4213,7 @@
       setTimeout(() => toggleContenidoCaja(cajaId), 100);
     }
 
-    async function eliminarLineaCaja(lineaId) {
+    async function eliminarLineaCaja(lineaId) { if (!exigeCap('inv')) return;
       if (!confirmar('¿Quitar este artículo de la caja? El stock volverá a quedar sin organizar.')) return;
       const { error } = await sb.from('stock').delete().eq('id', lineaId);
       if (error) { toast('❌ Error'); return; }
@@ -4386,7 +4390,7 @@
       document.getElementById('grupoSueltoUbicacion').style.display = tipo === 'ubicacion' ? 'block' : 'none';
     }
 
-    async function guardarSuelto() {
+    async function guardarSuelto() { if (!exigeCap('inv')) return;
       const varId = parseInt(document.getElementById('sueltoVariante').value);
       const cantidad = parseInt(document.getElementById('sueltoCantidad').value);
       const tipo = document.getElementById('sueltoDestinoTipo').value;
@@ -4429,7 +4433,7 @@
       await cargarSueltosTabla();
     }
 
-    async function eliminarSuelto(id) {
+    async function eliminarSuelto(id) { if (!exigeCap('inv')) return;
       if (!confirmar('¿Quitar este material suelto? El stock volverá a quedar sin organizar.')) return;
       const { error } = await sb.from('stock').delete().eq('id', id);
       if (error) { toast('❌ Error'); return; }
@@ -4719,7 +4723,7 @@
     }
 
     // ── CABECERA DE SALIDA ──────────────────
-    function nuevaSalida() { mostrarModalSalida(); }
+    function nuevaSalida() { if (!exigeCap('ops')) return; mostrarModalSalida(); }
 
     function mostrarModalSalida(id = null) {
       if (id) {
@@ -4745,7 +4749,7 @@
       abrirModalAdmin('modalSalida');
     }
 
-    async function guardarSalida() {
+    async function guardarSalida() { if (!exigeCap('ops')) return;
       const evento = document.getElementById('salidaEvento').value.trim();
       if (!evento) { alert('❌ Indica el evento o destino'); return; }
 
@@ -4776,7 +4780,7 @@
       if (!idStr) setTimeout(() => { const id = salidas[0]?.id; if (id) toggleContenidoSalida(id); }, 150);
     }
 
-    async function eliminarSalidaAdmin(id) {
+    async function eliminarSalidaAdmin(id) { if (!exigeCap('ops')) return;
       const s = salidas.find(x => x.id === id);
       if (!confirmar(`¿Eliminar la salida "${s?.evento}" y todo su contenido?\n\n(El material se considera de vuelta en el almacén.)`)) return;
       await sb.from('salida_lineas').delete().eq('salida_id', id);
@@ -4843,7 +4847,7 @@
       document.getElementById('lineaSalidaCantidad').value = max;
     }
 
-    async function guardarLineaSalida() {
+    async function guardarLineaSalida() { if (!exigeCap('ops')) return;
       const salidaId = parseInt(document.getElementById('lineaSalidaSalidaId').value);
       const varId = parseInt(document.getElementById('lineaSalidaVariante').value);
       const cantidad = parseInt(document.getElementById('lineaSalidaCantidad').value);
@@ -4881,7 +4885,7 @@
       setTimeout(() => toggleContenidoSalida(salidaId), 120);
     }
 
-    async function eliminarLineaSalida(lineaId) {
+    async function eliminarLineaSalida(lineaId) { if (!exigeCap('ops')) return;
       if (!confirmar('¿Quitar este artículo del pedido?')) return;
       const l = salidaLineas.find(x => x.id === lineaId);
       const salidaId = l?.salida_id;
@@ -4892,7 +4896,7 @@
     }
 
     // ── CAMBIOS DE ESTADO ───────────────────
-    async function marcarPreparado(id) {
+    async function marcarPreparado(id) { if (!exigeCap('ops')) return;
       const lineas = salidaLineas.filter(l => l.salida_id === id);
       if (!lineas.length) { alert('❌ Añade al menos un artículo antes de marcar como preparado'); return; }
       const { error } = await sb.from('salidas').update({ estado: 'preparado' }).eq('id', id);
@@ -4904,7 +4908,7 @@
       setTimeout(() => toggleContenidoSalida(id), 120);
     }
 
-    async function volverAPreparando(id) {
+    async function volverAPreparando(id) { if (!exigeCap('ops')) return;
       const { error } = await sb.from('salidas').update({ estado: 'preparando' }).eq('id', id);
       if (error) { toast('❌ Error'); return; }
       toast('↩️ Vuelta a preparando');
@@ -4914,7 +4918,7 @@
       setTimeout(() => toggleContenidoSalida(id), 120);
     }
 
-    async function finalizarSalida(id) {
+    async function finalizarSalida(id) { if (!exigeCap('ops')) return;
       const lineas = salidaLineas.filter(l => l.salida_id === id);
       if (!lineas.length) { alert('❌ Añade al menos un artículo antes de finalizar'); return; }
       if (!confirmar('¿Finalizar el pedido y marcar el material como FUERA del almacén?')) return;
@@ -4927,7 +4931,7 @@
       setTimeout(() => toggleContenidoSalida(id), 120);
     }
 
-    async function registrarDevolucion(id) {
+    async function registrarDevolucion(id) { if (!exigeCap('ops')) return;
       if (!confirmar('¿Registrar la devolución? El material vuelve a estar disponible en el almacén.')) return;
       const hoy = new Date().toISOString().slice(0, 10);
       const { error } = await sb.from('salidas').update({ estado: 'devuelta', fecha_devolucion_real: hoy }).eq('id', id);
@@ -5031,7 +5035,7 @@
     }
 
     // ── PLANTILLAS / FAVORITOS (Fase 3) ─────
-    async function guardarComoPlantilla(salidaId) {
+    async function guardarComoPlantilla(salidaId) { if (!exigeCap('ops')) return;
       const lineas = salidaLineas.filter(l => l.salida_id === salidaId);
       if (!lineas.length) { alert('Esta salida no tiene artículos para guardar como plantilla'); return; }
       const nombre = prompt('Nombre de la plantilla (ej: Evento Trail):');
@@ -5089,7 +5093,7 @@
       renderListaPlantillas();
     }
 
-    async function eliminarPlantilla(id) {
+    async function eliminarPlantilla(id) { if (!exigeCap('ops')) return;
       const p = plantillas.find(x => x.id === id);
       if (!confirmar(`¿Eliminar la plantilla "${p?.nombre}"?`)) return;
       await sb.from('plantilla_lineas').delete().eq('plantilla_id', id);
@@ -5131,7 +5135,7 @@
         vs.map(v => `<option value="${v.id}">${etiquetaVariante(v)}</option>`).join('');
     }
 
-    function anadirLineaEditorPlant() {
+    function anadirLineaEditorPlant() { if (!exigeCap('ops')) return;
       const varId = parseInt(document.getElementById('editorPlantVariante').value);
       const cant = parseInt(document.getElementById('editorPlantCantidad').value);
       if (!varId) { alert('Elige una variante'); return; }
@@ -5163,12 +5167,12 @@
       editorPlantLineas[i].cantidad = n;
     }
 
-    function quitarLineaEditorPlant(i) {
+    function quitarLineaEditorPlant(i) { if (!exigeCap('ops')) return;
       editorPlantLineas.splice(i, 1);
       renderEditorPlantLineas();
     }
 
-    async function guardarEditorPlantilla() {
+    async function guardarEditorPlantilla() { if (!exigeCap('ops')) return;
       const nombre = document.getElementById('editorPlantNombre').value.trim();
       if (!nombre) { alert('Indica el nombre de la plantilla'); return; }
       if (!editorPlantLineas.length) { alert('Añade al menos un artículo a la plantilla'); return; }
@@ -5384,7 +5388,7 @@
       if (flecha) flecha.textContent = abierto ? '▶' : '▼';
     }
 
-    function nuevaRecepcion() { mostrarModalRecepcion(); }
+    function nuevaRecepcion() { if (!exigeCap('ops')) return; mostrarModalRecepcion(); }
 
     function mostrarModalRecepcion(id = null) {
       const campos = ['recProveedor','recCliente','recDescripcion','recTracking','recTransportista','recBultos','recCantidad','recFechaEstimada','recObservaciones'];
@@ -5409,7 +5413,7 @@
       abrirModalAdmin('modalRecepcion');
     }
 
-    async function guardarRecepcion() {
+    async function guardarRecepcion() { if (!exigeCap('ops')) return;
       const proveedor = document.getElementById('recProveedor').value.trim();
       const descripcion = document.getElementById('recDescripcion').value.trim();
       if (!proveedor) { alert('❌ Indica el proveedor o remitente'); return; }
@@ -5444,7 +5448,7 @@
       await cargarRecepcionesTabla();
     }
 
-    async function eliminarRecepcionAdmin(id) {
+    async function eliminarRecepcionAdmin(id) { if (!exigeCap('ops')) return;
       const r = recepciones.find(x => x.id === id);
       if (!confirmar(`¿Eliminar la recepción "${r?.descripcion}" y sus incidencias?`)) return;
       await sb.from('recepcion_incidencias').delete().eq('recepcion_id', id);
@@ -5455,7 +5459,7 @@
       await cargarRecepcionesTabla();
     }
 
-    async function cambiarEstadoRecepcion(id, estado) {
+    async function cambiarEstadoRecepcion(id, estado) { if (!exigeCap('ops')) return;
       const datos = { estado };
       if ((estado === 'correcto' || estado === 'parcial')) {
         const r = recepciones.find(x => x.id === id);
@@ -5470,7 +5474,7 @@
       setTimeout(() => toggleContenidoRecepcion(id), 120);
     }
 
-    async function guardarSeguimientoRecepcion(id) {
+    async function guardarSeguimientoRecepcion(id) { if (!exigeCap('ops')) return;
       const bultos = parseInt(document.getElementById('seg-bultos-' + id).value);
       const coincide = document.getElementById('seg-coincide-' + id).value || null;
       const { error } = await sb.from('recepciones').update({
@@ -5483,7 +5487,7 @@
       setTimeout(() => toggleContenidoRecepcion(id), 120);
     }
 
-    async function anadirIncidencia(recepcionId) {
+    async function anadirIncidencia(recepcionId) { if (!exigeCap('ops')) return;
       const input = document.getElementById('inc-texto-' + recepcionId);
       const texto = input.value.trim();
       if (!texto) { alert('Escribe la incidencia'); return; }
@@ -5495,7 +5499,7 @@
       setTimeout(() => toggleContenidoRecepcion(recepcionId), 120);
     }
 
-    async function eliminarIncidencia(id, recepcionId) {
+    async function eliminarIncidencia(id, recepcionId) { if (!exigeCap('ops')) return;
       if (!confirmar('¿Eliminar esta incidencia?')) return;
       await sb.from('recepcion_incidencias').delete().eq('id', id);
       toast('✓ Eliminada');
@@ -5779,6 +5783,21 @@
 
     function nivelActual() { return NIVEL_ROL[rolActual] || 1; }
 
+    // Capacidades de edición por nivel
+    function tieneCap(cap) {
+      const n = nivelActual();
+      if (cap === 'inv') return n >= 2;    // editar inventario: operario+
+      if (cap === 'ops') return n >= 3;    // salidas/recepciones/eventos: responsable+
+      if (cap === 'cli') return n >= 4;    // clientes/visibilidad: gestor+
+      if (cap === 'admin') return n >= 5;  // equipo/usuarios: admin
+      return true;
+    }
+    function exigeCap(cap) {
+      if (tieneCap(cap)) return true;
+      toast('🔒 No tienes permiso para esta acción');
+      return false;
+    }
+
     function puedeVerPagina(pagina) {
       return nivelActual() >= (NIVEL_PAGINA[pagina] ?? 1);
     }
@@ -5791,6 +5810,9 @@
         const min = NIVEL_PAGINA[m[1]] ?? 1;
         item.style.display = (nivel >= min) ? '' : 'none';
       });
+      // Capacidades de edición (Fase 2B)
+      document.body.classList.toggle('cap-inv', nivel >= 2);  // editar inventario: operario+
+      document.body.classList.toggle('cap-ops', nivel >= 3);  // editar salidas/recepciones/eventos: responsable+
     }
 
     async function cargarEquipoTabla() {
@@ -5834,7 +5856,7 @@
       cont.innerHTML = html;
     }
 
-    async function cambiarRolPersona(id, rol) {
+    async function cambiarRolPersona(id, rol) { if (!exigeCap('admin')) return;
       const p = personasEquipo.find(x => x.id === id);
       if (!p) return;
       if (esAdminBlindado(p.email)) return;  // no se toca el blindado
@@ -5862,7 +5884,7 @@
       abrirModalAdmin('modalPersona');
     }
 
-    async function guardarPersona() {
+    async function guardarPersona() { if (!exigeCap('admin')) return;
       const nombre = document.getElementById('personaNombre').value.trim();
       if (!nombre) { alert('Indica el nombre'); return; }
       const email = document.getElementById('personaEmail').value.trim().toLowerCase() || null;
@@ -5881,7 +5903,7 @@
       await cargarEquipoTabla();
     }
 
-    async function eliminarPersona(id) {
+    async function eliminarPersona(id) { if (!exigeCap('admin')) return;
       const p = personasEquipo.find(x => x.id === id);
       if (!confirmar(`¿Eliminar a "${p?.nombre}"? Se quitará también de los eventos a los que esté convocada.`)) return;
       await sb.from('personas_equipo').delete().eq('id', id);
@@ -5909,7 +5931,7 @@
       abrirModalAdmin('modalConvocar');
     }
 
-    async function anadirConvocatoria() {
+    async function anadirConvocatoria() { if (!exigeCap('ops')) return;
       const tipo = document.getElementById('convocarTipo').value;
       const id = parseInt(document.getElementById('convocarId').value);
       const personaId = document.getElementById('convocarPersona').value;
@@ -5931,7 +5953,7 @@
       }
     }
 
-    async function quitarConvocatoria(id) {
+    async function quitarConvocatoria(id) { if (!exigeCap('ops')) return;
       const ep = eventoPersonas.find(x => x.id === id);
       await sb.from('evento_personas').delete().eq('id', id);
       toast('✓ Persona quitada del evento');
@@ -6169,7 +6191,7 @@
       abrirModalAdmin('modalEvento');
     }
 
-    async function guardarEvento() {
+    async function guardarEvento() { if (!exigeCap('ops')) return;
       const nombre = document.getElementById('eventoNombre').value.trim();
       const fechaInicio = document.getElementById('eventoFechaInicio').value;
       if (!nombre) { alert('Indica el nombre del evento'); return; }
@@ -6193,7 +6215,7 @@
       await cargarCalendario();
     }
 
-    async function eliminarEvento(id) {
+    async function eliminarEvento(id) { if (!exigeCap('ops')) return;
       const e = eventos.find(x => x.id === id);
       if (!confirmar(`¿Eliminar el evento "${e?.nombre}"? Se quitarán también sus convocatorias.`)) return;
       await sb.from('evento_personas').delete().eq('evento_id', id);
@@ -6277,7 +6299,7 @@
       abrirModalAdmin('modalCliente');
     }
 
-    async function guardarCliente() {
+    async function guardarCliente() { if (!exigeCap('cli')) return;
       const nombre = document.getElementById('clienteNombre').value.trim();
       if (!nombre) { alert('❌ Indica el nombre del cliente'); return; }
       const datos = {
@@ -6303,7 +6325,7 @@
       await cargarClientesTabla();
     }
 
-    async function eliminarClienteAdmin(id) {
+    async function eliminarClienteAdmin(id) { if (!exigeCap('cli')) return;
       const c = clientes.find(x => x.id === id);
       if (!confirmar(`¿Eliminar el cliente "${c?.nombre}" y su configuración de visibilidad?`)) return;
       await sb.from('cliente_visibilidad').delete().eq('cliente_id', id);
@@ -6369,7 +6391,7 @@
       cont.innerHTML = html;
     }
 
-    async function anadirProductoVisibilidad() {
+    async function anadirProductoVisibilidad() { if (!exigeCap('cli')) return;
       const clienteId = parseInt(document.getElementById('visClienteId').value);
       const prodId = parseInt(document.getElementById('visProductoSelect').value);
       if (!prodId) { alert('Selecciona un producto'); return; }
@@ -6398,13 +6420,13 @@
       toast('✓ Tope guardado');
     }
 
-    async function quitarVisibilidadVariante(visId) {
+    async function quitarVisibilidadVariante(visId) { if (!exigeCap('cli')) return;
       await sb.from('cliente_visibilidad').delete().eq('id', visId);
       clienteVisibilidad = clienteVisibilidad.filter(v => v.id !== visId);
       renderVisibilidad();
     }
 
-    async function quitarVisibilidadProducto(productoId) {
+    async function quitarVisibilidadProducto(productoId) { if (!exigeCap('cli')) return;
       const clienteId = parseInt(document.getElementById('visClienteId').value);
       if (!confirmar('¿Quitar este producto entero de la visibilidad del cliente?')) return;
       const varsProd = variantes.filter(v => v.producto_id === productoId).map(v => v.id);
@@ -6415,7 +6437,7 @@
     }
 
     // ── Plantillas de visibilidad (packs) ───
-    async function guardarVisibilidadComoPlantilla() {
+    async function guardarVisibilidadComoPlantilla() { if (!exigeCap('ops')) return;
       const clienteId = parseInt(document.getElementById('visClienteId').value);
       const vis = clienteVisibilidad.filter(v => v.cliente_id === clienteId);
       if (!vis.length) { alert('Este cliente no tiene material que guardar como plantilla'); return; }
@@ -6505,7 +6527,7 @@
       renderListaPlantillasVis();
     }
 
-    async function eliminarPlantillaVis(id) {
+    async function eliminarPlantillaVis(id) { if (!exigeCap('ops')) return;
       const p = plantillasVis.find(x => x.id === id);
       if (!confirmar(`¿Eliminar la plantilla "${p?.nombre}"?`)) return;
       await sb.from('plantilla_visibilidad_lineas').delete().eq('plantilla_id', id);
@@ -6547,7 +6569,7 @@
         vs.map(v => `<option value="${v.id}">${etiquetaVariante(v)}</option>`).join('');
     }
 
-    function anadirLineaEditorPlantVis() {
+    function anadirLineaEditorPlantVis() { if (!exigeCap('ops')) return;
       const varId = parseInt(document.getElementById('editorPlantVisVariante').value);
       const tope = parseInt(document.getElementById('editorPlantVisTope').value);
       if (!varId) { alert('Elige una variante'); return; }
@@ -6580,12 +6602,12 @@
       editorPlantVisLineas[i].tope = n;
     }
 
-    function quitarLineaEditorPlantVis(i) {
+    function quitarLineaEditorPlantVis(i) { if (!exigeCap('ops')) return;
       editorPlantVisLineas.splice(i, 1);
       renderEditorPlantVisLineas();
     }
 
-    async function guardarEditorPlantillaVis() {
+    async function guardarEditorPlantillaVis() { if (!exigeCap('ops')) return;
       const nombre = document.getElementById('editorPlantVisNombre').value.trim();
       if (!nombre) { alert('Indica el nombre de la plantilla'); return; }
       if (!editorPlantVisLineas.length) { alert('Añade al menos un artículo a la plantilla'); return; }
