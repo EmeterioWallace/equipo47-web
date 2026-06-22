@@ -561,6 +561,35 @@
     .zapa-grid td.cero { color: #555; }
     .zapa-grid td.hay { color: var(--text); font-weight: 600; }
     .zapa-grid tr.tot td { background: var(--dark); font-weight: 700; color: var(--accent); }
+
+    /* Calendario */
+    .cal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; gap:10px; flex-wrap:wrap; }
+    .cal-nav { display:flex; align-items:center; gap:8px; }
+    .cal-titulo { font-family:'Bebas Neue',sans-serif; font-size:24px; letter-spacing:1px; min-width:170px; text-align:center; text-transform:capitalize; }
+    .cal-leyenda { display:flex; gap:14px; flex-wrap:wrap; margin:12px 0 16px; font-size:12px; color:var(--muted); }
+    .cal-leyenda span { display:inline-flex; align-items:center; gap:5px; }
+    .cal-leyenda i { width:11px; height:11px; border-radius:3px; display:inline-block; }
+    .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+    .cal-dow { text-align:center; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted); padding:6px 0; font-weight:600; }
+    .cal-dia { min-height:80px; border:1px solid var(--border); border-radius:8px; padding:5px; background:var(--card); cursor:pointer; display:flex; flex-direction:column; gap:3px; overflow:hidden; }
+    .cal-dia:hover { border-color:var(--accent); }
+    .cal-dia.otro-mes { opacity:0.35; }
+    .cal-dia.hoy { box-shadow:inset 0 0 0 2px var(--accent); }
+    .cal-dia.participo { background:rgba(255,152,0,0.14); border-color:var(--warning); }
+    .cal-dia-num { font-size:12px; font-weight:600; color:var(--text); }
+    .cal-pill { font-size:10px; padding:1px 5px; border-radius:4px; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+    .cal-pill.salida { background:#3b82f6; }
+    .cal-pill.devolucion { background:#22c55e; }
+    .cal-pill.recepcion { background:#a855f7; }
+    .cal-pill.evento { background:#06b6d4; }
+    .cal-mas { font-size:9px; color:var(--muted); }
+    .cal-detalle { margin-top:16px; }
+    @media (max-width: 768px) {
+      .cal-dia { min-height:54px; padding:3px; }
+      .cal-pill { font-size:0; padding:3px; border-radius:50%; width:7px; height:7px; display:inline-block; }
+      .cal-mas { font-size:8px; }
+      .cal-grid { gap:2px; }
+    }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
@@ -729,6 +758,14 @@
       <div class="card" style="margin-top: 20px;">
         <h3>📨 Solicitudes de clientes pendientes</h3>
         <div id="avisos-solicitudes"><p style="color: var(--muted);">Comprobando...</p></div>
+      </div>
+
+      <div class="card" style="margin-top: 20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+          <h3 style="margin:0;">📅 Este mes</h3>
+          <button class="btn btn-secondary btn-sm" onclick="mostrarPagina('calendario')">Ver calendario completo →</button>
+        </div>
+        <div id="dashboard-calendario"></div>
       </div>
 
       <div class="card" style="margin-top: 20px;">
@@ -2052,24 +2089,33 @@
       const lista = document.getElementById('mis-eventos-lista');
       if (!aviso || !lista) return;
       if (!usuarioActual) { aviso.style.display = 'none'; return; }
-      // ¿El usuario que ha entrado es una persona del equipo?
       const personas = (await sb.from('personas_equipo').select('id').eq('email', usuarioActual.toLowerCase())).data || [];
       if (!personas.length) { aviso.style.display = 'none'; return; }
       const misIds = personas.map(p => p.id);
-      const convoc = (await sb.from('evento_personas').select('salida_id').in('persona_id', misIds)).data || [];
+      const convoc = (await sb.from('evento_personas').select('salida_id,evento_id').in('persona_id', misIds)).data || [];
       if (!convoc.length) { aviso.style.display = 'none'; return; }
-      const salidaIds = [...new Set(convoc.map(c => c.salida_id))];
       const hoy = new Date().toISOString().slice(0, 10);
-      const misSalidas = (await sb.from('salidas').select('*').in('id', salidaIds)).data || [];
-      const proximos = misSalidas
-        .filter(s => !s.fecha_salida || s.fecha_salida >= hoy)
-        .sort((a, b) => (a.fecha_salida || '').localeCompare(b.fecha_salida || ''));
+      const salidaIds = [...new Set(convoc.filter(c => c.salida_id).map(c => c.salida_id))];
+      const eventoIds = [...new Set(convoc.filter(c => c.evento_id).map(c => c.evento_id))];
+
+      const cosas = [];
+      if (salidaIds.length) {
+        const ms = (await sb.from('salidas').select('*').in('id', salidaIds)).data || [];
+        ms.forEach(s => cosas.push({ nombre: s.evento || 'Salida', fecha: s.fecha_salida || null }));
+      }
+      if (eventoIds.length) {
+        const me = (await sb.from('eventos').select('*').in('id', eventoIds)).data || [];
+        me.forEach(e => cosas.push({ nombre: e.nombre, fecha: e.fecha_inicio || null, fechaFin: e.fecha_fin || null }));
+      }
+      const proximos = cosas
+        .filter(c => { const ref = c.fechaFin || c.fecha; return !ref || ref >= hoy; })
+        .sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
       if (!proximos.length) { aviso.style.display = 'none'; return; }
-      lista.innerHTML = proximos.map(s => {
-        const esHoy = s.fecha_salida === hoy;
+      lista.innerHTML = proximos.map(c => {
+        const esHoy = c.fecha === hoy || (c.fecha && c.fechaFin && c.fecha <= hoy && c.fechaFin >= hoy);
         return `<div style="display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-bottom:1px solid var(--border); font-size:14px;">
-          <span><strong>${s.evento || 'Evento'}</strong>${esHoy ? ' <span class="badge badge-warning">¡Hoy!</span>' : ''}</span>
-          <span style="color:var(--muted); font-size:13px;">${s.fecha_salida ? fechaCorta(s.fecha_salida) : 'sin fecha'}</span>
+          <span><strong>${c.nombre}</strong>${esHoy ? ' <span class="badge badge-warning">¡Hoy!</span>' : ''}</span>
+          <span style="color:var(--muted); font-size:13px;">${c.fecha ? fechaCorta(c.fecha) : 'sin fecha'}</span>
         </div>`;
       }).join('');
       aviso.style.display = 'block';
@@ -2091,6 +2137,7 @@
       document.getElementById('stat-recepciones').textContent = recepcionesD.length;
 
       mostrarMisEventos();
+      cargarMiniCalendario();
 
       // Avisos de stock bajo (por variante)
       const bajos = variantesD.filter(v => (v.stock_minimo || 0) > 0 && (v.stock_total || 0) <= v.stock_minimo);
@@ -5706,13 +5753,160 @@
     //  EVENTOS (sin material) y CALENDARIO
     // ════════════════════════════════════════
     let eventos = [];
+    let calMes, calAnio, calDiaSel = null, calItems = {};
+    let misSalidasConv = new Set(), misEventosConv = new Set();
+    const CAL_MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    const CAL_DOW = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+    const CAL_TIPO_NOMBRE = { salida: 'Salida', devolucion: 'Devolución', recepcion: 'Recepción', evento: 'Evento' };
 
-    async function cargarCalendario() {
-      document.getElementById('eventos-lista').innerHTML = '<div class="loading">Cargando...</div>';
+    function calFechaStr(d) {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    async function cargarDatosCalendario() {
       eventos = (await sb.from('eventos').select('*').order('fecha_inicio')).data || [];
       eventoPersonas = (await sb.from('evento_personas').select('*')).data || [];
       personasEquipo = (await sb.from('personas_equipo').select('*').order('nombre')).data || [];
+      salidas = (await sb.from('salidas').select('*')).data || [];
+      recepciones = (await sb.from('recepciones').select('*')).data || [];
+      const misIds = new Set(personasEquipo.filter(p => (p.email || '').toLowerCase() === (usuarioActual || '').toLowerCase()).map(p => p.id));
+      misSalidasConv = new Set(eventoPersonas.filter(ep => ep.persona_id && misIds.has(ep.persona_id) && ep.salida_id).map(ep => ep.salida_id));
+      misEventosConv = new Set(eventoPersonas.filter(ep => ep.persona_id && misIds.has(ep.persona_id) && ep.evento_id).map(ep => ep.evento_id));
+      construirItemsCalendario();
+    }
+
+    async function cargarCalendario() {
+      document.getElementById('eventos-lista').innerHTML = '<div class="loading">Cargando...</div>';
+      document.getElementById('calendario-vista').innerHTML = '<div class="loading">Cargando calendario...</div>';
+      await cargarDatosCalendario();
+      if (calMes === undefined) { const h = new Date(); calMes = h.getMonth(); calAnio = h.getFullYear(); }
+      renderCalendarioMes();
       renderEventosLista();
+    }
+
+    async function cargarMiniCalendario() {
+      const cont = document.getElementById('dashboard-calendario');
+      if (!cont) return;
+      cont.innerHTML = '<div class="loading">Cargando...</div>';
+      await cargarDatosCalendario();
+      const h = new Date();
+      cont.innerHTML = `
+        <div class="cal-leyenda">
+          <span><i style="background:#3b82f6"></i>Salida</span>
+          <span><i style="background:#22c55e"></i>Devolución</span>
+          <span><i style="background:#a855f7"></i>Recepción</span>
+          <span><i style="background:#06b6d4"></i>Evento</span>
+          <span><i style="background:var(--warning)"></i>Participas</span>
+        </div>
+        ${pintarCuadricula(h.getMonth(), h.getFullYear(), 'irACalendarioDia')}`;
+    }
+
+    function irACalendarioDia(f) {
+      const d = new Date(f + 'T00:00:00');
+      calMes = d.getMonth(); calAnio = d.getFullYear(); calDiaSel = f;
+      mostrarPagina('calendario');
+    }
+
+    function pintarCuadricula(mes, anio, onclickName) {
+      const primero = new Date(anio, mes, 1);
+      const inicioSemana = (primero.getDay() + 6) % 7;
+      const diasMes = new Date(anio, mes + 1, 0).getDate();
+      const hoyStr = calFechaStr(new Date());
+      const totalCeldas = Math.ceil((inicioSemana + diasMes) / 7) * 7;
+      let celdas = '';
+      for (let i = 0; i < totalCeldas; i++) {
+        const diaNum = i - inicioSemana + 1;
+        const fechaObj = new Date(anio, mes, diaNum);
+        const f = calFechaStr(fechaObj);
+        const otroMes = (diaNum < 1 || diaNum > diasMes);
+        const items = calItems[f] || [];
+        const participo = items.some(it => it.participo);
+        const esHoy = f === hoyStr;
+        let pills = items.slice(0, 3).map(it => `<span class="cal-pill ${it.tipo}">${it.texto}</span>`).join('');
+        if (items.length > 3) pills += `<span class="cal-mas">+${items.length - 3} más</span>`;
+        celdas += `<div class="cal-dia ${otroMes ? 'otro-mes' : ''} ${esHoy ? 'hoy' : ''} ${participo ? 'participo' : ''}" onclick="${onclickName}('${f}')">
+          <span class="cal-dia-num">${fechaObj.getDate()}</span>${pills}</div>`;
+      }
+      return `<div class="cal-grid">${CAL_DOW.map(d => `<div class="cal-dow">${d}</div>`).join('')}${celdas}</div>`;
+    }
+
+    function construirItemsCalendario() {
+      calItems = {};
+      const add = (fecha, item) => { if (!fecha) return; (calItems[fecha] = calItems[fecha] || []).push(item); };
+      salidas.forEach(s => {
+        if (s.fecha_salida) add(s.fecha_salida, { tipo: 'salida', texto: s.evento || 'Salida', participo: misSalidasConv.has(s.id) });
+        if (s.fecha_devolucion) add(s.fecha_devolucion, { tipo: 'devolucion', texto: s.evento || 'Devolución', participo: misSalidasConv.has(s.id) });
+      });
+      (recepciones || []).forEach(r => {
+        const f = r.fecha_estimada || r.fecha_recepcion;
+        if (f) add(f, { tipo: 'recepcion', texto: r.proveedor || r.cliente || r.descripcion || 'Envío', participo: false });
+      });
+      eventos.forEach(e => {
+        let d = new Date((e.fecha_inicio) + 'T00:00:00');
+        const dfin = new Date((e.fecha_fin || e.fecha_inicio) + 'T00:00:00');
+        let guard = 0;
+        while (d <= dfin && guard < 400) {
+          add(calFechaStr(d), { tipo: 'evento', texto: e.nombre, participo: misEventosConv.has(e.id) });
+          d.setDate(d.getDate() + 1); guard++;
+        }
+      });
+    }
+
+    function renderCalendarioMes() {
+      const cont = document.getElementById('calendario-vista');
+      cont.innerHTML = `
+        <div class="cal-header">
+          <div class="cal-nav">
+            <button class="btn btn-ghost btn-sm" onclick="calCambiarMes(-1)">◀</button>
+            <span class="cal-titulo">${CAL_MESES[calMes]} ${calAnio}</span>
+            <button class="btn btn-ghost btn-sm" onclick="calCambiarMes(1)">▶</button>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="calHoy()">Hoy</button>
+        </div>
+        <div class="cal-leyenda">
+          <span><i style="background:#3b82f6"></i>Salida</span>
+          <span><i style="background:#22c55e"></i>Devolución</span>
+          <span><i style="background:#a855f7"></i>Recepción</span>
+          <span><i style="background:#06b6d4"></i>Evento</span>
+          <span><i style="background:var(--warning)"></i>Participas</span>
+        </div>
+        ${pintarCuadricula(calMes, calAnio, 'calAbrirDia')}
+        <div id="cal-detalle" class="cal-detalle"></div>`;
+      if (calDiaSel) calAbrirDia(calDiaSel);
+    }
+
+    function calCambiarMes(d) {
+      calMes += d;
+      if (calMes < 0) { calMes = 11; calAnio--; }
+      if (calMes > 11) { calMes = 0; calAnio++; }
+      calDiaSel = null;
+      renderCalendarioMes();
+    }
+
+    function calHoy() {
+      const h = new Date();
+      calMes = h.getMonth(); calAnio = h.getFullYear();
+      calDiaSel = calFechaStr(h);
+      renderCalendarioMes();
+    }
+
+    function calAbrirDia(f) {
+      calDiaSel = f;
+      const det = document.getElementById('cal-detalle');
+      if (!det) return;
+      const items = calItems[f] || [];
+      const titulo = new Date(f + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+      if (!items.length) {
+        det.innerHTML = `<div class="card"><h3 style="text-transform:capitalize; margin-top:0;">${titulo}</h3><p style="color:var(--muted);">Nada programado este día.</p></div>`;
+        return;
+      }
+      det.innerHTML = `<div class="card">
+        <h3 style="text-transform:capitalize; margin-top:0;">${titulo}</h3>
+        ${items.map(it => `<div style="display:flex; align-items:center; gap:10px; padding:8px; border-bottom:1px solid var(--border); ${it.participo ? 'background:rgba(255,152,0,0.14); border-radius:6px;' : ''}">
+          <span class="cal-pill ${it.tipo}" style="flex-shrink:0;">${CAL_TIPO_NOMBRE[it.tipo]}</span>
+          <span style="font-size:14px;">${it.texto}${it.participo ? ' <strong style="color:var(--warning);">· tú participas</strong>' : ''}</span>
+        </div>`).join('')}
+      </div>`;
     }
 
     async function cargarEventos() {
