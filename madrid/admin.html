@@ -5734,6 +5734,27 @@
     // ════════════════════════════════════════
     let personasEquipo = [];
 
+    // Administradores "de fábrica": SIEMPRE son admin, pase lo que pase con
+    // la tabla. Es la red de seguridad para no quedarse nunca fuera.
+    const ADMINS_BLINDADOS = ['guillermomartinez@equipo47.com', 'alejandromartinez@equipo47.com'];
+    const ROLES_LABEL = {
+      admin: 'Administrador',
+      gestor: 'Gestor',
+      responsable: 'Responsable',
+      operario: 'Operario',
+      consulta: 'Consulta'
+    };
+
+    function esAdminBlindado(email) {
+      return ADMINS_BLINDADOS.includes((email || '').toLowerCase());
+    }
+
+    // Rol efectivo de una persona: si su email está blindado, admin; si no, el de la tabla.
+    function rolEfectivo(p) {
+      if (esAdminBlindado(p.email)) return 'admin';
+      return p.rol || 'consulta';
+    }
+
     async function cargarEquipoTabla() {
       const cont = document.getElementById('equipo-tabla');
       cont.innerHTML = '<div class="loading">Cargando...</div>';
@@ -5747,11 +5768,22 @@
         cont.innerHTML = '<div class="empty"><div class="empty-icon">👷</div><p>Aún no hay personas. Añade a tu equipo con "Nueva persona".</p></div>';
         return;
       }
-      let html = '<table><thead><tr><th>Nombre</th><th>Email de acceso</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>';
+      let html = '<table><thead><tr><th>Nombre</th><th>Email de acceso</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>';
       personasEquipo.forEach(p => {
+        const blindado = esAdminBlindado(p.email);
+        let rolCelda;
+        if (blindado) {
+          rolCelda = '<span class="badge badge-success">Administrador 🔒</span>';
+        } else {
+          const actual = p.rol || 'consulta';
+          const opciones = Object.entries(ROLES_LABEL).map(([k, v]) =>
+            `<option value="${k}" ${k === actual ? 'selected' : ''}>${v}</option>`).join('');
+          rolCelda = `<select onchange="cambiarRolPersona(${p.id}, this.value)" style="padding:5px 8px; font-size:13px;">${opciones}</select>`;
+        }
         html += `<tr>
           <td><strong>${p.nombre}</strong></td>
           <td style="font-size:13px; color:var(--muted);">${p.email || '<em>sin email</em>'}</td>
+          <td>${rolCelda}</td>
           <td>${p.activo ? '<span class="badge badge-success">Activa</span>' : '<span class="badge">Inactiva</span>'}</td>
           <td>
             <button class="btn btn-ghost btn-sm" onclick="mostrarModalPersona(${p.id})">✏️</button>
@@ -5760,7 +5792,18 @@
         </tr>`;
       });
       html += '</tbody></table>';
+      html += '<p style="font-size:12px; color:var(--muted); margin-top:12px;">🔒 Los administradores de fábrica no se pueden cambiar desde aquí: lo son siempre, por seguridad. Asignar un rol aún no restringe el acceso (eso llegará en una fase posterior); de momento solo queda anotado.</p>';
       cont.innerHTML = html;
+    }
+
+    async function cambiarRolPersona(id, rol) {
+      const p = personasEquipo.find(x => x.id === id);
+      if (!p) return;
+      if (esAdminBlindado(p.email)) return;  // no se toca el blindado
+      const { error } = await sb.from('personas_equipo').update({ rol }).eq('id', id);
+      if (error) { alert('❌ ' + error.message); return; }
+      p.rol = rol;
+      toast(`✓ ${p.nombre}: ${ROLES_LABEL[rol] || rol}`);
     }
 
     function mostrarModalPersona(id = null) {
