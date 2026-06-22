@@ -875,7 +875,10 @@
           <h1>PALÉS</h1>
           <p>Contenedores que se colocan en las ubicaciones</p>
         </div>
-        <button class="btn btn-primary" onclick="mostrarModalPale()">➕ Nuevo palé</button>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-secondary" onclick="imprimirTodosQrPales()">🏷️ Imprimir QR (todos)</button>
+          <button class="btn btn-primary" onclick="mostrarModalPale()">➕ Nuevo palé</button>
+        </div>
       </div>
       <div id="pales-tabla" class="loading">Cargando...</div>
     </section>
@@ -1677,11 +1680,11 @@
     </div>
   </div>
 
-  <!-- MODAL QR DE CAJA (ver / imprimir) -->
+  <!-- MODAL QR (caja o palé: ver / imprimir) -->
   <div id="modalQrCaja" class="modal">
     <div class="modal-content" style="max-width: 380px;">
       <div class="modal-header">
-        <h2>🏷️ QR de la caja</h2>
+        <h2 id="qrModalTitulo">🏷️ Código QR</h2>
       </div>
       <div class="modal-body" style="text-align:center;">
         <div id="qrCajaCodigo" style="font-size:18px; font-weight:700; margin-bottom:12px;"></div>
@@ -1689,8 +1692,8 @@
         <p style="font-size:12px; color:var(--muted); margin-top:12px;">Escanea con la cámara del móvil para ver el contenido y la ubicación actualizados.</p>
       </div>
       <div class="modal-footer" style="flex-direction:column; gap:8px;">
-        <button type="button" class="btn btn-primary" style="width:100%;" onclick="imprimirEtiquetaCaja(false)">🖨️ Imprimir solo QR</button>
-        <button type="button" class="btn btn-secondary" style="width:100%;" onclick="imprimirEtiquetaCaja(true)">🖨️ Imprimir etiqueta con contenido</button>
+        <button type="button" class="btn btn-primary" style="width:100%;" onclick="imprimirQrActual(false)">🖨️ Imprimir solo QR</button>
+        <button type="button" class="btn btn-secondary" style="width:100%;" onclick="imprimirQrActual(true)">🖨️ Imprimir etiqueta con contenido</button>
         <button type="button" class="btn btn-ghost" style="width:100%;" onclick="cerrarModalAdmin('modalQrCaja')">Cerrar</button>
       </div>
     </div>
@@ -3296,6 +3299,7 @@
             <td>${nCajas}</td>
             <td style="font-size: 12px; color: var(--muted);">${p.descripcion || '—'}</td>
             <td>
+              <button class="btn btn-ghost btn-sm" onclick="mostrarQrPale(${p.id})" title="Código QR">🏷️</button>
               <button class="btn btn-ghost btn-sm" onclick="mostrarModalPale(${p.id})">✏️</button>
               <button class="btn btn-danger btn-sm" onclick="eliminarPaleAdmin(${p.id})">🗑️</button>
             </td>
@@ -3520,7 +3524,7 @@
     }
 
     // ── CÓDIGOS QR DE CAJAS ─────────────────
-    let qrCajaActual = null;
+    let qrActual = null;  // { tipo: 'caja'|'pale', obj }
 
     function qrUrlCaja(caja) {
       return `${location.origin}/madrid/admin.html?caja=${caja.id}`;
@@ -3550,7 +3554,8 @@
       const c = cajas.find(x => x.id === id);
       if (!c) return;
       if (typeof QRCode === 'undefined') { alert('No se pudo cargar el generador de QR (¿sin conexión?). Inténtalo de nuevo conectado a internet.'); return; }
-      qrCajaActual = c;
+      qrActual = { tipo: 'caja', obj: c };
+      document.getElementById('qrModalTitulo').textContent = '🏷️ QR de la caja';
       document.getElementById('qrCajaCodigo').textContent = c.codigo || 'Caja';
       const cont = document.getElementById('qrCajaCanvas');
       cont.innerHTML = '';
@@ -3558,15 +3563,68 @@
       abrirModalAdmin('modalQrCaja');
     }
 
-    function imprimirEtiquetaCaja(conContenido) {
-      if (!qrCajaActual) return;
-      imprimirEtiquetas([qrCajaActual], conContenido);
+    function mostrarQrPale(id) {
+      const p = pales.find(x => x.id === id);
+      if (!p) return;
+      if (typeof QRCode === 'undefined') { alert('No se pudo cargar el generador de QR (¿sin conexión?). Inténtalo de nuevo conectado a internet.'); return; }
+      qrActual = { tipo: 'pale', obj: p };
+      document.getElementById('qrModalTitulo').textContent = '🏷️ QR del palé';
+      document.getElementById('qrCajaCodigo').textContent = p.codigo || 'Palé';
+      const cont = document.getElementById('qrCajaCanvas');
+      cont.innerHTML = '';
+      new QRCode(cont, { text: qrUrlPale(p), width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M });
+      abrirModalAdmin('modalQrCaja');
+    }
+
+    function qrUrlPale(pale) {
+      return `${location.origin}/madrid/admin.html?pale=${pale.id}`;
+    }
+
+    function ubicacionFisicaPale(pale) {
+      const u = (ubicaciones || []).find(x => x.id === pale.ubicacion_id);
+      return u ? u.nombre : 'Sin ubicación';
+    }
+
+    function contenidoPale(id) {
+      return (cajas || []).filter(c => c.pale_id === id).map(c => {
+        const uds = (stockItems || []).filter(s => s.caja_id === c.id).reduce((a, s) => a + (s.cantidad || 0), 0);
+        return { codigo: c.codigo || 'Caja', uds };
+      });
+    }
+
+    function imprimirQrActual(conContenido) {
+      if (!qrActual) return;
+      if (qrActual.tipo === 'caja') imprimirEtiquetas([qrActual.obj], conContenido);
+      else imprimirEtiquetasPale([qrActual.obj], conContenido);
     }
 
     function imprimirTodosQr() {
       if (!cajas.length) { alert('No hay cajas para imprimir.'); return; }
       if (typeof QRCode === 'undefined') { alert('No se pudo cargar el generador de QR (¿sin conexión?).'); return; }
       imprimirEtiquetas(cajas, true);
+    }
+
+    function imprimirTodosQrPales() {
+      if (!pales.length) { alert('No hay palés para imprimir.'); return; }
+      if (typeof QRCode === 'undefined') { alert('No se pudo cargar el generador de QR (¿sin conexión?).'); return; }
+      imprimirEtiquetasPale(pales, true);
+    }
+
+    function ventanaImpresionEtiquetas(tarjetas) {
+      const win = window.open('', '_blank');
+      win.document.write(`<!DOCTYPE html><html><head><title>Etiquetas QR</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 10px; }
+          .etiqueta { display: inline-flex; align-items: flex-start; gap: 12px; border: 1px solid #999; border-radius: 8px; padding: 12px; margin: 6px; width: 330px; vertical-align: top; page-break-inside: avoid; }
+          .qr { width: 110px; height: 110px; flex-shrink: 0; }
+          .cod { font-size: 18px; font-weight: bold; }
+          .ubi { font-size: 12px; color: #555; margin: 4px 0; }
+          .cont { margin: 6px 0 0; padding-left: 16px; font-size: 11px; }
+          .cont li { margin-bottom: 2px; }
+          .vacia { font-size: 11px; color: #999; }
+        </style></head><body>${tarjetas}</body></html>`);
+      win.document.close();
+      setTimeout(() => { win.print(); }, 400);
     }
 
     function imprimirEtiquetas(listaCajas, conContenido) {
@@ -3589,21 +3647,30 @@
           </div>
         </div>`;
       }).join('');
+      ventanaImpresionEtiquetas(tarjetas);
+    }
 
-      const win = window.open('', '_blank');
-      win.document.write(`<!DOCTYPE html><html><head><title>Etiquetas QR</title>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 10px; }
-          .etiqueta { display: inline-flex; align-items: flex-start; gap: 12px; border: 1px solid #999; border-radius: 8px; padding: 12px; margin: 6px; width: 330px; vertical-align: top; page-break-inside: avoid; }
-          .qr { width: 110px; height: 110px; flex-shrink: 0; }
-          .cod { font-size: 18px; font-weight: bold; }
-          .ubi { font-size: 12px; color: #555; margin: 4px 0; }
-          .cont { margin: 6px 0 0; padding-left: 16px; font-size: 11px; }
-          .cont li { margin-bottom: 2px; }
-          .vacia { font-size: 11px; color: #999; }
-        </style></head><body>${tarjetas}</body></html>`);
-      win.document.close();
-      setTimeout(() => { win.print(); }, 400);
+    function imprimirEtiquetasPale(listaPales, conContenido) {
+      const tarjetas = listaPales.map(p => {
+        const url = qrDataUrl(qrUrlPale(p), 200);
+        const ubic = ubicacionFisicaPale(p);
+        let contenidoHtml = '';
+        if (conContenido) {
+          const cajasP = contenidoPale(p.id);
+          contenidoHtml = cajasP.length
+            ? '<ul class="cont">' + cajasP.map(c => `<li>${c.codigo} — ${c.uds} uds</li>`).join('') + '</ul>'
+            : '<p class="vacia">Palé sin cajas</p>';
+        }
+        return `<div class="etiqueta">
+          <img src="${url}" class="qr">
+          <div class="info">
+            <div class="cod">${p.codigo || 'Palé'}</div>
+            <div class="ubi">${ubic}</div>
+            ${contenidoHtml}
+          </div>
+        </div>`;
+      }).join('');
+      ventanaImpresionEtiquetas(tarjetas);
     }
 
     // Ficha de la caja al escanear el QR (consulta)
@@ -3630,10 +3697,37 @@
       abrirModalAdmin('modalFichaCaja');
     }
 
+    // Ficha del palé al escanear el QR (consulta)
+    async function abrirFichaPale(id) {
+      if (!cajas.length || !stockItems.length) await cargarCajasTabla();
+      if (!pales.length) pales = await obtenerPales();
+      if (!ubicaciones.length) ubicaciones = await obtenerUbicaciones();
+      const p = pales.find(x => x.id === id);
+      if (!p) { alert('No se encontró ese palé.'); return; }
+      document.getElementById('fichaCajaTitulo').textContent = '🏛️ ' + (p.codigo || 'Palé');
+      const cajasP = contenidoPale(p.id);
+      const contenidoHtml = cajasP.length
+        ? cajasP.map(c => `<div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border); font-size:14px;"><span>📦 ${c.codigo}</span><strong>${c.uds} uds</strong></div>`).join('')
+        : '<p style="color:var(--muted); text-align:center; padding:14px;">Palé sin cajas</p>';
+      document.getElementById('fichaCajaBody').innerHTML = `
+        <div style="margin-bottom:14px;">
+          <div style="font-size:12px; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted);">Dónde está guardado</div>
+          <div style="font-size:15px; margin-top:3px;">${ubicacionFisicaPale(p)}</div>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <span style="font-size:12px; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted);">Cajas que contiene</span>
+          <span class="badge badge-${cajasP.length === 0 ? 'warning' : 'success'}">${cajasP.length}</span>
+        </div>
+        ${contenidoHtml}`;
+      abrirModalAdmin('modalFichaCaja');
+    }
+
     async function procesarQrEntrante() {
-      const cajaId = new URLSearchParams(location.search).get('caja');
-      if (!cajaId) return;
-      await abrirFichaCaja(parseInt(cajaId));
+      const params = new URLSearchParams(location.search);
+      const cajaId = params.get('caja');
+      const paleId = params.get('pale');
+      if (cajaId) await abrirFichaCaja(parseInt(cajaId));
+      else if (paleId) await abrirFichaPale(parseInt(paleId));
     }
 
     // ── MODAL CAJA (contenedor) ─────────────
@@ -3846,6 +3940,24 @@
       return { html, totGen, dispGen, total, disp, fuera: total - disp, gens };
     }
 
+    // Nombre de archivo de la foto a partir del nombre del modelo
+    // "Nimbus 28" -> "nimbus-28"  ·  "Gel-Cumulus 27" -> "gel-cumulus-27"
+    function slugZapa(nombre) {
+      return (nombre || '')
+        .toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+    }
+
+    // Si la foto no existe todavía, se muestra el recuadro con el 👟
+    function zapaFotoError(img) {
+      const div = document.createElement('div');
+      div.className = 'zapa-foto';
+      div.textContent = '👟';
+      img.replaceWith(div);
+    }
+
     function tarjetaModelo(md) {
       const m = md.modelo; const r = md.rej;
       const baseGen = (zapaModo === 'disponible') ? r.dispGen : r.totGen;
@@ -3853,7 +3965,8 @@
       const linea = (r.fuera > 0)
         ? `Total: <strong>${r.total}</strong> · Disponibles: <strong>${r.disp}</strong> · <span style="color:var(--warning);">${r.fuera} en eventos</span> · ${desglose}`
         : `Total: <strong>${r.total}</strong> pares · ${desglose}`;
-      const foto = `<div class="zapa-foto">👟</div>`;
+      // Intenta cargar la foto del modelo; si no existe, cae al recuadro con 👟
+      const foto = `<img src="images/zapatillas/${slugZapa(m.nombre)}.jpg" alt="${m.nombre}" class="zapa-foto" onerror="zapaFotoError(this)">`;
       return `<div class="zapa-modelo">
         <div class="zapa-modelo-cab">
           ${foto}
