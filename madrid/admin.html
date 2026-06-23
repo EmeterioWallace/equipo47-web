@@ -586,6 +586,7 @@
     .cal-pill.devolucion { background:#22c55e; }
     .cal-pill.recepcion { background:#a855f7; }
     .cal-pill.evento { background:#06b6d4; }
+    .cal-pill.apagado { background:var(--muted) !important; opacity:0.55; }
     .cal-mas { font-size:9px; color:var(--muted); }
     .cal-detalle { margin-top:16px; }
     @media (max-width: 768px) {
@@ -1765,10 +1766,11 @@
           <input type="text" id="convocarExterno" placeholder="Nombre de la persona">
           <p style="font-size:11px; color:var(--muted); margin-top:4px;">No recibirá aviso (no tiene usuario), solo queda anotado en el evento.</p>
         </div>
+        <p style="font-size:11px; color:var(--muted); margin-top:8px;">💡 Puedes convocar a varias personas seguidas: añade una y pulsa "Convocar y seguir". Cuando termines, pulsa "Hecho".</p>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" onclick="cerrarModalAdmin('modalConvocar')">Cancelar</button>
-        <button type="button" class="btn btn-primary" onclick="anadirConvocatoria()">Convocar</button>
+        <button type="button" class="btn btn-secondary" onclick="cerrarModalAdmin('modalConvocar')">Hecho</button>
+        <button type="button" class="btn btn-primary" onclick="anadirConvocatoria()">Convocar y seguir</button>
       </div>
     </div>
   </div>
@@ -5961,13 +5963,17 @@
       return ep.nombre_externo || 'Colaborador';
     }
 
-    function mostrarModalConvocar(tipo, id) {
-      document.getElementById('convocarTipo').value = tipo;
-      document.getElementById('convocarId').value = id;
+    function refrescarSelectConvocar(tipo, id) {
       const yaConvocados = new Set(eventoPersonas.filter(ep => (tipo === 'salida' ? ep.salida_id === id : ep.evento_id === id) && ep.persona_id).map(ep => ep.persona_id));
       const disponibles = personasEquipo.filter(p => p.activo !== false && !yaConvocados.has(p.id));
       document.getElementById('convocarPersona').innerHTML = '<option value="">Elegir del equipo...</option>' +
         disponibles.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+    }
+
+    function mostrarModalConvocar(tipo, id) {
+      document.getElementById('convocarTipo').value = tipo;
+      document.getElementById('convocarId').value = id;
+      refrescarSelectConvocar(tipo, id);
       document.getElementById('convocarExterno').value = '';
       abrirModalAdmin('modalConvocar');
     }
@@ -5985,13 +5991,16 @@
       const { error } = await sb.from('evento_personas').insert(registros);
       if (error) { alert('❌ ' + error.message); return; }
       toast('✓ Convocatoria añadida');
-      cerrarModalAdmin('modalConvocar');
+      // Refrescamos los datos y la lista de fondo...
       if (tipo === 'salida') {
         await cargarSalidasTabla();
-        setTimeout(() => toggleContenidoSalida(id), 120);
+        setTimeout(() => toggleContenidoSalida(id), 60);
       } else {
         await cargarEventos();
       }
+      // ...pero dejamos el panel ABIERTO para convocar a otra persona seguida (en cadena)
+      document.getElementById('convocarExterno').value = '';
+      refrescarSelectConvocar(tipo, id);
     }
 
     async function quitarConvocatoria(id) { if (!exigeCap('ops')) return;
@@ -6079,7 +6088,7 @@
         const items = calItems[f] || [];
         const participo = items.some(it => it.participo);
         const esHoy = f === hoyStr;
-        let pills = items.slice(0, 3).map(it => `<span class="cal-pill ${it.tipo}">${it.texto}</span>`).join('');
+        let pills = items.slice(0, 3).map(it => `<span class="cal-pill ${it.tipo}${it.apagado ? ' apagado' : ''}">${it.texto}</span>`).join('');
         if (items.length > 3) pills += `<span class="cal-mas">+${items.length - 3} más</span>`;
         celdas += `<div class="cal-dia ${otroMes ? 'otro-mes' : ''} ${esHoy ? 'hoy' : ''} ${participo ? 'participo' : ''}" onclick="${onclickName}('${f}')">
           <span class="cal-dia-num">${fechaObj.getDate()}</span>${pills}</div>`;
@@ -6103,7 +6112,7 @@
         const dfin = new Date((e.fecha_fin || e.fecha_inicio) + 'T00:00:00');
         let guard = 0;
         while (d <= dfin && guard < 400) {
-          add(calFechaStr(d), { tipo: 'evento', texto: e.nombre, participo: misEventosConv.has(e.id) });
+          add(calFechaStr(d), { tipo: 'evento', texto: e.nombre, participo: !e.completado && misEventosConv.has(e.id), apagado: !!e.completado });
           d.setDate(d.getDate() + 1); guard++;
         }
       });
@@ -6160,8 +6169,8 @@
       det.innerHTML = `<div class="card">
         <h3 style="text-transform:capitalize; margin-top:0;">${titulo}</h3>
         ${items.map(it => `<div style="display:flex; align-items:center; gap:10px; padding:8px; border-bottom:1px solid var(--border); ${it.participo ? 'background:rgba(255,152,0,0.14); border-radius:6px;' : ''}">
-          <span class="cal-pill ${it.tipo}" style="flex-shrink:0;">${CAL_TIPO_NOMBRE[it.tipo]}</span>
-          <span style="font-size:14px;">${it.texto}${it.participo ? ' <strong style="color:var(--warning);">· tú participas</strong>' : ''}</span>
+          <span class="cal-pill ${it.tipo}${it.apagado ? ' apagado' : ''}" style="flex-shrink:0;">${CAL_TIPO_NOMBRE[it.tipo]}</span>
+          <span style="font-size:14px;">${it.texto}${it.apagado ? ' <span style="color:var(--muted);">(completado)</span>' : ''}${it.participo ? ' <strong style="color:var(--warning);">· tú participas</strong>' : ''}</span>
         </div>`).join('')}
       </div>`;
     }
@@ -6172,42 +6181,67 @@
       renderEventosLista();
     }
 
+    function tarjetaEvento(e) {
+      const convocados = eventoPersonas.filter(ep => ep.evento_id === e.id);
+      const fechas = (e.fecha_fin && e.fecha_fin !== e.fecha_inicio)
+        ? `${fechaCorta(e.fecha_inicio)} → ${fechaCorta(e.fecha_fin)}`
+        : fechaCorta(e.fecha_inicio);
+      const btnEstado = e.completado
+        ? `<button class="btn btn-ghost btn-sm acc-ops" onclick="marcarEventoCompletado(${e.id}, false)">↩ Reactivar</button>`
+        : `<button class="btn btn-ghost btn-sm acc-ops" onclick="marcarEventoCompletado(${e.id}, true)">✓ Completar</button>`;
+      return `<div class="card" style="margin-bottom:12px; ${e.completado ? 'opacity:0.6;' : ''}">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;">
+          <div>
+            <h3 style="margin:0;">${e.nombre}${e.completado ? ' <span class="badge">✓ Completado</span>' : ''}</h3>
+            <p style="font-size:13px; color:var(--muted); margin:4px 0;">📅 ${fechas}${e.lugar ? ' · 📍 ' + e.lugar : ''}</p>
+            ${e.notas ? `<p style="font-size:13px; margin:4px 0;">📝 ${e.notas}</p>` : ''}
+          </div>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            ${btnEstado}
+            <button class="btn btn-ghost btn-sm acc-ops" onclick="mostrarModalEvento(${e.id})">✏️</button>
+            <button class="btn btn-danger btn-sm acc-ops" onclick="eliminarEvento(${e.id})">🗑️</button>
+          </div>
+        </div>
+        <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
+            <span style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted);">👷 Personas convocadas (${convocados.length})</span>
+            <button class="btn btn-success btn-small acc-ops" onclick="mostrarModalConvocar('evento', ${e.id})">+ Convocar persona</button>
+          </div>
+          ${convocados.length ? convocados.map(ep => `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--border); font-size:13px;">
+              <span>${nombreConvocado(ep)}${ep.persona_id ? '' : ' <span style="font-size:11px; color:var(--muted);">(colaborador puntual)</span>'}</span>
+              <button class="btn btn-danger btn-small acc-ops" onclick="quitarConvocatoria(${ep.id})">🗑️</button>
+            </div>`).join('') : '<p style="font-size:12px; color:var(--muted);">Nadie convocado todavía.</p>'}
+        </div>
+      </div>`;
+    }
+
     function renderEventosLista() {
       const cont = document.getElementById('eventos-lista');
       if (!eventos.length) {
         cont.innerHTML = '<div class="empty"><div class="empty-icon">📅</div><p>No hay eventos todavía. Crea uno con "Nuevo evento".</p></div>';
         return;
       }
-      cont.innerHTML = eventos.map(e => {
-        const convocados = eventoPersonas.filter(ep => ep.evento_id === e.id);
-        const fechas = (e.fecha_fin && e.fecha_fin !== e.fecha_inicio)
-          ? `${fechaCorta(e.fecha_inicio)} → ${fechaCorta(e.fecha_fin)}`
-          : fechaCorta(e.fecha_inicio);
-        return `<div class="card" style="margin-bottom:12px;">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;">
-            <div>
-              <h3 style="margin:0;">${e.nombre}</h3>
-              <p style="font-size:13px; color:var(--muted); margin:4px 0;">📅 ${fechas}${e.lugar ? ' · 📍 ' + e.lugar : ''}</p>
-              ${e.notas ? `<p style="font-size:13px; margin:4px 0;">📝 ${e.notas}</p>` : ''}
-            </div>
-            <div style="display:flex; gap:6px;">
-              <button class="btn btn-ghost btn-sm" onclick="mostrarModalEvento(${e.id})">✏️</button>
-              <button class="btn btn-danger btn-sm" onclick="eliminarEvento(${e.id})">🗑️</button>
-            </div>
-          </div>
-          <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border);">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
-              <span style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted);">👷 Personas convocadas (${convocados.length})</span>
-              <button class="btn btn-success btn-small" onclick="mostrarModalConvocar('evento', ${e.id})">+ Convocar persona</button>
-            </div>
-            ${convocados.length ? convocados.map(ep => `
-              <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--border); font-size:13px;">
-                <span>${nombreConvocado(ep)}${ep.persona_id ? '' : ' <span style="font-size:11px; color:var(--muted);">(colaborador puntual)</span>'}</span>
-                <button class="btn btn-danger btn-small" onclick="quitarConvocatoria(${ep.id})">🗑️</button>
-              </div>`).join('') : '<p style="font-size:12px; color:var(--muted);">Nadie convocado todavía.</p>'}
-          </div>
-        </div>`;
-      }).join('');
+      const activos = eventos.filter(e => !e.completado);
+      const completados = eventos.filter(e => e.completado);
+      let html = activos.length
+        ? activos.map(tarjetaEvento).join('')
+        : '<p style="font-size:13px; color:var(--muted);">No hay eventos activos.</p>';
+      if (completados.length) {
+        html += `<details style="margin-top:18px;">
+          <summary style="cursor:pointer; font-size:13px; color:var(--muted); padding:8px 0; user-select:none;">Eventos completados (${completados.length})</summary>
+          <div style="margin-top:10px;">${completados.map(tarjetaEvento).join('')}</div>
+        </details>`;
+      }
+      cont.innerHTML = html;
+    }
+
+    async function marcarEventoCompletado(id, completado) {
+      if (!exigeCap('ops')) return;
+      const { error } = await sb.from('eventos').update({ completado }).eq('id', id);
+      if (error) { alert('❌ ' + error.message); return; }
+      toast(completado ? '✓ Evento marcado como completado' : '↩ Evento reactivado');
+      await cargarCalendario();
     }
 
     function mostrarModalEvento(id = null) {
