@@ -2051,11 +2051,52 @@
     </div>
   </div>
 
+  <!-- OVERLAY: establecer contraseña (al llegar desde el email de invitación) -->
+  <div id="set-password-overlay" style="position:fixed; inset:0; background:#0f1117; z-index:99999; display:none; align-items:center; justify-content:center;">
+    <div style="background:var(--card); padding:32px; border-radius:14px; width:360px; max-width:90%; border:1px solid var(--border);">
+      <h2 style="margin:0 0 4px; color:var(--text); font-size:20px;">🔑 Crea tu contraseña</h2>
+      <p style="font-size:13px; color:var(--muted); margin:0 0 20px;">Elige la contraseña con la que entrarás a partir de ahora.</p>
+      <div class="form-group">
+        <label>Nueva contraseña</label>
+        <input type="password" id="newPassword" placeholder="mínimo 8 caracteres" autocomplete="new-password">
+      </div>
+      <div class="form-group">
+        <label>Repite la contraseña</label>
+        <input type="password" id="newPassword2" placeholder="••••••••" autocomplete="new-password" onkeydown="if(event.key==='Enter') establecerPassword()">
+      </div>
+      <div id="setPasswordError" style="display:none; color:var(--danger); font-size:13px; margin-bottom:12px;"></div>
+      <div id="setPasswordOk" style="display:none; color:var(--success); font-size:13px; margin-bottom:12px;"></div>
+      <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="establecerPassword()">Guardar contraseña</button>
+    </div>
+  </div>
+
   <!-- SCRIPTS -->
+  <script>
+    // IMPORTANTE: capturamos el hash de la URL ANTES de cargar el SDK de Supabase,
+    // porque el SDK lo limpia automáticamente al procesar enlaces de recuperación.
+    // Si no lo guardamos aquí, perderíamos el "type=recovery" y el usuario entraría
+    // directo sin poder poner su contraseña.
+    window.HASH_INICIAL = window.location.hash || '';
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/supabase.js"></script>
   <script src="js/utils.js"></script>
   <script>
+    // Hash capturado arriba (antes del SDK); respaldo por si acaso.
+    const HASH_INICIAL = window.HASH_INICIAL || window.location.hash || '';
+
+    // Detector de recuperación de contraseña (respaldo del hash)
+    if (window.sb && sb.auth && sb.auth.onAuthStateChange) {
+      sb.auth.onAuthStateChange((event) => {
+        if (event === 'PASSWORD_RECOVERY') {
+          const lo = document.getElementById('login-overlay');
+          const sp = document.getElementById('set-password-overlay');
+          if (lo) lo.style.display = 'none';
+          if (sp) sp.style.display = 'flex';
+        }
+      });
+    }
+
     // ── NAVEGACIÓN ──────────────────────────
     function toggleMenuMovil() {
       document.getElementById('sidebar').classList.toggle('abierto');
@@ -6749,8 +6790,7 @@
       if (btn) btn.textContent = claro ? '🌙 Tema oscuro' : '☀️ Tema claro';
     }
 
-    document.addEventListener('DOMContentLoaded', async () => {
-      aplicarTemaAdmin();
+    async function arrancarApp() {
       const { data: { session } } = await sb.auth.getSession();
       if (session) {
         usuarioActual = session.user?.email || null;
@@ -6763,6 +6803,49 @@
       } else {
         document.getElementById('login-overlay').style.display = 'flex';
       }
+    }
+
+    async function establecerPassword() {
+      const p1 = document.getElementById('newPassword').value;
+      const p2 = document.getElementById('newPassword2').value;
+      const err = document.getElementById('setPasswordError');
+      const ok = document.getElementById('setPasswordOk');
+      err.style.display = 'none'; ok.style.display = 'none';
+      if (p1.length < 8) { err.textContent = 'La contraseña debe tener al menos 8 caracteres.'; err.style.display = 'block'; return; }
+      if (p1 !== p2) { err.textContent = 'Las contraseñas no coinciden.'; err.style.display = 'block'; return; }
+      const { error } = await sb.auth.updateUser({ password: p1 });
+      if (error) { err.textContent = 'Error: ' + error.message; err.style.display = 'block'; return; }
+      ok.textContent = '✓ Contraseña guardada. Entrando...';
+      ok.style.display = 'block';
+      // Limpiamos el enlace de la URL y entramos
+      history.replaceState(null, '', location.pathname);
+      setTimeout(async () => {
+        document.getElementById('set-password-overlay').style.display = 'none';
+        await arrancarApp();
+      }, 900);
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      aplicarTemaAdmin();
+      // ¿El enlace del email ha caducado o ya se usó? (Supabase devuelve error en el hash)
+      if (HASH_INICIAL.includes('otp_expired') || HASH_INICIAL.includes('error=access_denied') || HASH_INICIAL.includes('error_code')) {
+        history.replaceState(null, '', location.pathname);
+        document.getElementById('set-password-overlay').style.display = 'none';
+        document.getElementById('login-overlay').style.display = 'flex';
+        const le = document.getElementById('loginError');
+        if (le) {
+          le.textContent = 'El enlace ha caducado o ya se había usado. Pídele a tu administrador que te envíe uno nuevo y ábrelo cuanto antes.';
+          le.style.display = 'block';
+        }
+        return;
+      }
+      // ¿Viene de un enlace de invitación o de recuperación de contraseña?
+      if (HASH_INICIAL.includes('type=recovery') || HASH_INICIAL.includes('type=invite')) {
+        document.getElementById('login-overlay').style.display = 'none';
+        document.getElementById('set-password-overlay').style.display = 'flex';
+        return;
+      }
+      await arrancarApp();
     });
   </script>
 </body>
