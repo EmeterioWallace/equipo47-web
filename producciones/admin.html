@@ -444,6 +444,15 @@
         </div>
       </div>
 
+      <div class="form-row" style="margin-bottom:20px;">
+        <div class="form-group" style="max-width:240px;">
+          <label>Vista por año</label>
+          <select id="fichaAnio" onchange="aplicarFiltroFicha()">
+            <option value="">Todos los años</option>
+          </select>
+        </div>
+      </div>
+
       <div class="grid">
         <div class="card">
           <h3>📦 Producciones realizadas</h3>
@@ -496,6 +505,12 @@
             <option value="">Todos los productos</option>
           </select>
         </div>
+        <div class="form-group">
+          <label>Año</label>
+          <select id="filtroOrdenesAnio" onchange="renderOrdenesTabla()">
+            <option value="">Todos los años</option>
+          </select>
+        </div>
       </div>
       <div id="ordenes-tabla" class="loading">Cargando...</div>
     </section>
@@ -523,6 +538,12 @@
           <label>Producto</label>
           <select id="filtroPresupuestosProducto" onchange="renderPresupuestosTabla()">
             <option value="">Todos los productos</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Año</label>
+          <select id="filtroPresupuestosAnio" onchange="renderPresupuestosTabla()">
+            <option value="">Todos los años</option>
           </select>
         </div>
       </div>
@@ -1021,23 +1042,46 @@
       const datos = [c.cif_nif, c.persona_contacto, c.telefono, c.email].filter(Boolean).join(' · ');
       document.getElementById('fichaClienteDatos').textContent = datos || 'Sin datos de contacto adicionales';
 
-      const ordenesCliente = ordenes.filter(o => o.cliente_id === id);
+      // Poblar el selector de año con los años que tiene este cliente (órdenes + presupuestos)
+      const datosCliente = [
+        ...ordenes.filter(o => o.cliente_id === id),
+        ...presupuestos.filter(p => p.cliente_id === id)
+      ];
+      const selA = document.getElementById('fichaAnio');
+      selA.innerHTML = opcionesAnio(aniosDe(datosCliente));
+      selA.value = '';
+
+      aplicarFiltroFicha();
+
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.getElementById('ficha-cliente-page').classList.add('active');
+    }
+
+    // Aplica el año seleccionado a los KPIs y a las dos tablas de la ficha
+    function aplicarFiltroFicha() {
+      const id = clienteFichaActualId;
+      const anio = document.getElementById('fichaAnio').value;
+
+      let ordenesCliente = ordenes.filter(o => o.cliente_id === id);
+      let presupuestosCliente = presupuestos.filter(p => p.cliente_id === id);
+      if (anio) {
+        ordenesCliente = ordenesCliente.filter(o => (o.fecha || '').slice(0, 4) === anio);
+        presupuestosCliente = presupuestosCliente.filter(p => (p.fecha || '').slice(0, 4) === anio);
+      }
+
       const inversionTotal = ordenesCliente.reduce((acc, o) => acc + Number(o.coste_total || 0), 0);
       const productosIds = [...new Set(ordenesCliente.map(o => o.producto_id))];
       const nombresProductos = productosIds.map(pid => productos.find(p => p.id === pid)?.nombre || '—');
 
       document.getElementById('fichaKpiProducciones').textContent = ordenesCliente.length;
       document.getElementById('fichaKpiInversion').textContent = formatoEuro(inversionTotal);
-      document.getElementById('fichaKpiProductos').textContent = nombresProductos.length ? nombresProductos.join(', ') : 'Todavía no tiene pedidos';
+      document.getElementById('fichaKpiProductos').textContent = nombresProductos.length
+        ? nombresProductos.join(', ')
+        : (anio ? 'Sin pedidos en ' + anio : 'Todavía no tiene pedidos');
 
       renderTablaOrdenes('ficha-ordenes-tabla', ordenesCliente);
-
-      const presupuestosCliente = presupuestos.filter(p => p.cliente_id === id);
       renderTablaPresupuestos('ficha-presupuestos-tabla', presupuestosCliente);
-
-      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-      document.getElementById('ficha-cliente-page').classList.add('active');
     }
 
     // ════════════════════════════════════════
@@ -1108,6 +1152,16 @@
       return ({ aereo: 'Aéreo', maritimo: 'Marítimo', terrestre: 'Terrestre' })[tipo] || tipo;
     }
 
+    // ── AÑOS (filtro temporal) ──────────────
+    function aniosDe(lista) {
+      const set = new Set(lista.map(x => (x.fecha || '').slice(0, 4)).filter(Boolean));
+      return [...set].sort((a, b) => b.localeCompare(a));
+    }
+    function opcionesAnio(anios) {
+      return '<option value="">Todos los años</option>' +
+        anios.map(a => `<option value="${a}">${a}</option>`).join('');
+    }
+
     function poblarSelectsFiltroOrdenes() {
       const selC = document.getElementById('filtroOrdenesCliente');
       const selP = document.getElementById('filtroOrdenesProducto');
@@ -1116,15 +1170,20 @@
         clientes.map(c => `<option value="${c.id}">${c.nombre_empresa}</option>`).join('');
       selP.innerHTML = '<option value="">Todos los productos</option>' +
         productos.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
-      selC.value = vC; selP.value = vP;
+      const selA = document.getElementById('filtroOrdenesAnio');
+      const vA = selA.value;
+      selA.innerHTML = opcionesAnio(aniosDe(ordenes));
+      selC.value = vC; selP.value = vP; selA.value = vA;
     }
 
     function renderOrdenesTabla() {
       const filtroCliente = document.getElementById('filtroOrdenesCliente').value;
       const filtroProducto = document.getElementById('filtroOrdenesProducto').value;
+      const filtroAnio = document.getElementById('filtroOrdenesAnio').value;
       let lista = ordenes.slice();
       if (filtroCliente) lista = lista.filter(o => o.cliente_id === filtroCliente);
       if (filtroProducto) lista = lista.filter(o => o.producto_id === filtroProducto);
+      if (filtroAnio) lista = lista.filter(o => (o.fecha || '').slice(0, 4) === filtroAnio);
       renderTablaOrdenes('ordenes-tabla', lista);
     }
 
@@ -1298,7 +1357,10 @@
         clientes.map(c => `<option value="${c.id}">${c.nombre_empresa}</option>`).join('');
       selP.innerHTML = '<option value="">Todos los productos</option>' +
         productos.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
-      selC.value = vC; selP.value = vP;
+      const selA = document.getElementById('filtroPresupuestosAnio');
+      const vA = selA.value;
+      selA.innerHTML = opcionesAnio(aniosDe(presupuestos));
+      selC.value = vC; selP.value = vP; selA.value = vA;
     }
 
     function colorMargen(pct) {
@@ -1346,9 +1408,11 @@
     function renderPresupuestosTabla() {
       const filtroCliente = document.getElementById('filtroPresupuestosCliente').value;
       const filtroProducto = document.getElementById('filtroPresupuestosProducto').value;
+      const filtroAnio = document.getElementById('filtroPresupuestosAnio').value;
       let lista = presupuestos.slice();
       if (filtroCliente) lista = lista.filter(p => p.cliente_id === filtroCliente);
       if (filtroProducto) lista = lista.filter(p => p.producto_id === filtroProducto);
+      if (filtroAnio) lista = lista.filter(p => (p.fecha || '').slice(0, 4) === filtroAnio);
       renderTablaPresupuestos('presupuestos-tabla', lista);
     }
 
