@@ -437,7 +437,8 @@
           <h1 id="fichaClienteNombre">CLIENTE</h1>
           <p id="fichaClienteDatos">—</p>
         </div>
-        <div style="display:flex; gap:10px;">
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn btn-ghost" onclick="abrirModalPDF(clienteFichaActualId)">📄 Generar presupuesto PDF</button>
           <button class="btn btn-ghost" onclick="mostrarModalPresupuesto(null, clienteFichaActualId)">➕ Nuevo presupuesto</button>
           <button class="btn btn-primary" onclick="mostrarModalPedido(null, clienteFichaActualId)">➕ Nuevo pedido</button>
         </div>
@@ -506,7 +507,10 @@
           <h1>PRESUPUESTOS</h1>
           <p>Historial de precios y márgenes por cliente</p>
         </div>
-        <button class="btn btn-primary" onclick="mostrarModalPresupuesto()">➕ Nuevo presupuesto</button>
+        <div style="display:flex; gap:10px;">
+          <button class="btn btn-ghost" onclick="abrirModalPDF()">📄 Generar presupuesto PDF</button>
+          <button class="btn btn-primary" onclick="mostrarModalPresupuesto()">➕ Nuevo presupuesto</button>
+        </div>
       </div>
       <div class="form-row" style="margin-bottom:20px;">
         <div class="form-group">
@@ -622,6 +626,10 @@
             <select id="presupuestoProducto"></select>
           </div>
         </div>
+        <div class="form-group">
+          <label>Descripción (aparece en el PDF)</label>
+          <input type="text" id="presupuestoDescripcion" placeholder="Ej: Toallas de microfibra">
+        </div>
         <div class="form-row">
           <div class="form-group">
             <label>Fecha *</label>
@@ -653,6 +661,44 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-ghost" onclick="cerrarModal('modalPresupuesto')">Cancelar</button>
         <button type="button" class="btn btn-primary" onclick="guardarPresupuesto()">💾 Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL GENERAR PDF -->
+  <div id="modalPDF" class="modal">
+    <div class="modal-content">
+      <div class="modal-header"><h2>Generar presupuesto PDF</h2></div>
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Cliente *</label>
+            <select id="pdfCliente" onchange="renderLineasPDF()"></select>
+          </div>
+          <div class="form-group">
+            <label>Fecha del presupuesto *</label>
+            <input type="date" id="pdfFecha">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nº de referencia (opcional)</label>
+            <input type="text" id="pdfReferencia" placeholder="Ej: 2026-014">
+          </div>
+          <div class="form-group" style="display:flex; align-items:flex-end;">
+            <label style="display:flex; align-items:center; gap:8px; text-transform:none; letter-spacing:0; font-size:13px; color:var(--text); cursor:pointer;">
+              <input type="checkbox" id="pdfValidez15" checked style="width:auto;">
+              Incluir cláusula "válido 15 días"
+            </label>
+          </div>
+        </div>
+        <label style="display:block; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted); margin-bottom:8px;">Líneas a incluir (solo se muestra el precio del cliente)</label>
+        <div id="pdfLineas" style="border:1px solid var(--border); border-radius:4px; max-height:260px; overflow-y:auto;"></div>
+        <p style="font-size:12px; color:var(--muted); margin-top:10px;">🔒 El documento descargado nunca incluye el coste interno ni el margen; solo el precio final del cliente.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="cerrarModal('modalPDF')">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="descargarPDF()">📄 Descargar PDF</button>
       </div>
     </div>
   </div>
@@ -736,14 +782,16 @@
 
   <!-- SCRIPTS -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfmake@0.2.20/build/pdfmake.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfmake@0.2.20/build/vfs_fonts.js"></script>
   <script>
     // ════════════════════════════════════════
     //  CONFIGURACIÓN DE SUPABASE
     //  Sustituye estos dos valores por los de tu proyecto
     //  "equipo47-producciones" (Settings → API en Supabase).
     // ════════════════════════════════════════
-    const SUPABASE_URL = 'https://ciszgyorsveumnrtcejn.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpc3pneW9yc3ZldW1ucnRjZWpuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3ODk0MDYsImV4cCI6MjA5NzM2NTQwNn0.O56WDFFdtZMc1mXpgCEkgQF8ZTT5tnCpzg8xN4H_qK8';
+    const SUPABASE_URL = 'https://TU-PROYECTO.supabase.co';
+    const SUPABASE_ANON_KEY = 'TU_ANON_KEY';
     window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     const sb = window.sb;
 
@@ -1344,6 +1392,7 @@
         document.getElementById('presupuestoCostInterno').value = p.coste_interno_unitario;
         document.getElementById('presupuestoPrecioCliente').value = p.precio_cliente_unitario;
         document.getElementById('presupuestoObservaciones').value = p.observaciones || '';
+        document.getElementById('presupuestoDescripcion').value = p.descripcion || '';
       } else {
         document.getElementById('tituloModalPresupuesto').textContent = 'Nuevo presupuesto';
         document.getElementById('presupuestoId').value = '';
@@ -1352,6 +1401,7 @@
         document.getElementById('presupuestoCostInterno').value = '';
         document.getElementById('presupuestoPrecioCliente').value = '';
         document.getElementById('presupuestoObservaciones').value = '';
+        document.getElementById('presupuestoDescripcion').value = '';
       }
       actualizarPreviewMargen();
       abrirModal('modalPresupuesto');
@@ -1379,6 +1429,7 @@
         cantidad,
         coste_interno_unitario: costeInterno,
         precio_cliente_unitario: precioCliente,
+        descripcion: document.getElementById('presupuestoDescripcion').value.trim() || null,
         observaciones: document.getElementById('presupuestoObservaciones').value.trim() || null
       };
       // beneficio_unitario y margen_pct son columnas calculadas: no se incluyen.
@@ -1415,6 +1466,297 @@
       } else {
         renderPresupuestosTabla();
       }
+    }
+
+
+    // ════════════════════════════════════════
+    //  MÓDULO GENERACIÓN DE PDF (presupuesto comercial)
+    // ════════════════════════════════════════
+// Constructor del docDefinition de pdfmake para el presupuesto comercial de Equipo 47.
+// IMPORTANTE (privacidad): este documento SOLO usa el precio del cliente.
+// Nunca recibe ni imprime coste interno, beneficio ni margen.
+
+const EMPRESA_PDF = {
+  legal: 'GRUPO ESTUDIO E INVERSIÓN 47 S.L.',
+  cif: 'B56538309',
+  direccion: 'C/ Torquemada Nº18 Bajo 4. 28043, Madrid',
+  emailProducciones: 'PRODUCCIONES@EQUIPO47.COM',
+  web: 'EQUIPO47.COM'
+};
+
+const COL_PDF = {
+  navy: '#2E3D54',
+  orange: '#E8622A',
+  band: '#F4F5F7',
+  line: '#E4E7EB',
+  gray: '#6B7280',
+  dark: '#1F2733'
+};
+
+function pdfEuro(n) {
+  const num = Number(n) || 0;
+  return num.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' €';
+}
+
+function pdfFecha(iso) {
+  if (!iso) return '';
+  const d = new Date(iso + 'T00:00:00');
+  return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+// datos = { clienteNombre, fecha (iso), referencia?, validez15 (bool), lineas: [{producto, descripcion, cantidad, precioUnitario}] }
+// logoDataUrl = dataURL de la imagen del logo, o null (se dibuja "E47" en texto)
+// Logo E47 en blanco (vectorial) para incrustar en el PDF sobre el fondo navy.
+    const LOGO_SVG = `<svg fill="#ffffff" id="Capa_4_copia_3" data-name="Capa 4 copia 3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500"> <g> <polygon points="72 279.97 22.33 279.98 0 341.17 129.36 341.17 143.2 302.72 63.75 302.59 72 279.97"/> <polygon points="54.02 193.13 183.45 192.91 195.84 158.97 66.47 159 54.02 193.13"/> <polygon points="49.27 206.12 41.02 228.74 27.13 266.83 144.12 266.79 158.02 228.71 90.7 228.73 98.95 206.11 49.27 206.12"/> <polygon points="485.43 197.13 500 158.88 362.44 158.83 351.67 188.32 348.44 197.17 434.34 197.15 315.57 341.17 366.65 341.17 485.43 197.13"/> </g> <g> <polygon points="260.42 266.8 260.42 266.8 222.37 266.81 278.68 216.74 263.11 259.43 307 259.54 323.36 215.17 343.67 158.96 299.43 158.85 169.39 266.82 156.33 302.6 291.27 302.57 291.27 302.57 313.34 302.56 326.39 266.78 260.42 266.8"/> <polygon points="244.6 310.15 233.29 341.15 277.2 341.13 288.51 310.14 244.6 310.15"/> </g> </svg>`;
+
+    function construirDocDefinition(datos, logoDataUrl) {
+  const lineas = datos.lineas || [];
+  let total = 0;
+
+  const filas = [[
+    { text: 'PRODUCTO', style: 'th' },
+    { text: 'DESCRIPCIÓN', style: 'th' },
+    { text: 'UDS.', style: 'th', alignment: 'center' },
+    { text: 'PRECIO UNIDAD', style: 'th', alignment: 'right' },
+    { text: 'TOTAL SIN IVA', style: 'th', alignment: 'right' }
+  ]];
+
+  lineas.forEach((l, i) => {
+    const lineaTotal = (Number(l.cantidad) || 0) * (Number(l.precioUnitario) || 0);
+    total += lineaTotal;
+    const bg = i % 2 === 0 ? null : COL_PDF.band;
+    filas.push([
+      { text: l.producto || '', bold: true, color: COL_PDF.dark, fillColor: bg, margin: [0, 6, 0, 6] },
+      { text: l.descripcion || '', color: COL_PDF.gray, fillColor: bg, margin: [0, 6, 0, 6] },
+      { text: String(l.cantidad ?? ''), alignment: 'center', color: COL_PDF.dark, fillColor: bg, margin: [0, 6, 0, 6] },
+      { text: pdfEuro(l.precioUnitario), alignment: 'right', color: COL_PDF.dark, fillColor: bg, margin: [0, 6, 0, 6] },
+      { text: pdfEuro(lineaTotal), alignment: 'right', bold: true, color: COL_PDF.dark, fillColor: bg, margin: [0, 6, 0, 6] }
+    ]);
+  });
+
+  // Bloque de marca (navy) con logo + datos fiscales
+  const bloqueMarca = {
+    table: {
+      widths: ['*'],
+      body: [[{
+        fillColor: COL_PDF.navy,
+        margin: [16, 14, 16, 14],
+        stack: [
+          logoDataUrl && logoDataUrl.indexOf('<svg') !== -1
+            ? { svg: logoDataUrl, width: 66, margin: [0, 0, 0, 8] }
+            : (logoDataUrl
+                ? { image: logoDataUrl, width: 66, margin: [0, 0, 0, 8] }
+                : { text: 'E47', color: '#fff', bold: true, italics: true, fontSize: 30, margin: [0, 0, 0, 6] }),
+          { text: EMPRESA_PDF.legal, color: '#ffffff', bold: true, fontSize: 10.5 },
+          { text: 'CIF: ' + EMPRESA_PDF.cif, color: '#C9D0DB', fontSize: 8, margin: [0, 5, 0, 0] },
+          { text: EMPRESA_PDF.direccion, color: '#C9D0DB', fontSize: 8, margin: [0, 1, 0, 0] }
+        ]
+      }]]
+    },
+    layout: 'noBorders'
+  };
+
+  const cabecera = {
+    columns: [
+      { width: '58%', stack: [bloqueMarca] },
+      {
+        width: '42%',
+        margin: [0, 10, 0, 0],
+        stack: [
+          { text: 'PRESUPUESTO', color: COL_PDF.navy, bold: true, fontSize: 26, alignment: 'right' },
+          { canvas: [{ type: 'rect', x: 92, y: 6, w: 90, h: 3, color: COL_PDF.orange }] },
+          datos.referencia
+            ? { text: 'Nº ' + datos.referencia, color: COL_PDF.gray, fontSize: 9, alignment: 'right', margin: [0, 12, 0, 0] }
+            : {}
+        ]
+      }
+    ]
+  };
+
+  // Banda de cliente / fecha / validez
+  const celdasInfo = [
+    {
+      stack: [
+        { text: 'CLIENTE', color: COL_PDF.orange, bold: true, fontSize: 9 },
+        { text: datos.clienteNombre || '—', color: COL_PDF.dark, bold: true, fontSize: 13, margin: [0, 3, 0, 0] }
+      ],
+      margin: [14, 12, 14, 12]
+    },
+    {
+      stack: [
+        { text: 'FECHA', color: COL_PDF.orange, bold: true, fontSize: 9 },
+        { text: pdfFecha(datos.fecha), color: COL_PDF.dark, fontSize: 13, margin: [0, 3, 0, 0] }
+      ],
+      margin: [14, 12, 14, 12]
+    }
+  ];
+  if (datos.validez15) {
+    celdasInfo.push({
+      stack: [
+        { text: 'VALIDEZ', color: COL_PDF.orange, bold: true, fontSize: 9 },
+        { text: '15 días naturales', color: COL_PDF.dark, fontSize: 13, margin: [0, 3, 0, 0] }
+      ],
+      margin: [14, 12, 14, 12]
+    });
+  }
+
+  const bandaInfo = {
+    table: { widths: celdasInfo.map(() => '*'), body: [celdasInfo] },
+    layout: {
+      fillColor: () => COL_PDF.band,
+      hLineWidth: () => 0,
+      vLineWidth: () => 0
+    },
+    margin: [0, 22, 0, 22]
+  };
+
+  const tabla = {
+    table: { headerRows: 1, widths: ['20%', '*', '10%', '17%', '18%'], body: filas },
+    layout: {
+      hLineWidth: (i) => (i === 1 ? 0 : 0.6),
+      vLineWidth: () => 0,
+      hLineColor: () => COL_PDF.line,
+      fillColor: (rowIndex) => (rowIndex === 0 ? COL_PDF.navy : null),
+      paddingLeft: () => 8, paddingRight: () => 8,
+      paddingTop: () => 0, paddingBottom: () => 0
+    }
+  };
+
+  const totales = {
+    columns: [
+      { width: '*', text: '' },
+      {
+        width: 'auto',
+        margin: [0, 16, 0, 0],
+        table: {
+          body: [[
+            { text: 'TOTAL SIN IVA', bold: true, color: '#fff', fillColor: COL_PDF.navy, fontSize: 11, margin: [14, 8, 14, 8] },
+            { text: pdfEuro(total), bold: true, color: '#fff', fillColor: COL_PDF.navy, fontSize: 13, alignment: 'right', margin: [14, 8, 14, 8] }
+          ]]
+        },
+        layout: 'noBorders'
+      }
+    ]
+  };
+
+  const notaIva = { text: 'Todos los precios se indican SIN IVA.', italics: true, color: COL_PDF.gray, fontSize: 8, alignment: 'right', margin: [0, 6, 0, 0] };
+
+  return {
+    pageSize: 'A4',
+    pageMargins: [42, 46, 42, 92],
+    content: [cabecera, bandaInfo, tabla, totales, notaIva],
+    styles: {
+      th: { color: '#ffffff', bold: true, fontSize: 9, margin: [0, 8, 0, 8] }
+    },
+    defaultStyle: { font: 'Roboto', fontSize: 10, color: COL_PDF.dark },
+    footer: function () {
+      const stack = [];
+      if (datos.validez15) {
+        stack.push({
+          text: 'Validez del presupuesto: 15 días naturales. El precio final podría variar en función de las modificaciones de diseño o ajustes definitivos solicitados por el cliente.',
+          alignment: 'center', italics: true, fontSize: 8, color: COL_PDF.gray, margin: [70, 0, 70, 10]
+        });
+      }
+      stack.push({
+        table: {
+          widths: ['*', '*'],
+          body: [[
+            { text: EMPRESA_PDF.emailProducciones, color: '#fff', fillColor: COL_PDF.navy, alignment: 'center', fontSize: 9, bold: true, margin: [0, 8, 0, 8] },
+            { text: EMPRESA_PDF.web, color: '#fff', fillColor: COL_PDF.orange, alignment: 'center', fontSize: 9, bold: true, margin: [0, 8, 0, 8] }
+          ]]
+        },
+        layout: 'noBorders',
+        margin: [42, 0, 42, 0]
+      });
+      return stack;
+    }
+  };
+}
+
+    // Cargar el logo del sitio como dataURL (para incrustarlo en el PDF).
+    // Si no se puede (p.ej. en local sin la imagen), el PDF usa el texto "E47".
+    async function obtenerLogoDataUrl() {
+      try {
+        const resp = await fetch('/images/brand/logo.png');
+        if (!resp.ok) return null;
+        const blob = await resp.blob();
+        return await new Promise((res) => {
+          const r = new FileReader();
+          r.onloadend = () => res(r.result);
+          r.onerror = () => res(null);
+          r.readAsDataURL(blob);
+        });
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function abrirModalPDF(clientePrefillId = null) {
+      const sel = document.getElementById('pdfCliente');
+      sel.innerHTML = clientes.map(c => `<option value="${c.id}">${c.nombre_empresa}</option>`).join('');
+      if (clientePrefillId) sel.value = clientePrefillId;
+      document.getElementById('pdfFecha').value = new Date().toISOString().slice(0, 10);
+      document.getElementById('pdfReferencia').value = '';
+      document.getElementById('pdfValidez15').checked = true;
+      renderLineasPDF();
+      abrirModal('modalPDF');
+    }
+
+    function renderLineasPDF() {
+      const clienteId = document.getElementById('pdfCliente').value;
+      const cont = document.getElementById('pdfLineas');
+      const lineas = presupuestos.filter(p => p.cliente_id === clienteId);
+      if (!lineas.length) {
+        cont.innerHTML = '<p style="padding:16px; color:var(--muted); font-size:13px;">Este cliente no tiene presupuestos guardados. Crea uno antes de generar el PDF.</p>';
+        return;
+      }
+      cont.innerHTML = lineas.map(p => {
+        const prod = productos.find(x => x.id === p.producto_id);
+        const totalLinea = (Number(p.cantidad) || 0) * (Number(p.precio_cliente_unitario) || 0);
+        return `<label style="display:flex; align-items:center; gap:10px; padding:10px 14px; border-bottom:1px solid var(--border); cursor:pointer; font-size:13px;">
+          <input type="checkbox" class="pdf-linea-chk" value="${p.id}" checked style="width:auto;">
+          <span style="flex:1;">
+            <strong>${prod ? prod.nombre : '—'}</strong>${p.descripcion ? ' · <span style="color:var(--muted)">' + p.descripcion + '</span>' : ''}<br>
+            <span style="color:var(--muted); font-size:12px;">${formatoFecha(p.fecha)} · ${p.cantidad} uds × ${formatoEuro(p.precio_cliente_unitario)} = ${formatoEuro(totalLinea)}</span>
+          </span>
+        </label>`;
+      }).join('');
+    }
+
+    async function descargarPDF() {
+      const clienteId = document.getElementById('pdfCliente').value;
+      const cliente = clientes.find(c => c.id === clienteId);
+      if (!cliente) { alert('❌ Elige un cliente'); return; }
+
+      const idsSeleccionados = Array.from(document.querySelectorAll('.pdf-linea-chk:checked')).map(chk => chk.value);
+      if (!idsSeleccionados.length) { alert('❌ Marca al menos una línea para incluir en el presupuesto'); return; }
+
+      // Solo se toman datos comerciales: producto, descripción, cantidad y PRECIO DEL CLIENTE.
+      // Nunca coste interno, beneficio ni margen.
+      const lineas = idsSeleccionados.map(id => {
+        const p = presupuestos.find(x => x.id === id);
+        const prod = productos.find(x => x.id === p.producto_id);
+        return {
+          producto: prod ? prod.nombre : '',
+          descripcion: p.descripcion || '',
+          cantidad: p.cantidad,
+          precioUnitario: p.precio_cliente_unitario
+        };
+      });
+
+      const datos = {
+        clienteNombre: cliente.nombre_empresa,
+        fecha: document.getElementById('pdfFecha').value,
+        referencia: document.getElementById('pdfReferencia').value.trim() || null,
+        validez15: document.getElementById('pdfValidez15').checked,
+        lineas
+      };
+
+      const dd = construirDocDefinition(datos, LOGO_SVG);
+      const nombreArchivo = `Presupuesto_${cliente.nombre_empresa.replace(/[^a-zA-Z0-9]/g, '_')}_${datos.fecha}.pdf`;
+      pdfMake.createPdf(dd).download(nombreArchivo);
+      toast('✓ Presupuesto generado');
+      cerrarModal('modalPDF');
     }
 
     // ── INIT ────────────────────────────────
