@@ -3337,13 +3337,29 @@
     // ════════════════════════════════════════
     let pales = [];
 
+    // Contenido detallado de un palé: sus cajas, y dentro de cada caja sus productos
+    function contenidoPaleDetallado(paleId) {
+      return (cajas || []).filter(c => c.pale_id === paleId).map(c => {
+        const items = contenidoCaja(c.id);  // [{nombre, cantidad}]
+        const uds = items.reduce((a, i) => a + i.cantidad, 0);
+        return { id: c.id, codigo: c.codigo || 'Caja', uds, items };
+      });
+    }
+
+    function togglePaleDetalle(id) {
+      const row = document.getElementById(`pale-detalle-${id}`);
+      if (row) row.style.display = (row.style.display === 'none') ? '' : 'none';
+    }
+
     async function cargarPalesTabla() {
       const cont = document.getElementById('pales-tabla');
       cont.innerHTML = '<div class="loading">Cargando...</div>';
 
       pales = await obtenerPales();
       ubicaciones = await obtenerUbicaciones();
-      const { data: cajas } = await sb.from('cajas').select('id, pale_id');
+      cajas = await obtenerCajas();
+      const { data: stk } = await sb.from('stock').select('*');
+      stockItems = stk || [];
 
       if (!pales.length) {
         cont.innerHTML = `
@@ -3369,17 +3385,35 @@
 
       for (const p of pales) {
         const ubi = ubicaciones.find(u => u.id === p.ubicacion_id);
-        const nCajas = (cajas || []).filter(c => c.pale_id === p.id).length;
+        const detalle = contenidoPaleDetallado(p.id);
+        const nCajas = detalle.length;
         html += `
           <tr>
             <td><strong>${p.codigo || '—'}</strong></td>
             <td style="font-size: 13px;">${ubi ? ubi.nombre : '<span style="color: var(--muted);">Sin ubicación</span>'}</td>
-            <td>${nCajas}</td>
+            <td>${nCajas > 0 ? `<button class="btn btn-ghost btn-sm" onclick="togglePaleDetalle(${p.id})">${nCajas} 📦 ▾</button>` : '0'}</td>
             <td style="font-size: 12px; color: var(--muted);">${p.descripcion || '—'}</td>
             <td>
               <button class="btn btn-ghost btn-sm" onclick="mostrarQrPale(${p.id})" title="Código QR">🏷️</button>
               <button class="btn btn-ghost btn-sm" onclick="mostrarModalPale(${p.id})">✏️</button>
               <button class="btn btn-danger btn-sm" onclick="eliminarPaleAdmin(${p.id})">🗑️</button>
+            </td>
+          </tr>`;
+        // Fila desplegable con el detalle de las cajas
+        const detalleHtml = detalle.length ? detalle.map(c => `
+          <div style="margin-bottom:10px;">
+            <strong>📦 ${c.codigo}</strong> <span style="color:var(--muted); font-size:13px;">(${c.uds} uds)</span>
+            ${c.items.length
+              ? '<ul style="margin:4px 0 0 18px; font-size:13px;">' + c.items.map(i => `<li>${i.nombre} — ${i.cantidad} uds</li>`).join('') + '</ul>'
+              : '<span style="color:var(--muted); font-size:12px;"> — caja vacía</span>'}
+          </div>`).join('') : '<span style="color:var(--muted);">Este palé no tiene cajas.</span>';
+        html += `
+          <tr id="pale-detalle-${p.id}" style="display:none;">
+            <td colspan="5" style="background: var(--card);">
+              <div style="padding:10px 16px 10px 40px;">
+                <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted); margin-bottom:8px;">Contenido del palé</div>
+                ${detalleHtml}
+              </div>
             </td>
           </tr>`;
       }
@@ -3734,10 +3768,17 @@
         const ubic = ubicacionFisicaPale(p);
         let contenidoHtml = '';
         if (conContenido) {
-          const cajasP = contenidoPale(p.id);
-          contenidoHtml = cajasP.length
-            ? '<ul class="cont">' + cajasP.map(c => `<li>${c.codigo} — ${c.uds} uds</li>`).join('') + '</ul>'
-            : '<p class="vacia">Palé sin cajas</p>';
+          const cajasP = contenidoPaleDetallado(p.id);
+          if (cajasP.length) {
+            contenidoHtml = '<ul class="cont">' + cajasP.map(c => {
+              const productos = c.items.length
+                ? '<ul>' + c.items.map(i => `<li>${i.nombre} — ${i.cantidad} uds</li>`).join('') + '</ul>'
+                : '';
+              return `<li><strong>${c.codigo}</strong> (${c.uds} uds)${productos}</li>`;
+            }).join('') + '</ul>';
+          } else {
+            contenidoHtml = '<p class="vacia">Palé sin cajas</p>';
+          }
         }
         return `<div class="etiqueta">
           <img src="${url}" class="qr">
