@@ -897,6 +897,16 @@
             <option value="">Todas</option>
           </select>
         </div>
+        <div class="form-group">
+          <label>Ordenar por</label>
+          <select id="ordenPales" onchange="renderPales()">
+            <option value="codigo-asc">Código (A → Z)</option>
+            <option value="codigo-desc">Código (Z → A)</option>
+            <option value="ubicacion">Ubicación</option>
+            <option value="cajas-desc">Más cajas primero</option>
+            <option value="recientes">Más recientes</option>
+          </select>
+        </div>
       </div>
 
       <div id="pales-tabla" class="loading">Cargando...</div>
@@ -3419,7 +3429,18 @@
         return;
       }
 
-      let html = `
+      // Ordenación
+      const orden = document.getElementById('ordenPales')?.value || 'codigo-asc';
+      const nombreUbi = pid => { const u = ubicaciones.find(x => x.id === pid); return u ? u.nombre : ''; };
+      palesFiltrados.sort((a, b) => {
+        if (orden === 'codigo-desc') return (b.codigo || '').localeCompare(a.codigo || '', 'es', { numeric: true });
+        if (orden === 'ubicacion') return nombreUbi(a.ubicacion_id).localeCompare(nombreUbi(b.ubicacion_id), 'es', { numeric: true }) || (a.codigo || '').localeCompare(b.codigo || '', 'es', { numeric: true });
+        if (orden === 'cajas-desc') return contenidoPaleDetallado(b.id).length - contenidoPaleDetallado(a.id).length;
+        if (orden === 'recientes') return (b.created_at || '').localeCompare(a.created_at || '');
+        return (a.codigo || '').localeCompare(b.codigo || '', 'es', { numeric: true });  // codigo-asc
+      });
+
+      let html = `<p style="font-size:13px; color:var(--muted); margin-bottom:10px;">${palesFiltrados.length} palé${palesFiltrados.length === 1 ? '' : 's'}</p>
         <table>
           <thead>
             <tr>
