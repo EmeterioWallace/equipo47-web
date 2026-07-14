@@ -885,6 +885,20 @@
           <button class="btn btn-primary acc-inv" onclick="mostrarModalPale()">➕ Nuevo palé</button>
         </div>
       </div>
+
+      <div class="form-row" style="margin-bottom: 20px;">
+        <div class="form-group">
+          <label>Buscar</label>
+          <input type="text" id="buscadorPales" placeholder="🔍 Código de palé, descripción o contenido..." onkeyup="renderPales()">
+        </div>
+        <div class="form-group">
+          <label>Ubicación</label>
+          <select id="filtroPaleUbicacion" onchange="renderPales()">
+            <option value="">Todas</option>
+          </select>
+        </div>
+      </div>
+
       <div id="pales-tabla" class="loading">Cargando...</div>
     </section>
 
@@ -3361,12 +3375,47 @@
       const { data: stk } = await sb.from('stock').select('*');
       stockItems = stk || [];
 
+      // Rellenar el filtro de ubicación (solo las que tienen palés)
+      const sel = document.getElementById('filtroPaleUbicacion');
+      if (sel) {
+        const usadas = [...new Set(pales.map(p => p.ubicacion_id).filter(Boolean))];
+        const valActual = sel.value;
+        sel.innerHTML = '<option value="">Todas</option>' + usadas.map(uid => {
+          const u = ubicaciones.find(x => x.id === uid);
+          return u ? `<option value="${u.id}">${u.nombre}</option>` : '';
+        }).join('');
+        sel.value = valActual;
+      }
+
+      renderPales();
+    }
+
+    function renderPales() {
+      const cont = document.getElementById('pales-tabla');
       if (!pales.length) {
         cont.innerHTML = `
           <div class="empty">
             <div class="empty-icon">🏛️</div>
             <p>No hay palés todavía. Crea el primero con "Nuevo palé".</p>
           </div>`;
+        return;
+      }
+
+      const q = (document.getElementById('buscadorPales')?.value || '').toLowerCase().trim();
+      const filtroUbi = document.getElementById('filtroPaleUbicacion')?.value || '';
+
+      const palesFiltrados = pales.filter(p => {
+        if (filtroUbi && String(p.ubicacion_id) !== filtroUbi) return false;
+        if (!q) return true;
+        // Buscar en código, descripción, y en el contenido (códigos de caja y productos)
+        const detalle = contenidoPaleDetallado(p.id);
+        const textoContenido = detalle.map(c => c.codigo + ' ' + c.items.map(i => i.nombre).join(' ')).join(' ');
+        const texto = `${p.codigo || ''} ${p.descripcion || ''} ${textoContenido}`.toLowerCase();
+        return texto.includes(q);
+      });
+
+      if (!palesFiltrados.length) {
+        cont.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><p>Ningún palé coincide con la búsqueda.</p></div>';
         return;
       }
 
@@ -3383,7 +3432,7 @@
           </thead>
           <tbody>`;
 
-      for (const p of pales) {
+      for (const p of palesFiltrados) {
         const ubi = ubicaciones.find(u => u.id === p.ubicacion_id);
         const detalle = contenidoPaleDetallado(p.id);
         const nCajas = detalle.length;
@@ -3399,7 +3448,6 @@
               <button class="btn btn-danger btn-sm" onclick="eliminarPaleAdmin(${p.id})">🗑️</button>
             </td>
           </tr>`;
-        // Fila desplegable con el detalle de las cajas
         const detalleHtml = detalle.length ? detalle.map(c => `
           <div style="margin-bottom:10px;">
             <strong>📦 ${c.codigo}</strong> <span style="color:var(--muted); font-size:13px;">(${c.uds} uds)</span>
@@ -3477,20 +3525,32 @@
     async function eliminarPaleAdmin(id) { if (!exigeCap('inv')) return;
       const p = pales.find(x => x.id === id);
 
-      const { data: cajas } = await sb.from('cajas').select('id').eq('pale_id', id);
-      const { data: stock } = await sb.from('stock').select('id').eq('pale_id', id);
-      const usos = (cajas?.length || 0) + (stock?.length || 0);
+      const { data: cajasEnPale } = await sb.from('cajas').select('id').eq('pale_id', id);
+      const { data: stockEnPale } = await sb.from('stock').select('id, cantidad').eq('pale_id', id);
+      const nCajas = cajasEnPale?.length || 0;
+      const sueltos = stockEnPale || [];
+      const udsSuelto = sueltos.reduce((a, s) => a + (s.cantidad || 0), 0);
 
-      if (usos > 0) {
-        alert(`❌ No se puede borrar "${p?.codigo}".\n\nHay ${cajas?.length || 0} caja(s) y ${stock?.length || 0} artículo(s) suelto(s) en este palé.\n\nMuévelos primero.`);
-        return;
+      let msg;
+      if (nCajas + sueltos.length > 0) {
+        msg = `Vas a borrar el palé "${p?.codigo}".\n\n`;
+        if (nCajas) msg += `• Sus ${nCajas} caja(s) NO se borran: quedarán sin ubicación (con su contenido), listas para recolocar.\n`;
+        if (sueltos.length) msg += `• Su material suelto (${udsSuelto} uds) volverá a quedar sin organizar.\n`;
+        msg += `\n¿Continuar?`;
+      } else {
+        msg = `¿Eliminar el palé "${p?.codigo}"?`;
       }
+      if (!confirmar(msg)) return;
 
-      if (!confirmar(`¿Eliminar el palé "${p?.codigo}"?`)) return;
+      // 1. Las cajas del palé quedan sin ubicación (siguen existiendo con su contenido)
+      await sb.from('cajas').update({ pale_id: null, ubicacion_id: null }).eq('pale_id', id);
+      // 2. El material suelto del palé: borrar colocaciones → sus uds vuelven a "sin organizar"
+      await sb.from('stock').delete().eq('pale_id', id);
+      // 3. Borrar el palé (ya sin cajas ni stock apuntando a él)
       const { error } = await sb.from('pales').delete().eq('id', id);
-      if (error) { toast('❌ Error al eliminar'); return; }
-      toast('✓ Palé eliminado');
-      registrarActividad('borrar', 'palé', `Eliminó el palé "${p?.codigo}"`);
+      if (error) { toast('❌ Error al eliminar: ' + error.message); return; }
+      toast('✓ Palé eliminado. Su contenido quedó sin organizar.');
+      registrarActividad('borrar', 'palé', `Eliminó el palé "${p?.codigo}" (contenido a sin organizar)`);
       await cargarPalesTabla();
     }
 
@@ -3938,18 +3998,23 @@
     async function eliminarCajaAdmin(id) { if (!exigeCap('inv')) return;
       const c = cajas.find(x => x.id === id);
       const lineas = stockItems.filter(s => s.caja_id === id);
+      const uds = lineas.reduce((a, s) => a + (s.cantidad || 0), 0);
 
+      let msg;
       if (lineas.length > 0) {
-        if (!confirmar(`La caja "${c?.codigo}" contiene ${lineas.length} artículo(s).\n\nAl borrarla, ese stock volverá a quedar "sin organizar" (no se pierde del inventario).\n\n¿Continuar?`)) return;
+        msg = `Vas a borrar la caja "${c?.codigo}".\n\nSu contenido (${uds} uds) NO se pierde del inventario: volverá a quedar "sin organizar", listo para recolocar.\n\n¿Continuar?`;
       } else {
-        if (!confirmar(`¿Eliminar la caja "${c?.codigo}"?`)) return;
+        msg = `¿Eliminar la caja "${c?.codigo}"?`;
       }
+      if (!confirmar(msg)) return;
 
-      // Al borrar la caja, el stock asociado se borra en cascada (vuelve a sin organizar)
+      // Borrar las colocaciones de esta caja → sus uds vuelven a "sin organizar"
+      // (el stock_total de la variante no cambia; solo desaparece la colocación)
+      await sb.from('stock').delete().eq('caja_id', id);
       const { error } = await sb.from('cajas').delete().eq('id', id);
-      if (error) { toast('❌ Error al eliminar'); return; }
-      toast('✓ Caja eliminada');
-      registrarActividad('borrar', 'caja', `Eliminó la caja "${c?.codigo}"`);
+      if (error) { toast('❌ Error al eliminar: ' + error.message); return; }
+      toast('✓ Caja eliminada. Su contenido quedó sin organizar.');
+      registrarActividad('borrar', 'caja', `Eliminó la caja "${c?.codigo}" (contenido a sin organizar)`);
       await cargarCajasTabla();
     }
 
