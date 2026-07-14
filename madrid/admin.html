@@ -2949,7 +2949,7 @@
         // 1. Borrar las que el usuario quitó (estaban en BD, ya no en el modal)
         for (const va of varsActuales) {
           if (!idsQueQuedan.includes(va.id)) {
-            await sb.from('cajas').delete().eq('variante_id', va.id); // limpia cajas huérfanas
+            await limpiarDependenciasVariantes([va.id]);
             await sb.from('variantes').delete().eq('id', va.id);
           }
         }
@@ -2980,7 +2980,7 @@
         // Si antes tenía variantes reales y ahora es simple, limpiarlas
         for (const va of varsActuales) {
           if (va.tipo !== 'Unidad') {
-            await sb.from('cajas').delete().eq('variante_id', va.id);
+            await limpiarDependenciasVariantes([va.id]);
             await sb.from('variantes').delete().eq('id', va.id);
           }
         }
@@ -3002,23 +3002,53 @@
       await cargarProductosTabla();
     }
 
+    // Limpia todo lo que cuelga de unas variantes (stock, líneas de salida,
+    // plantillas, visibilidad, solicitudes). NO toca cajas ni palés: esos se
+    // conservan, solo se les retira el stock de estas variantes.
+    async function limpiarDependenciasVariantes(varIds) {
+      if (!varIds || !varIds.length) return;
+      for (const tabla of ['stock', 'salida_lineas', 'plantilla_lineas', 'plantilla_visibilidad_lineas', 'cliente_visibilidad', 'solicitud_items']) {
+        await sb.from(tabla).delete().in('variante_id', varIds);
+      }
+    }
+
     async function eliminarProductoAdmin(id) { if (!exigeCap('inv')) return;
       const p = productos.find(x => x.id === id);
-      if (!confirmar(`¿Eliminar "${p?.nombre}" y todas sus variantes y cajas?`)) return;
-
-      // Borrar cajas de sus variantes, luego variantes, luego producto
+      if (!p) return;
       const varsProd = variantes.filter(v => v.producto_id === id);
-      for (const v of varsProd) {
-        await sb.from('cajas').delete().eq('variante_id', v.id);
+      const varIds = varsProd.map(v => v.id);
+
+      // Calcular el stock registrado, para avisar
+      let stockUds = 0;
+      if (varIds.length) {
+        const { data: st } = await sb.from('stock').select('cantidad').in('variante_id', varIds);
+        stockUds = (st || []).reduce((a, s) => a + (s.cantidad || 0), 0);
       }
-      await sb.from('variantes').delete().eq('producto_id', id);
-      const ok = await eliminarProducto(id);
-      if (ok) {
+
+      // Mensaje de confirmación claro y detallado
+      let msg = `Vas a eliminar "${p?.nombre}"`;
+      if (varsProd.length) msg += ` y sus ${varsProd.length} variante(s)`;
+      msg += `.\n\n`;
+      if (stockUds > 0) msg += `• Se eliminará su stock registrado (${stockUds} uds).\n`;
+      msg += `• Las cajas y palés NO se borran: solo se les retira este producto.\n`;
+      msg += `• Si aparecía en salidas o plantillas, se quitará de ellas.\n`;
+      msg += `\n⚠️ Esta acción no se puede deshacer. ¿Continuar?`;
+      if (!confirmar(msg)) return;
+
+      try {
+        if (varIds.length) {
+          // Limpiar TODO lo que cuelga de las variantes (menos cajas/palés, que se conservan)
+          await limpiarDependenciasVariantes(varIds);
+          const { error: errVar } = await sb.from('variantes').delete().eq('producto_id', id);
+          if (errVar) { toast('❌ No se pudo eliminar: ' + errVar.message); return; }
+        }
+        const { error: errProd } = await sb.from('productos').delete().eq('id', id);
+        if (errProd) { toast('❌ No se pudo eliminar: ' + errProd.message); return; }
         toast('✓ Producto eliminado');
         registrarActividad('borrar', 'producto', `Eliminó el producto "${p?.nombre}"`);
         await cargarProductosTabla();
-      } else {
-        toast('❌ Error al eliminar');
+      } catch (e) {
+        toast('❌ Error al eliminar: ' + (e.message || e));
       }
     }
 
