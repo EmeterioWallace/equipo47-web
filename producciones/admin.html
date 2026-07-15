@@ -399,6 +399,24 @@
       color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 12px;
     }
     .mini-input:focus { outline: none; border-color: var(--accent); }
+    /* Gráficos */
+    .gr-fila { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; font-size: 12px; }
+    .gr-etiqueta { flex: 0 0 140px; color: var(--text); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .gr-pista { flex: 1; background: var(--border); border-radius: 3px; height: 20px; overflow: hidden; }
+    .gr-barra { height: 100%; border-radius: 3px; background: var(--accent); transition: width .3s; }
+    .gr-valor { flex: 0 0 auto; color: var(--muted); white-space: nowrap; min-width: 150px; }
+    .gr-anios { display: flex; align-items: flex-end; gap: 14px; height: 190px; padding: 8px 0 0; overflow-x: auto; }
+    .gr-anio { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 78px; height: 100%; justify-content: flex-end; }
+    .gr-par { display: flex; align-items: flex-end; gap: 4px; }
+    .gr-col { width: 24px; border-radius: 3px 3px 0 0; min-height: 2px; }
+    .gr-leyenda { display: flex; gap: 16px; font-size: 11px; color: var(--muted); margin-top: 10px; flex-wrap: wrap; }
+    .gr-punto { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+    @media (max-width: 600px) {
+      .gr-fila { flex-wrap: wrap; gap: 4px; margin-bottom: 14px; }
+      .gr-etiqueta { flex: 1 1 100%; text-align: left; font-weight: 600; }
+      .gr-pista { flex: 1 1 100%; }
+      .gr-valor { flex: 1 1 100%; min-width: 0; }
+    }
     .apunte {
       display: flex; justify-content: space-between; align-items: center; gap: 8px;
       font-size: 12px; padding: 6px 0; border-top: 1px solid var(--border);
@@ -473,12 +491,21 @@
         </div>
       </div>
 
-      <div class="form-row" style="margin-bottom:20px;">
-        <div class="form-group" style="max-width:240px;">
+      <div class="form-row" style="margin-bottom:20px; align-items:flex-end;">
+        <div class="form-group" style="max-width:260px;">
+          <label>Línea de negocio</label>
+          <select id="fichaLinea" onchange="aplicarFiltroFicha()">
+            <option value="">Todas</option>
+          </select>
+        </div>
+        <div class="form-group" style="max-width:200px;">
           <label>Vista por año</label>
           <select id="fichaAnio" onchange="aplicarFiltroFicha()">
             <option value="">Todos los años</option>
           </select>
+        </div>
+        <div class="form-group" style="flex:0 0 auto;">
+          <button type="button" class="btn btn-ghost" onclick="abrirModalLineas()">🗂️ Gestionar líneas</button>
         </div>
       </div>
 
@@ -496,12 +523,24 @@
         <div class="card">
           <h3>📈 Beneficio generado</h3>
           <p id="fichaKpiBeneficio" style="font-size: 32px; color: var(--success); margin: 12px 0;">—</p>
-          <p>Descontando costes internos y transporte</p>
+          <p>Precio del cliente menos coste de los productos</p>
         </div>
         <div class="card">
           <h3>🏷️ Productos solicitados</h3>
           <p id="fichaKpiProductos" style="font-size: 14px; color: var(--text); margin: 12px 0; line-height:1.6;">—</p>
           <p>Productos distintos que ha pedido</p>
+        </div>
+      </div>
+
+      <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));">
+        <div class="card">
+          <h3>🏆 Productos más pedidos</h3>
+          <div id="graficoProductos" style="margin-top:14px;"></div>
+        </div>
+        <div class="card">
+          <h3>📊 Por año</h3>
+          <p style="font-size:11px; color:var(--muted); margin-bottom:4px;">Muestra siempre todos los años, aunque filtres arriba</p>
+          <div id="graficoAnios" style="margin-top:8px;"></div>
         </div>
       </div>
 
@@ -661,12 +700,18 @@
           </div>
           <div class="form-group">
             <label>Cliente *</label>
-            <select id="presCliente"></select>
+            <select id="presCliente" onchange="poblarLineasPresupuesto()"></select>
           </div>
         </div>
-        <div class="form-group" style="max-width:220px;">
-          <label>Fecha *</label>
-          <input type="date" id="presFecha">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Fecha *</label>
+            <input type="date" id="presFecha">
+          </div>
+          <div class="form-group">
+            <label>Línea de negocio (opcional)</label>
+            <select id="presLinea"><option value="">— Sin línea —</option></select>
+          </div>
         </div>
 
         <label style="display:block; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted); margin-bottom:8px;">Productos de este presupuesto</label>
@@ -696,6 +741,30 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-ghost" onclick="cerrarModal('modalPresupuesto')">Cancelar</button>
         <button type="button" class="btn btn-primary" onclick="guardarPresupuesto()">💾 Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL LÍNEAS DE NEGOCIO -->
+  <div id="modalLineas" class="modal">
+    <div class="modal-content" style="max-width:560px;">
+      <div class="modal-header">
+        <h2>Líneas de negocio</h2>
+        <p id="lineasSubtitulo" style="font-size:13px; color:var(--muted); margin-top:4px;"></p>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:12px; color:var(--muted); margin-bottom:14px;">
+          Sirven para agrupar los pedidos de este cliente (Trail, Asfalto, Carrera de la Mujer...).
+          Son opcionales: si este cliente es un pedido y ya está, no hace falta crear ninguna.
+        </p>
+        <div id="listaLineas"></div>
+        <div style="display:flex; gap:6px; margin-top:14px;">
+          <input type="text" class="mini-input" id="nuevaLineaNombre" placeholder="Ej: Carrera de la Mujer" style="flex:1;" onkeydown="if(event.key==='Enter') anadirLineaNegocio()">
+          <button type="button" class="btn btn-primary btn-sm" onclick="anadirLineaNegocio()">➕ Añadir</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="cerrarModal('modalLineas')">Cerrar</button>
       </div>
     </div>
   </div>
@@ -837,6 +906,7 @@
     let productos = [];
     let presupuestos = [];   // cabeceras (las "carpetas")
     let lineas = [];         // productos dentro de cada carpeta
+    let lineasNegocio = [];  // agrupaciones de pedidos dentro de un cliente
     let cobros = [];         // dinero que entra (cliente → nosotros)
     let pagos = [];          // dinero que sale (nosotros → proveedores / transporte)
     let pagosPresupuestoId = null;
@@ -930,14 +1000,16 @@
 
     // ── CARGA INICIAL ───────────────────────
     async function cargarTodo() {
-      const [rc, rp, rpr, rl, rco, rpa] = await Promise.all([
+      const [rc, rp, rpr, rl, rco, rpa, rln] = await Promise.all([
         sb.from('clientes').select('*').order('nombre_empresa'),
         sb.from('productos').select('*').order('nombre'),
         sb.from('presupuestos').select('*').order('fecha', { ascending: false }),
         sb.from('presupuesto_lineas').select('*').order('posicion'),
         sb.from('cobros').select('*').order('fecha'),
-        sb.from('pagos').select('*').order('fecha')
+        sb.from('pagos').select('*').order('fecha'),
+        sb.from('lineas_negocio').select('*').order('nombre')
       ]);
+      lineasNegocio = rln.data || [];
       clientes = rc.data || [];
       productos = rp.data || [];
       presupuestos = rpr.data || [];
@@ -1097,6 +1169,14 @@
       const datos = [c.cif_nif, c.persona_contacto, c.telefono, c.email].filter(Boolean).join(' · ');
       document.getElementById('fichaClienteDatos').textContent = datos || 'Sin datos de contacto adicionales';
 
+      const selL = document.getElementById('fichaLinea');
+      const ls = lineasDeCliente(id);
+      const haySinLinea = presupuestos.some(p => p.cliente_id === id && !p.linea_negocio_id);
+      selL.innerHTML = '<option value="">Todas</option>' +
+        ls.map(l => `<option value="${l.id}">${esc(l.nombre)}</option>`).join('') +
+        (haySinLinea && ls.length ? '<option value="__sin__">— Sin línea —</option>' : '');
+      selL.value = '';
+
       const selA = document.getElementById('fichaAnio');
       selA.innerHTML = opcionesAnio(aniosDe(presupuestos.filter(p => p.cliente_id === id)));
       selA.value = '';
@@ -1110,7 +1190,14 @@
     function aplicarFiltroFicha() {
       const id = clienteFichaActualId;
       const anio = document.getElementById('fichaAnio').value;
+      const linea = document.getElementById('fichaLinea').value;
+
       let delCliente = presupuestos.filter(p => p.cliente_id === id);
+      // El filtro de línea se aplica antes que el de año, porque el gráfico
+      // "Por año" necesita ver todos los años de esa línea.
+      if (linea === '__sin__') delCliente = delCliente.filter(p => !p.linea_negocio_id);
+      else if (linea) delCliente = delCliente.filter(p => p.linea_negocio_id === linea);
+      const todosLosAnios = delCliente.slice();
       if (anio) delCliente = delCliente.filter(p => (p.fecha || '').slice(0, 4) === anio);
 
       const aprobados = delCliente.filter(p => p.estado === 'aprobado');
@@ -1135,6 +1222,9 @@
       document.getElementById('fichaKpiProductos').textContent = nombresProd.length
         ? nombresProd.join(', ')
         : (anio ? 'Sin pedidos aprobados en ' + anio : 'Todavía no tiene pedidos aprobados');
+
+      renderGraficoProductos(aprobados);
+      renderGraficoAnios(todosLosAnios);
 
       renderTablaCarpetas('ficha-aprobados-tabla', aprobados, true);
       renderTablaCarpetas('ficha-presupuestos-tabla', sinAprobar);
@@ -1253,6 +1343,7 @@
       let sumaCliente = 0, sumaBeneficio = 0, sumaPendientePago = 0;
       for (const p of ordenada) {
         const cliente = clientes.find(c => c.id === p.cliente_id);
+        const ln = lineasNegocio.find(x => x.id === p.linea_negocio_id);
         const t = totalesCarpeta(p.id);
         sumaCliente += t.totalCliente; sumaBeneficio += t.beneficio;
         const col = colorMargen(t.margen);
@@ -1268,7 +1359,7 @@
         }
         html += `<tr>
           <td style="white-space:nowrap;">${formatoFecha(p.fecha)}</td>
-          <td><strong>${esc(p.nombre)}</strong></td>
+          <td><strong>${esc(p.nombre)}</strong>${ln ? `<br><span style="color:var(--muted); font-size:11px;">🗂️ ${esc(ln.nombre)}</span>` : ''}</td>
           <td>${cliente ? esc(cliente.nombre_empresa) : '—'}</td>
           <td style="max-width:200px; font-size:12px; color:var(--muted);" title="${esc(resumenProd)}">${t.nLineas} · ${esc(resumenProd.slice(0, 60))}${resumenProd.length > 60 ? '…' : ''}</td>
           <td>${formatoEuro(t.totalCliente)}</td>
@@ -1379,6 +1470,7 @@
         document.getElementById('presNombre').value = p.nombre || '';
         selC.value = p.cliente_id;
         document.getElementById('presFecha').value = p.fecha;
+        poblarLineasPresupuesto(p.linea_negocio_id || '');
         document.getElementById('presObservaciones').value = p.observaciones || '';
         lineasEditor = lineas.filter(l => l.presupuesto_id === id).map(l => ({
           id: l.id, producto_id: l.producto_id, variante: l.variante || '', descripcion: l.descripcion || '',
@@ -1390,6 +1482,7 @@
         document.getElementById('presNombre').value = '';
         if (clientePrefillId) selC.value = clientePrefillId;
         document.getElementById('presFecha').value = new Date().toISOString().slice(0, 10);
+        poblarLineasPresupuesto();
         document.getElementById('presObservaciones').value = '';
         lineasEditor = [];
         anadirLineaSilencioso();
@@ -1427,6 +1520,7 @@
         cliente_id: clienteId,
         nombre,
         fecha,
+        linea_negocio_id: document.getElementById('presLinea').value || null,
         observaciones: document.getElementById('presObservaciones').value.trim() || null
       };
       const idStr = document.getElementById('presupuestoId').value;
@@ -1510,6 +1604,188 @@
       }
     }
 
+
+
+    // ════════════════════════════════════════
+    //  LÍNEAS DE NEGOCIO
+    // ════════════════════════════════════════
+    // Agrupan los pedidos dentro de un cliente (ASICS → Trail, Asfalto...).
+    // Son opcionales: un cliente suelto no crea ninguna y sus pedidos se
+    // quedan "sin línea", que se ve perfectamente igual.
+
+    function lineasDeCliente(clienteId) {
+      return lineasNegocio.filter(l => l.cliente_id === clienteId);
+    }
+
+    function abrirModalLineas() {
+      const c = clientes.find(x => x.id === clienteFichaActualId);
+      document.getElementById('lineasSubtitulo').textContent = c ? c.nombre_empresa : '';
+      document.getElementById('nuevaLineaNombre').value = '';
+      renderListaLineas();
+      abrirModal('modalLineas');
+    }
+
+    function renderListaLineas() {
+      const ls = lineasDeCliente(clienteFichaActualId);
+      const cont = document.getElementById('listaLineas');
+      if (!ls.length) {
+        cont.innerHTML = '<p style="font-size:13px; color:var(--muted);">Este cliente no tiene líneas de negocio.</p>';
+        return;
+      }
+      cont.innerHTML = ls.map(l => {
+        const nPedidos = presupuestos.filter(p => p.linea_negocio_id === l.id).length;
+        return `<div class="apunte">
+          <span><strong>${esc(l.nombre)}</strong> <span style="color:var(--muted)">· ${nPedidos} presupuesto(s)</span></span>
+          <span style="display:flex; gap:6px;">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="renombrarLinea('${l.id}')">✏️</button>
+            <button type="button" class="btn btn-danger btn-sm" onclick="eliminarLinea('${l.id}')">🗑️</button>
+          </span>
+        </div>`;
+      }).join('');
+    }
+
+    async function anadirLineaNegocio() {
+      const nombre = document.getElementById('nuevaLineaNombre').value.trim();
+      if (!nombre) { alert('❌ Escribe un nombre para la línea'); return; }
+      const { error } = await sb.from('lineas_negocio').insert({ cliente_id: clienteFichaActualId, nombre });
+      if (error) {
+        alert(error.message.includes('duplicate') || error.code === '23505'
+          ? '❌ Este cliente ya tiene una línea con ese nombre'
+          : '❌ Error al guardar: ' + error.message);
+        return;
+      }
+      document.getElementById('nuevaLineaNombre').value = '';
+      toast('✓ Línea creada');
+      await recargarLineasNegocio();
+      renderListaLineas();
+      verFichaCliente(clienteFichaActualId);
+    }
+
+    async function renombrarLinea(id) {
+      const l = lineasNegocio.find(x => x.id === id);
+      const nombre = prompt('Nuevo nombre de la línea:', l.nombre);
+      if (nombre === null) return;
+      if (!nombre.trim()) { alert('❌ El nombre no puede estar vacío'); return; }
+      const { error } = await sb.from('lineas_negocio').update({ nombre: nombre.trim() }).eq('id', id);
+      if (error) {
+        alert(error.code === '23505' ? '❌ Ya existe otra línea con ese nombre' : '❌ Error: ' + error.message);
+        return;
+      }
+      toast('✓ Línea renombrada');
+      await recargarLineasNegocio();
+      renderListaLineas();
+      verFichaCliente(clienteFichaActualId);
+    }
+
+    async function eliminarLinea(id) {
+      const l = lineasNegocio.find(x => x.id === id);
+      const n = presupuestos.filter(p => p.linea_negocio_id === id).length;
+      const aviso = n
+        ? `¿Eliminar la línea "${l.nombre}"?\n\nSus ${n} presupuesto(s) NO se borran: se quedarán sin línea y los seguirás viendo igual.`
+        : `¿Eliminar la línea "${l.nombre}"?`;
+      if (!confirmarAccion(aviso)) return;
+      const { error } = await sb.from('lineas_negocio').delete().eq('id', id);
+      if (error) { alert('❌ Error al eliminar: ' + error.message); return; }
+      toast('✓ Línea eliminada');
+      await recargarLineasNegocio();
+      await recargarPresupuestos();
+      renderListaLineas();
+      verFichaCliente(clienteFichaActualId);
+    }
+
+    async function recargarLineasNegocio() {
+      const { data } = await sb.from('lineas_negocio').select('*').order('nombre');
+      lineasNegocio = data || [];
+    }
+
+    // Rellena el selector de línea del modal de presupuesto según el cliente elegido
+    function poblarLineasPresupuesto(seleccionada = '') {
+      const clienteId = document.getElementById('presCliente').value;
+      const sel = document.getElementById('presLinea');
+      sel.innerHTML = '<option value="">— Sin línea —</option>' +
+        lineasDeCliente(clienteId).map(l => `<option value="${l.id}">${esc(l.nombre)}</option>`).join('');
+      sel.value = seleccionada || '';
+    }
+
+    // ════════════════════════════════════════
+    //  GRÁFICOS DE LA FICHA
+    // ════════════════════════════════════════
+    // Hechos con barras CSS a propósito: no hace falta cargar ninguna
+    // librería extra y se adaptan solos al tema claro/oscuro.
+
+    // Productos más pedidos: la barra va por dinero facturado, y al lado
+    // se ve en cuántos pedidos aparece y cuántas unidades suman.
+    function renderGraficoProductos(pedidosAprobados) {
+      const cont = document.getElementById('graficoProductos');
+      const ids = pedidosAprobados.map(p => p.id);
+      const ls = lineas.filter(l => ids.includes(l.presupuesto_id));
+      if (!ls.length) {
+        cont.innerHTML = '<p style="font-size:13px; color:var(--muted);">Todavía no hay pedidos aprobados que mostrar.</p>';
+        return;
+      }
+      const acum = {};
+      ls.forEach(l => {
+        const k = l.producto_id;
+        if (!acum[k]) acum[k] = { importe: 0, unidades: 0, pedidos: new Set() };
+        acum[k].importe += (Number(l.cantidad) || 0) * (Number(l.precio_cliente_unitario) || 0);
+        acum[k].unidades += Number(l.cantidad) || 0;
+        acum[k].pedidos.add(l.presupuesto_id);
+      });
+      const filas = Object.entries(acum)
+        .map(([pid, v]) => ({
+          nombre: productos.find(p => p.id === pid)?.nombre || '—',
+          importe: v.importe, unidades: v.unidades, pedidos: v.pedidos.size
+        }))
+        .sort((a, b) => b.importe - a.importe)
+        .slice(0, 8);
+      const max = Math.max(...filas.map(f => f.importe), 1);
+      cont.innerHTML = filas.map(f => `
+        <div class="gr-fila">
+          <span class="gr-etiqueta" title="${esc(f.nombre)}">${esc(f.nombre)}</span>
+          <span class="gr-pista"><span class="gr-barra" style="width:${(f.importe / max * 100).toFixed(1)}%"></span></span>
+          <span class="gr-valor">${formatoEuro(f.importe)} · ${f.unidades} uds · ${f.pedidos} pedido${f.pedidos === 1 ? '' : 's'}</span>
+        </div>`).join('');
+    }
+
+    // Volumen y beneficio por año. Ignora a propósito el filtro de año
+    // (es justo el desglose por años), pero sí respeta el de línea.
+    function renderGraficoAnios(pedidosTodosLosAnios) {
+      const cont = document.getElementById('graficoAnios');
+      const aprobados = pedidosTodosLosAnios.filter(p => p.estado === 'aprobado');
+      if (!aprobados.length) {
+        cont.innerHTML = '<p style="font-size:13px; color:var(--muted);">Todavía no hay pedidos aprobados que mostrar.</p>';
+        return;
+      }
+      const porAnio = {};
+      aprobados.forEach(p => {
+        const a = (p.fecha || '').slice(0, 4);
+        if (!a) return;
+        if (!porAnio[a]) porAnio[a] = { volumen: 0, beneficio: 0, n: 0 };
+        const t = totalesCarpeta(p.id);
+        porAnio[a].volumen += t.totalCliente;
+        porAnio[a].beneficio += t.beneficio;
+        porAnio[a].n++;
+      });
+      const anios = Object.keys(porAnio).sort();
+      const max = Math.max(...anios.map(a => porAnio[a].volumen), 1);
+      cont.innerHTML = `<div class="gr-anios">` + anios.map(a => {
+        const v = porAnio[a];
+        const hV = Math.max(2, v.volumen / max * 120);
+        const hB = Math.max(2, Math.abs(v.beneficio) / max * 120);
+        return `<div class="gr-anio" title="${a}: ${formatoEuro(v.volumen)} en ${v.n} pedido(s), beneficio ${formatoEuro(v.beneficio)}">
+          <span style="font-size:11px; color:var(--muted);">${formatoEuro(v.volumen)}</span>
+          <span class="gr-par">
+            <span class="gr-col" style="height:${hV}px; background:var(--accent);"></span>
+            <span class="gr-col" style="height:${hB}px; background:${v.beneficio >= 0 ? 'var(--success)' : 'var(--danger)'};"></span>
+          </span>
+          <strong style="font-size:12px;">${a}</strong>
+        </div>`;
+      }).join('') + `</div>
+      <div class="gr-leyenda">
+        <span><span class="gr-punto" style="background:var(--accent);"></span>Volumen de compra</span>
+        <span><span class="gr-punto" style="background:var(--success);"></span>Beneficio</span>
+      </div>`;
+    }
 
     // ════════════════════════════════════════
     //  ESTADO DE PAGOS
