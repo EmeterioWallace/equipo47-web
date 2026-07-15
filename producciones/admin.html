@@ -1,0 +1,1895 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Producciones — Equipo 47</title>
+  <link rel="icon" type="image/png" href="/images/brand/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --black: #0a0a0a;
+      --dark: #141414;
+      --card: #1c1c1c;
+      --border: #2a2a2a;
+      --e47-blue: #003DA5;
+      --e47-red: #E4002B;
+      --accent: #4FC3F7;
+      --text: #f0f0f0;
+      --muted: #888;
+      --success: #4CAF50;
+      --warning: #FF9800;
+      --danger: #E4002B;
+    }
+
+    /* Tema claro (el oscuro es el de por defecto) */
+    body.tema-claro {
+      --black: #eef1f5;
+      --dark: #e4e8ee;
+      --card: #ffffff;
+      --border: #d4d9e0;
+      --text: #1a1a1a;
+      --muted: #667085;
+    }
+
+    .marca-logo, .topbar-logo {
+      filter: brightness(0) saturate(100%) invert(70%) sepia(38%) saturate(1352%) hue-rotate(167deg) brightness(95%) contrast(91%);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--black);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 240px;
+      height: 100vh;
+      background: var(--dark);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      z-index: 100;
+    }
+
+    .sidebar-logo {
+      padding: 28px 24px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .sidebar-logo .marca-fila {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .sidebar-logo .marca-logo {
+      height: 32px;
+      width: auto;
+    }
+
+    .sidebar-logo .e47 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 18px;
+      letter-spacing: 2px;
+      color: white;
+    }
+
+    .sidebar-logo .admin-tag {
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-top: 4px;
+      display: block;
+    }
+
+    .sidebar-logo .badge-admin {
+      display: inline-block;
+      margin-top: 8px;
+      background: var(--e47-blue);
+      color: white;
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      padding: 3px 8px;
+      border-radius: 2px;
+    }
+
+    .nav { padding: 16px 0; flex: 1; }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 24px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+      transition: all 0.2s;
+      border-left: 3px solid transparent;
+    }
+
+    .nav-item:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+
+    .nav-item.active {
+      color: var(--accent);
+      border-left-color: var(--accent);
+      background: rgba(79,195,247,0.05);
+    }
+
+    .nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+
+    .sidebar-bottom {
+      padding: 20px 24px;
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    /* MAIN */
+    .main { margin-left: 240px; padding: 32px; min-height: 100vh; }
+
+    .page { display: none; }
+    .page.active { display: block; }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 32px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .page-header h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 32px;
+      letter-spacing: 2px;
+      color: var(--accent);
+    }
+
+    .page-header p { font-size: 13px; color: var(--muted); }
+
+    /* GRID / CARD */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+      margin-bottom: 32px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+    }
+
+    .card h3 {
+      margin-bottom: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--accent);
+    }
+
+    .card p { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+    /* TABLA */
+    table { width: 100%; border-collapse: collapse; }
+
+    th {
+      text-align: left;
+      padding: 12px 16px;
+      background: var(--card);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    td { padding: 14px 16px; border-bottom: 1px solid var(--border); font-size: 13px; }
+
+    tr:hover { background: rgba(79,195,247,0.05); }
+
+    tr.totales td {
+      background: var(--dark);
+      font-weight: 700;
+      color: var(--accent);
+      border-top: 2px solid var(--border);
+    }
+
+    /* FORMULARIO */
+    .form-group { margin-bottom: 16px; }
+
+    .form-group label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      color: var(--text);
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(79,195,247,0.1);
+    }
+
+    .form-row { display: flex; gap: 16px; flex-wrap: wrap; }
+    .form-row .form-group { flex: 1; min-width: 140px; }
+
+    /* BOTONES */
+    .btn {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 4px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-primary { background: var(--e47-blue); color: white; }
+    .btn-primary:hover { background: #002d7a; }
+    .btn-success { background: var(--success); color: white; }
+    .btn-success:hover { background: #3a8c3f; }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-danger:hover { background: #b5001e; }
+    .btn-ghost { background: transparent; color: var(--accent); border: 1px solid var(--border); }
+    .btn-ghost:hover { background: rgba(79,195,247,0.05); border-color: var(--accent); }
+    .btn-sm, .btn-small { padding: 6px 12px; font-size: 11px; }
+
+    /* MODALES */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 200;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal.open { display: flex; }
+
+    .modal-content {
+      background: var(--dark);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      max-height: 90vh;
+      overflow-y: auto;
+      max-width: 600px;
+      width: 90%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+
+    .modal-header { padding: 24px; border-bottom: 1px solid var(--border); }
+    .modal-header h2 { font-family: 'Bebas Neue', sans-serif; font-size: 24px; letter-spacing: 1px; color: var(--accent); }
+    .modal-body { padding: 24px; }
+    .modal-footer { padding: 20px 24px; border-top: 1px solid var(--border); display: flex; gap: 12px; justify-content: flex-end; }
+
+    /* EMPTY STATE */
+    .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+    .empty-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.5; }
+
+    /* BADGES */
+    .badge { display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .badge-success { background: rgba(76,175,80,0.2); color: var(--success); }
+    .badge-warning { background: rgba(255,152,0,0.2); color: var(--warning); }
+    .badge-danger { background: rgba(228,0,43,0.2); color: var(--danger); }
+
+    .loading { padding: 40px; text-align: center; color: var(--muted); font-size: 13px; }
+
+    /* TOAST */
+    #toast-cont { position: fixed; bottom: 24px; right: 24px; z-index: 999; display: flex; flex-direction: column; gap: 8px; }
+    .toast {
+      background: var(--card); border: 1px solid var(--border); border-left: 3px solid var(--success);
+      color: var(--text); padding: 12px 18px; border-radius: 6px; font-size: 13px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4); animation: toastIn 0.2s ease;
+    }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* RESPONSIVO */
+    .topbar-movil { display: none; }
+    .menu-overlay { display: none; }
+
+    @media (max-width: 768px) {
+      .topbar-movil {
+        display: flex; align-items: center; gap: 10px;
+        position: fixed; top: 0; left: 0; right: 0; height: 54px; z-index: 250;
+        background: var(--card); border-bottom: 1px solid var(--border); padding: 0 14px;
+      }
+      .topbar-logo { height: 30px; width: auto; }
+      .topbar-titulo { font-size: 15px; font-weight: 600; color: var(--text); flex: 1; }
+      .hamburguesa { background: none; border: none; color: var(--text); font-size: 26px; cursor: pointer; padding: 4px 8px; line-height: 1; }
+
+      .sidebar {
+        position: fixed; top: 0; left: 0; height: 100%; width: 260px;
+        flex-direction: column; overflow-y: auto;
+        border-right: 1px solid var(--border); border-bottom: none;
+        transform: translateX(-100%); transition: transform 0.25s ease; z-index: 300;
+      }
+      .sidebar.abierto { transform: translateX(0); }
+      .menu-overlay.activo { display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 280; }
+
+      .nav { flex-direction: column; padding: 0; }
+      .nav-item { white-space: nowrap; flex-shrink: 0; }
+
+      .main { margin-left: 0; margin-top: 54px; padding: 20px; }
+      .grid { grid-template-columns: 1fr; }
+      .page-header { flex-direction: column; align-items: stretch; gap: 12px; }
+      .form-row { flex-direction: column; }
+
+      .page > div[id$="-tabla"] { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .modal-content { max-width: 95% !important; width: 95%; max-height: 90vh; overflow-y: auto; }
+      .btn { padding: 11px 16px; }
+      .modal-footer { flex-wrap: wrap; gap: 8px; }
+      .modal-footer .btn { flex: 1; min-width: 130px; justify-content: center; }
+      td .btn { margin: 2px 0; }
+    }
+
+    @media (max-width: 480px) {
+      .main { padding: 14px; }
+      .page-header h1 { font-size: 24px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- BARRA SUPERIOR (solo móvil) -->
+  <div class="topbar-movil">
+    <img src="/images/brand/logo.png" alt="E47" class="topbar-logo" onerror="this.style.display='none'">
+    <span class="topbar-titulo">Producciones</span>
+    <button class="hamburguesa" onclick="toggleMenuMovil()" aria-label="Abrir menú">☰</button>
+  </div>
+  <div class="menu-overlay" id="menuOverlay" onclick="cerrarMenuMovil()"></div>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="marca-fila">
+        <img src="/images/brand/logo.png" alt="E47" class="marca-logo" onerror="this.style.display='none'">
+        <span class="e47">EQUIPO 47</span>
+      </div>
+      <span class="admin-tag">Producciones</span>
+      <span class="badge-admin">ADMIN</span>
+    </div>
+    <nav class="nav">
+      <div class="nav-item active" data-pagina="clientes" onclick="mostrarPagina('clientes')">
+        <span class="icon">👥</span><span>Clientes</span>
+      </div>
+      <div class="nav-item" data-pagina="ordenes" onclick="mostrarPagina('ordenes')">
+        <span class="icon">📦</span><span>Órdenes de producción</span>
+      </div>
+      <div class="nav-item" data-pagina="presupuestos" onclick="mostrarPagina('presupuestos')">
+        <span class="icon">💶</span><span>Presupuestos</span>
+      </div>
+      <div class="nav-item" data-pagina="productos" onclick="mostrarPagina('productos')">
+        <span class="icon">🏷️</span><span>Productos</span>
+      </div>
+    </nav>
+    <div class="sidebar-bottom">
+      <button class="btn btn-ghost btn-sm" onclick="toggleTema()" id="btnTema" style="width: 100%; justify-content: center; margin-bottom: 8px;">☀️ Tema claro</button>
+      <button class="btn btn-ghost btn-sm" onclick="cerrarSesion()" style="width: 100%; justify-content: center;">🚪 Salir</button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- CLIENTES -->
+    <section class="page active" id="clientes-page">
+      <div class="page-header">
+        <div>
+          <h1>CLIENTES</h1>
+          <p>Directorio de clientes de producciones</p>
+        </div>
+        <div style="display:flex; gap:10px;">
+          <input type="text" id="buscadorClientes" placeholder="Buscar por nombre o CIF..." oninput="renderClientesTabla()" style="padding:10px 12px; background:var(--card); border:1px solid var(--border); border-radius:4px; color:var(--text); font-size:13px; min-width:220px;">
+          <button class="btn btn-primary" onclick="mostrarModalCliente()">➕ Nuevo cliente</button>
+        </div>
+      </div>
+      <div id="clientes-tabla" class="loading">Cargando...</div>
+    </section>
+
+    <!-- FICHA DE CLIENTE -->
+    <section class="page" id="ficha-cliente-page">
+      <div class="page-header">
+        <div>
+          <button class="btn btn-ghost btn-sm" onclick="mostrarPagina('clientes')" style="margin-bottom:12px;">← Volver a clientes</button>
+          <h1 id="fichaClienteNombre">CLIENTE</h1>
+          <p id="fichaClienteDatos">—</p>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn btn-ghost" onclick="abrirModalPDF(clienteFichaActualId)">📄 Generar presupuesto PDF</button>
+          <button class="btn btn-ghost" onclick="mostrarModalPresupuesto(null, clienteFichaActualId)">➕ Nuevo presupuesto</button>
+          <button class="btn btn-primary" onclick="mostrarModalPedido(null, clienteFichaActualId)">➕ Nuevo pedido</button>
+        </div>
+      </div>
+
+      <div class="form-row" style="margin-bottom:20px;">
+        <div class="form-group" style="max-width:240px;">
+          <label>Vista por año</label>
+          <select id="fichaAnio" onchange="aplicarFiltroFicha()">
+            <option value="">Todos los años</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <h3>📦 Producciones realizadas</h3>
+          <p id="fichaKpiProducciones" style="font-size: 32px; color: var(--accent); margin: 12px 0;">—</p>
+          <p>Total de pedidos registrados</p>
+        </div>
+        <div class="card">
+          <h3>💶 Inversión total</h3>
+          <p id="fichaKpiInversion" style="font-size: 32px; color: var(--accent); margin: 12px 0;">—</p>
+          <p>Suma del coste total de todos sus pedidos</p>
+        </div>
+        <div class="card">
+          <h3>🏷️ Productos solicitados</h3>
+          <p id="fichaKpiProductos" style="font-size: 14px; color: var(--text); margin: 12px 0; line-height:1.6;">—</p>
+          <p>Productos distintos que ha pedido este cliente</p>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px; background:transparent; border:none; padding:0;">
+        <h3 style="margin-bottom:0;">Histórico de producción</h3>
+      </div>
+      <div id="ficha-ordenes-tabla" class="loading">Cargando...</div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:32px; margin-bottom:16px;">
+        <h3 style="font-size:14px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--accent);">Presupuestos enviados</h3>
+        <button class="btn btn-ghost btn-sm" onclick="mostrarModalPresupuesto(null, clienteFichaActualId)">➕ Nuevo presupuesto</button>
+      </div>
+      <div id="ficha-presupuestos-tabla"></div>
+    </section>
+
+    <!-- ÓRDENES DE PRODUCCIÓN -->
+    <section class="page" id="ordenes-page">
+      <div class="page-header">
+        <div>
+          <h1>ÓRDENES DE PRODUCCIÓN</h1>
+          <p>Historial completo de pedidos de fabricación</p>
+        </div>
+        <button class="btn btn-primary" onclick="mostrarModalPedido()">➕ Nuevo pedido</button>
+      </div>
+      <div class="form-row" style="margin-bottom:20px;">
+        <div class="form-group">
+          <label>Cliente</label>
+          <select id="filtroOrdenesCliente" onchange="renderOrdenesTabla()">
+            <option value="">Todos los clientes</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Producto</label>
+          <select id="filtroOrdenesProducto" onchange="renderOrdenesTabla()">
+            <option value="">Todos los productos</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Año</label>
+          <select id="filtroOrdenesAnio" onchange="renderOrdenesTabla()">
+            <option value="">Todos los años</option>
+          </select>
+        </div>
+      </div>
+      <div id="ordenes-tabla" class="loading">Cargando...</div>
+    </section>
+
+    <!-- PRESUPUESTOS -->
+    <section class="page" id="presupuestos-page">
+      <div class="page-header">
+        <div>
+          <h1>PRESUPUESTOS</h1>
+          <p>Historial de precios y márgenes por cliente</p>
+        </div>
+        <div style="display:flex; gap:10px;">
+          <button class="btn btn-ghost" onclick="abrirModalPDF()">📄 Generar presupuesto PDF</button>
+          <button class="btn btn-primary" onclick="mostrarModalPresupuesto()">➕ Nuevo presupuesto</button>
+        </div>
+      </div>
+      <div class="form-row" style="margin-bottom:20px;">
+        <div class="form-group">
+          <label>Cliente</label>
+          <select id="filtroPresupuestosCliente" onchange="renderPresupuestosTabla()">
+            <option value="">Todos los clientes</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Producto</label>
+          <select id="filtroPresupuestosProducto" onchange="renderPresupuestosTabla()">
+            <option value="">Todos los productos</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Año</label>
+          <select id="filtroPresupuestosAnio" onchange="renderPresupuestosTabla()">
+            <option value="">Todos los años</option>
+          </select>
+        </div>
+      </div>
+      <div id="presupuestos-tabla" class="loading">Cargando...</div>
+    </section>
+
+    <!-- PRODUCTOS (catálogo) -->
+    <section class="page" id="productos-page">
+      <div class="page-header">
+        <div>
+          <h1>PRODUCTOS</h1>
+          <p>Catálogo de productos que se fabrican (camisetas, bolígrafos, pulseras...)</p>
+        </div>
+        <button class="btn btn-primary" onclick="mostrarModalProducto()">➕ Nuevo producto</button>
+      </div>
+      <div id="productos-tabla" class="loading">Cargando...</div>
+    </section>
+
+  </main>
+
+  <!-- MODAL CLIENTE -->
+  <div id="modalCliente" class="modal">
+    <div class="modal-content">
+      <div class="modal-header"><h2 id="tituloModalCliente">Nuevo cliente</h2></div>
+      <div class="modal-body">
+        <input type="hidden" id="clienteId">
+        <div class="form-group">
+          <label>Nombre de la empresa *</label>
+          <input type="text" id="clienteNombreEmpresa" placeholder="Ej: Eventos del Sur S.L.">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>CIF / NIF</label>
+            <input type="text" id="clienteCifNif" placeholder="B12345678">
+          </div>
+          <div class="form-group">
+            <label>Persona de contacto</label>
+            <input type="text" id="clientePersonaContacto" placeholder="Nombre y apellidos">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Teléfono</label>
+            <input type="text" id="clienteTelefono" placeholder="600 000 000">
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="clienteEmail" placeholder="contacto@empresa.com">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Dirección de envío / facturación</label>
+          <textarea id="clienteDireccion" rows="2" placeholder="Calle, número, ciudad, provincia, CP"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="cerrarModal('modalCliente')">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="guardarCliente()">💾 Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL PRODUCTO -->
+  <div id="modalProducto" class="modal">
+    <div class="modal-content" style="max-width:440px;">
+      <div class="modal-header"><h2 id="tituloModalProducto">Nuevo producto</h2></div>
+      <div class="modal-body">
+        <input type="hidden" id="productoId">
+        <div class="form-group">
+          <label>Nombre del producto *</label>
+          <input type="text" id="productoNombre" placeholder="Ej: Camisetas">
+        </div>
+        <div class="form-group" id="grupoProductoActivo" style="display:none;">
+          <label>Estado</label>
+          <select id="productoActivo">
+            <option value="true">Activo (aparece para elegir en pedidos)</option>
+            <option value="false">Inactivo (se conserva el histórico, pero no aparece)</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="cerrarModal('modalProducto')">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="guardarProducto()">💾 Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL PRESUPUESTO -->
+  <div id="modalPresupuesto" class="modal">
+    <div class="modal-content">
+      <div class="modal-header"><h2 id="tituloModalPresupuesto">Nuevo presupuesto</h2></div>
+      <div class="modal-body">
+        <input type="hidden" id="presupuestoId">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Cliente *</label>
+            <select id="presupuestoCliente"></select>
+          </div>
+          <div class="form-group">
+            <label>Producto *</label>
+            <select id="presupuestoProducto" onchange="sugerirVariantes('presupuesto')"></select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Variante / característica</label>
+            <input type="text" id="presupuestoVariante" list="variantesPresupuesto" placeholder="Ej: Sublimados" autocomplete="off">
+            <datalist id="variantesPresupuesto"></datalist>
+          </div>
+          <div class="form-group">
+            <label>Descripción (aparece en el PDF)</label>
+            <input type="text" id="presupuestoDescripcion" placeholder="Ej: Toallas de microfibra">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Fecha *</label>
+            <input type="date" id="presupuestoFecha">
+          </div>
+          <div class="form-group">
+            <label>Cantidad *</label>
+            <input type="number" id="presupuestoCantidad" min="1" step="1">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Coste interno unitario (€) *</label>
+            <input type="number" id="presupuestoCostInterno" min="0" step="0.0001" oninput="actualizarPreviewMargen()">
+          </div>
+          <div class="form-group">
+            <label>Precio al cliente unitario (€) *</label>
+            <input type="number" id="presupuestoPrecioCliente" min="0" step="0.0001" oninput="actualizarPreviewMargen()">
+          </div>
+        </div>
+        <div id="presupuestoPreviewMargen" style="background:var(--card); border:1px solid var(--border); border-radius:4px; padding:12px 16px; margin-bottom:16px; font-size:13px; color:var(--muted);">
+          Beneficio: — · Margen: —
+        </div>
+        <div class="form-group">
+          <label>Observaciones</label>
+          <textarea id="presupuestoObservaciones" rows="2" placeholder="Condiciones, validez, descuentos..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="cerrarModal('modalPresupuesto')">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="guardarPresupuesto()">💾 Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL GENERAR PDF -->
+  <div id="modalPDF" class="modal">
+    <div class="modal-content">
+      <div class="modal-header"><h2>Generar presupuesto PDF</h2></div>
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Cliente *</label>
+            <select id="pdfCliente" onchange="renderLineasPDF()"></select>
+          </div>
+          <div class="form-group">
+            <label>Fecha del presupuesto *</label>
+            <input type="date" id="pdfFecha">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nº de referencia (opcional)</label>
+            <input type="text" id="pdfReferencia" placeholder="Ej: 2026-014">
+          </div>
+          <div class="form-group" style="display:flex; align-items:flex-end;">
+            <label style="display:flex; align-items:center; gap:8px; text-transform:none; letter-spacing:0; font-size:13px; color:var(--text); cursor:pointer;">
+              <input type="checkbox" id="pdfValidez15" checked style="width:auto;">
+              Incluir cláusula "válido 15 días"
+            </label>
+          </div>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:8px; flex-wrap:wrap;">
+          <label style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted); margin:0;">Líneas a incluir (solo se muestra el precio del cliente)</label>
+          <div style="display:flex; gap:6px;">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="marcarLineasPDF(true)">Seleccionar todo</button>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="marcarLineasPDF(false)">Deseleccionar todo</button>
+          </div>
+        </div>
+        <div id="pdfLineas" style="border:1px solid var(--border); border-radius:4px; max-height:260px; overflow-y:auto;"></div>
+        <p style="font-size:12px; color:var(--muted); margin-top:10px;">🔒 El documento descargado nunca incluye el coste interno ni el margen; solo el precio final del cliente.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="cerrarModal('modalPDF')">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="descargarPDF()">📄 Descargar PDF</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL PEDIDO (orden de producción) -->
+  <div id="modalPedido" class="modal">
+    <div class="modal-content">
+      <div class="modal-header"><h2 id="tituloModalPedido">Nuevo pedido</h2></div>
+      <div class="modal-body">
+        <input type="hidden" id="pedidoId">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Cliente *</label>
+            <select id="pedidoCliente"></select>
+          </div>
+          <div class="form-group">
+            <label>Producto *</label>
+            <select id="pedidoProducto" onchange="sugerirVariantes('pedido')"></select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Variante / característica</label>
+          <input type="text" id="pedidoVariante" list="variantesPedido" placeholder="Ej: Sublimados" autocomplete="off">
+          <datalist id="variantesPedido"></datalist>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Fecha *</label>
+            <input type="date" id="pedidoFecha">
+          </div>
+          <div class="form-group">
+            <label>Cantidad *</label>
+            <input type="number" id="pedidoCantidad" min="1" step="1" oninput="actualizarPreviewCosteUnitario()">
+          </div>
+          <div class="form-group">
+            <label>Tipo de envío *</label>
+            <select id="pedidoTipoEnvio">
+              <option value="aereo">Aéreo (avión)</option>
+              <option value="maritimo">Marítimo (mar)</option>
+              <option value="terrestre">Terrestre</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Costes extra (diseño, moldes, aduanas...)</label>
+            <input type="number" id="pedidoCostesExtra" min="0" step="0.01" value="0">
+          </div>
+          <div class="form-group">
+            <label>Coste total del pedido *</label>
+            <input type="number" id="pedidoCosteTotal" min="0" step="0.01" oninput="actualizarPreviewCosteUnitario()">
+          </div>
+        </div>
+        <p id="pedidoPreviewCosteUnitario" style="font-size:13px; color:var(--muted); margin:-8px 0 16px;">Coste unitario: —</p>
+        <div class="form-group">
+          <label>Observaciones</label>
+          <textarea id="pedidoObservaciones" rows="2" placeholder="Cualquier particularidad de este pedido"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="cerrarModal('modalPedido')">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="guardarPedido()">💾 Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANTALLA DE LOGIN -->
+  <div id="login-overlay" style="position:fixed; inset:0; background:#0f1117; z-index:99999; display:flex; align-items:center; justify-content:center;">
+    <div style="background:var(--card); padding:32px; border-radius:14px; width:340px; max-width:90%; border:1px solid var(--border);">
+      <h2 style="margin:0 0 4px; color:var(--text); font-size:20px;">🔐 Equipo 47 · Producciones</h2>
+      <p style="font-size:13px; color:var(--muted); margin:0 0 20px;">Inicia sesión para continuar</p>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="loginEmail" placeholder="tu@email.com" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label>Contraseña</label>
+        <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter') iniciarSesion()">
+      </div>
+      <div id="loginError" style="display:none; color:var(--danger); font-size:13px; margin-bottom:12px;"></div>
+      <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="iniciarSesion()">Entrar</button>
+    </div>
+  </div>
+
+  <div id="toast-cont"></div>
+
+  <!-- SCRIPTS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfmake@0.2.20/build/pdfmake.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfmake@0.2.20/build/vfs_fonts.js"></script>
+  <script>
+    // ════════════════════════════════════════
+    //  CONFIGURACIÓN DE SUPABASE
+    //  Sustituye estos dos valores por los de tu proyecto
+    //  "equipo47-producciones" (Settings → API en Supabase).
+    // ════════════════════════════════════════
+    const SUPABASE_URL = 'https://ciszgyorsveumnrtcejn.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpc3pneW9yc3ZldW1ucnRjZWpuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3ODk0MDYsImV4cCI6MjA5NzM2NTQwNn0.O56WDFFdtZMc1mXpgCEkgQF8ZTT5tnCpzg8xN4H_qK8';
+    window.sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const sb = window.sb;
+
+    // ── ESTADO GLOBAL ───────────────────────
+    let clientes = [];
+    let productos = [];
+    let ordenes = [];
+    let presupuestos = [];
+    let clienteFichaActualId = null;
+
+    // ── UTILIDADES ──────────────────────────
+    function toast(msg) {
+      const cont = document.getElementById('toast-cont');
+      const el = document.createElement('div');
+      el.className = 'toast';
+      el.textContent = msg;
+      cont.appendChild(el);
+      setTimeout(() => el.remove(), 3500);
+    }
+
+    function confirmarAccion(msg) { return window.confirm(msg); }
+
+    function formatoEuro(n) {
+      return (Number(n) || 0).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
+    }
+
+    function formatoFecha(f) {
+      if (!f) return '—';
+      const d = new Date(f + 'T00:00:00');
+      return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    }
+
+    function abrirModal(id) { document.getElementById(id).classList.add('open'); }
+    function cerrarModal(id) { document.getElementById(id).classList.remove('open'); }
+
+    // ── NAVEGACIÓN ──────────────────────────
+    function toggleMenuMovil() {
+      document.getElementById('sidebar').classList.toggle('abierto');
+      document.getElementById('menuOverlay').classList.toggle('activo');
+    }
+    function cerrarMenuMovil() {
+      document.getElementById('sidebar').classList.remove('abierto');
+      document.getElementById('menuOverlay').classList.remove('activo');
+    }
+
+    function mostrarPagina(pagina) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+      document.getElementById(`${pagina}-page`).classList.add('active');
+      const navItem = document.querySelector(`.nav-item[data-pagina="${pagina}"]`);
+      if (navItem) navItem.classList.add('active');
+      cerrarMenuMovil();
+
+      if (pagina === 'clientes') renderClientesTabla();
+      if (pagina === 'ordenes') { poblarSelectsFiltroOrdenes(); renderOrdenesTabla(); }
+      if (pagina === 'presupuestos') { poblarSelectsFiltroPresupuestos(); renderPresupuestosTabla(); }
+      if (pagina === 'productos') renderProductosTabla();
+    }
+
+    // ── TEMA CLARO / OSCURO ─────────────────
+    function aplicarTema() {
+      const claro = localStorage.getItem('produccionesTema') === 'claro';
+      document.body.classList.toggle('tema-claro', claro);
+      const btn = document.getElementById('btnTema');
+      if (btn) btn.textContent = claro ? '🌙 Tema oscuro' : '☀️ Tema claro';
+    }
+    function toggleTema() {
+      const claro = document.body.classList.toggle('tema-claro');
+      localStorage.setItem('produccionesTema', claro ? 'claro' : 'oscuro');
+      const btn = document.getElementById('btnTema');
+      btn.textContent = claro ? '🌙 Tema oscuro' : '☀️ Tema claro';
+    }
+
+    // ── AUTENTICACIÓN ───────────────────────
+    async function iniciarSesion() {
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const errEl = document.getElementById('loginError');
+      errEl.style.display = 'none';
+      if (!email || !password) {
+        errEl.textContent = 'Escribe tu email y contraseña';
+        errEl.style.display = 'block';
+        return;
+      }
+      const { data, error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) {
+        errEl.textContent = '❌ Email o contraseña incorrectos';
+        errEl.style.display = 'block';
+        return;
+      }
+      document.getElementById('login-overlay').style.display = 'none';
+      await cargarTodo();
+    }
+
+    async function cerrarSesion() {
+      if (!confirmarAccion('¿Cerrar sesión?')) return;
+      await sb.auth.signOut();
+      location.reload();
+    }
+
+    // ════════════════════════════════════════
+    //  CARGA INICIAL DE DATOS
+    // ════════════════════════════════════════
+    async function cargarTodo() {
+      const [resClientes, resProductos, resOrdenes, resPresupuestos] = await Promise.all([
+        sb.from('clientes').select('*').order('nombre_empresa'),
+        sb.from('productos').select('*').order('nombre'),
+        sb.from('ordenes_produccion').select('*').order('fecha', { ascending: false }),
+        sb.from('presupuestos').select('*').order('fecha', { ascending: false })
+      ]);
+      clientes = resClientes.data || [];
+      productos = resProductos.data || [];
+      ordenes = resOrdenes.data || [];
+      presupuestos = resPresupuestos.data || [];
+      mostrarPagina('clientes');
+    }
+
+    // ════════════════════════════════════════
+    //  MÓDULO CLIENTES
+    // ════════════════════════════════════════
+    function renderClientesTabla() {
+      const cont = document.getElementById('clientes-tabla');
+      const filtro = (document.getElementById('buscadorClientes').value || '').toLowerCase().trim();
+      let lista = clientes.slice();
+      if (filtro) {
+        lista = lista.filter(c =>
+          (c.nombre_empresa || '').toLowerCase().includes(filtro) ||
+          (c.cif_nif || '').toLowerCase().includes(filtro)
+        );
+      }
+      if (!lista.length) {
+        cont.innerHTML = `<div class="empty"><div class="empty-icon">👥</div><p>${clientes.length ? 'Ningún cliente coincide con la búsqueda.' : 'No hay clientes todavía. Crea el primero con "Nuevo cliente".'}</p></div>`;
+        return;
+      }
+      let html = `<table><thead><tr>
+        <th>Empresa</th><th>CIF/NIF</th><th>Contacto</th><th>Teléfono</th><th>Email</th><th></th>
+      </tr></thead><tbody>`;
+      for (const c of lista) {
+        html += `<tr>
+          <td><strong>${c.nombre_empresa}</strong></td>
+          <td>${c.cif_nif || '—'}</td>
+          <td>${c.persona_contacto || '—'}</td>
+          <td>${c.telefono || '—'}</td>
+          <td>${c.email || '—'}</td>
+          <td style="white-space:nowrap; text-align:right;">
+            <button class="btn btn-ghost btn-sm" onclick="verFichaCliente('${c.id}')">👁️ Ver ficha</button>
+            <button class="btn btn-ghost btn-sm" onclick="mostrarModalCliente('${c.id}')">✏️</button>
+            <button class="btn btn-danger btn-sm" onclick="eliminarCliente('${c.id}')">🗑️</button>
+          </td>
+        </tr>`;
+      }
+      html += '</tbody></table>';
+      cont.innerHTML = html;
+    }
+
+    function mostrarModalCliente(id = null) {
+      if (id) {
+        const c = clientes.find(x => x.id === id);
+        document.getElementById('tituloModalCliente').textContent = 'Editar cliente';
+        document.getElementById('clienteId').value = c.id;
+        document.getElementById('clienteNombreEmpresa').value = c.nombre_empresa || '';
+        document.getElementById('clienteCifNif').value = c.cif_nif || '';
+        document.getElementById('clientePersonaContacto').value = c.persona_contacto || '';
+        document.getElementById('clienteTelefono').value = c.telefono || '';
+        document.getElementById('clienteEmail').value = c.email || '';
+        document.getElementById('clienteDireccion').value = c.direccion || '';
+      } else {
+        document.getElementById('tituloModalCliente').textContent = 'Nuevo cliente';
+        document.getElementById('clienteId').value = '';
+        document.getElementById('clienteNombreEmpresa').value = '';
+        document.getElementById('clienteCifNif').value = '';
+        document.getElementById('clientePersonaContacto').value = '';
+        document.getElementById('clienteTelefono').value = '';
+        document.getElementById('clienteEmail').value = '';
+        document.getElementById('clienteDireccion').value = '';
+      }
+      abrirModal('modalCliente');
+    }
+
+    async function guardarCliente() {
+      const nombre = document.getElementById('clienteNombreEmpresa').value.trim();
+      if (!nombre) { alert('❌ El nombre de la empresa es obligatorio'); return; }
+      const payload = {
+        nombre_empresa: nombre,
+        cif_nif: document.getElementById('clienteCifNif').value.trim() || null,
+        persona_contacto: document.getElementById('clientePersonaContacto').value.trim() || null,
+        telefono: document.getElementById('clienteTelefono').value.trim() || null,
+        email: document.getElementById('clienteEmail').value.trim() || null,
+        direccion: document.getElementById('clienteDireccion').value.trim() || null
+      };
+      const idStr = document.getElementById('clienteId').value;
+      let error;
+      if (idStr) {
+        ({ error } = await sb.from('clientes').update(payload).eq('id', idStr));
+      } else {
+        ({ error } = await sb.from('clientes').insert(payload));
+      }
+      if (error) { alert('❌ Error al guardar: ' + error.message); return; }
+      cerrarModal('modalCliente');
+      toast(idStr ? '✓ Cliente actualizado' : '✓ Cliente creado');
+      const { data } = await sb.from('clientes').select('*').order('nombre_empresa');
+      clientes = data || [];
+      renderClientesTabla();
+    }
+
+    async function eliminarCliente(id) {
+      const c = clientes.find(x => x.id === id);
+      if (!confirmarAccion(`¿Eliminar al cliente "${c?.nombre_empresa}"? Esta acción no se puede deshacer.`)) return;
+      const { error } = await sb.from('clientes').delete().eq('id', id);
+      if (error) {
+        alert('❌ No se puede eliminar: este cliente tiene producciones registradas. Si ya no lo necesitas, considera dejarlo simplemente sin usar.');
+        return;
+      }
+      toast('✓ Cliente eliminado');
+      clientes = clientes.filter(x => x.id !== id);
+      renderClientesTabla();
+    }
+
+    // ── FICHA DE CLIENTE ────────────────────
+    function verFichaCliente(id) {
+      clienteFichaActualId = id;
+      const c = clientes.find(x => x.id === id);
+      if (!c) return;
+
+      document.getElementById('fichaClienteNombre').textContent = c.nombre_empresa.toUpperCase();
+      const datos = [c.cif_nif, c.persona_contacto, c.telefono, c.email].filter(Boolean).join(' · ');
+      document.getElementById('fichaClienteDatos').textContent = datos || 'Sin datos de contacto adicionales';
+
+      // Poblar el selector de año con los años que tiene este cliente (órdenes + presupuestos)
+      const datosCliente = [
+        ...ordenes.filter(o => o.cliente_id === id),
+        ...presupuestos.filter(p => p.cliente_id === id)
+      ];
+      const selA = document.getElementById('fichaAnio');
+      selA.innerHTML = opcionesAnio(aniosDe(datosCliente));
+      selA.value = '';
+
+      aplicarFiltroFicha();
+
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.getElementById('ficha-cliente-page').classList.add('active');
+    }
+
+    // Aplica el año seleccionado a los KPIs y a las dos tablas de la ficha
+    function aplicarFiltroFicha() {
+      const id = clienteFichaActualId;
+      const anio = document.getElementById('fichaAnio').value;
+
+      let ordenesCliente = ordenes.filter(o => o.cliente_id === id);
+      let presupuestosCliente = presupuestos.filter(p => p.cliente_id === id);
+      if (anio) {
+        ordenesCliente = ordenesCliente.filter(o => (o.fecha || '').slice(0, 4) === anio);
+        presupuestosCliente = presupuestosCliente.filter(p => (p.fecha || '').slice(0, 4) === anio);
+      }
+
+      const inversionTotal = ordenesCliente.reduce((acc, o) => acc + Number(o.coste_total || 0), 0);
+      const productosIds = [...new Set(ordenesCliente.map(o => o.producto_id))];
+      const nombresProductos = productosIds.map(pid => productos.find(p => p.id === pid)?.nombre || '—');
+
+      document.getElementById('fichaKpiProducciones').textContent = ordenesCliente.length;
+      document.getElementById('fichaKpiInversion').textContent = formatoEuro(inversionTotal);
+      document.getElementById('fichaKpiProductos').textContent = nombresProductos.length
+        ? nombresProductos.join(', ')
+        : (anio ? 'Sin pedidos en ' + anio : 'Todavía no tiene pedidos');
+
+      renderTablaOrdenes('ficha-ordenes-tabla', ordenesCliente);
+      renderTablaPresupuestos('ficha-presupuestos-tabla', presupuestosCliente);
+    }
+
+    // ════════════════════════════════════════
+    //  MÓDULO PRODUCTOS (catálogo)
+    // ════════════════════════════════════════
+    function renderProductosTabla() {
+      const cont = document.getElementById('productos-tabla');
+      if (!productos.length) {
+        cont.innerHTML = `<div class="empty"><div class="empty-icon">🏷️</div><p>No hay productos todavía. Crea el primero con "Nuevo producto".</p></div>`;
+        return;
+      }
+      let html = `<table><thead><tr><th>Producto</th><th>Estado</th><th></th></tr></thead><tbody>`;
+      for (const p of productos) {
+        html += `<tr>
+          <td><strong>${p.nombre}</strong></td>
+          <td><span class="badge badge-${p.activo ? 'success' : 'warning'}">${p.activo ? 'Activo' : 'Inactivo'}</span></td>
+          <td style="text-align:right;">
+            <button class="btn btn-ghost btn-sm" onclick="mostrarModalProducto('${p.id}')">✏️ Editar</button>
+          </td>
+        </tr>`;
+      }
+      html += '</tbody></table>';
+      cont.innerHTML = html;
+    }
+
+    function mostrarModalProducto(id = null) {
+      const grupoActivo = document.getElementById('grupoProductoActivo');
+      if (id) {
+        const p = productos.find(x => x.id === id);
+        document.getElementById('tituloModalProducto').textContent = 'Editar producto';
+        document.getElementById('productoId').value = p.id;
+        document.getElementById('productoNombre').value = p.nombre;
+        document.getElementById('productoActivo').value = String(p.activo);
+        grupoActivo.style.display = 'block';
+      } else {
+        document.getElementById('tituloModalProducto').textContent = 'Nuevo producto';
+        document.getElementById('productoId').value = '';
+        document.getElementById('productoNombre').value = '';
+        document.getElementById('productoActivo').value = 'true';
+        grupoActivo.style.display = 'none';
+      }
+      abrirModal('modalProducto');
+    }
+
+    async function guardarProducto() {
+      const nombre = document.getElementById('productoNombre').value.trim();
+      if (!nombre) { alert('❌ El nombre del producto es obligatorio'); return; }
+      const idStr = document.getElementById('productoId').value;
+      const payload = { nombre, activo: document.getElementById('productoActivo').value === 'true' };
+      let error;
+      if (idStr) {
+        ({ error } = await sb.from('productos').update(payload).eq('id', idStr));
+      } else {
+        ({ error } = await sb.from('productos').insert({ nombre, activo: true }));
+      }
+      if (error) { alert('❌ Error al guardar: ' + error.message); return; }
+      cerrarModal('modalProducto');
+      toast(idStr ? '✓ Producto actualizado' : '✓ Producto creado');
+      const { data } = await sb.from('productos').select('*').order('nombre');
+      productos = data || [];
+      renderProductosTabla();
+    }
+
+    // ════════════════════════════════════════
+    //  MÓDULO ÓRDENES DE PRODUCCIÓN
+    // ════════════════════════════════════════
+    function etiquetaEnvio(tipo) {
+      return ({ aereo: 'Aéreo', maritimo: 'Marítimo', terrestre: 'Terrestre' })[tipo] || tipo;
+    }
+
+    // ── VARIANTES DE PRODUCTO ───────────────
+    // El catálogo guarda el "qué" (Calcetines); la variante es la característica
+    // distintiva que se escribe en cada presupuesto/pedido (Sublimados, Nylon...).
+    // Así las estadísticas siguen agrupando por producto en vez de dispersarse.
+    function etiquetaProducto(productoId, variante) {
+      const p = productos.find(x => x.id === productoId);
+      const base = p ? p.nombre : '—';
+      return variante ? base + ' · ' + variante : base;
+    }
+
+    // Rellena el desplegable de sugerencias con las variantes ya usadas
+    // para ese producto, para no tener que reescribirlas cada vez.
+    function sugerirVariantes(tipo) {
+      const selId = tipo === 'presupuesto' ? 'presupuestoProducto' : 'pedidoProducto';
+      const dlId = tipo === 'presupuesto' ? 'variantesPresupuesto' : 'variantesPedido';
+      const productoId = document.getElementById(selId).value;
+      const usadas = [...presupuestos, ...ordenes]
+        .filter(x => x.producto_id === productoId && x.variante)
+        .map(x => x.variante);
+      const unicas = [...new Set(usadas)].sort((a, b) => a.localeCompare(b));
+      document.getElementById(dlId).innerHTML = unicas.map(v => `<option value="${v}">`).join('');
+    }
+
+    // ── AÑOS (filtro temporal) ──────────────
+    function aniosDe(lista) {
+      const set = new Set(lista.map(x => (x.fecha || '').slice(0, 4)).filter(Boolean));
+      return [...set].sort((a, b) => b.localeCompare(a));
+    }
+    function opcionesAnio(anios) {
+      return '<option value="">Todos los años</option>' +
+        anios.map(a => `<option value="${a}">${a}</option>`).join('');
+    }
+
+    function poblarSelectsFiltroOrdenes() {
+      const selC = document.getElementById('filtroOrdenesCliente');
+      const selP = document.getElementById('filtroOrdenesProducto');
+      const vC = selC.value, vP = selP.value;
+      selC.innerHTML = '<option value="">Todos los clientes</option>' +
+        clientes.map(c => `<option value="${c.id}">${c.nombre_empresa}</option>`).join('');
+      selP.innerHTML = '<option value="">Todos los productos</option>' +
+        productos.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+      const selA = document.getElementById('filtroOrdenesAnio');
+      const vA = selA.value;
+      selA.innerHTML = opcionesAnio(aniosDe(ordenes));
+      selC.value = vC; selP.value = vP; selA.value = vA;
+    }
+
+    function renderOrdenesTabla() {
+      const filtroCliente = document.getElementById('filtroOrdenesCliente').value;
+      const filtroProducto = document.getElementById('filtroOrdenesProducto').value;
+      const filtroAnio = document.getElementById('filtroOrdenesAnio').value;
+      let lista = ordenes.slice();
+      if (filtroCliente) lista = lista.filter(o => o.cliente_id === filtroCliente);
+      if (filtroProducto) lista = lista.filter(o => o.producto_id === filtroProducto);
+      if (filtroAnio) lista = lista.filter(o => (o.fecha || '').slice(0, 4) === filtroAnio);
+      renderTablaOrdenes('ordenes-tabla', lista);
+    }
+
+    function renderTablaOrdenes(contenedorId, lista) {
+      const cont = document.getElementById(contenedorId);
+      if (!lista.length) {
+        cont.innerHTML = `<div class="empty"><div class="empty-icon">📦</div><p>No hay pedidos para mostrar todavía.</p></div>`;
+        return;
+      }
+      const ordenada = lista.slice().sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+      let html = `<table><thead><tr>
+        <th>Fecha</th><th>Cliente</th><th>Producto</th><th>Cant.</th><th>Envío</th>
+        <th>Costes extra</th><th>Coste total</th><th>Coste unitario</th><th>Obs.</th><th></th>
+      </tr></thead><tbody>`;
+      for (const o of ordenada) {
+        const cliente = clientes.find(c => c.id === o.cliente_id);
+        const producto = productos.find(p => p.id === o.producto_id);
+        html += `<tr>
+          <td style="white-space:nowrap;">${formatoFecha(o.fecha)}</td>
+          <td>${cliente ? cliente.nombre_empresa : '—'}</td>
+          <td>${producto ? producto.nombre : '—'}${o.variante ? ' <span style="color:var(--muted)">· ' + o.variante + '</span>' : ''}</td>
+          <td>${o.cantidad}</td>
+          <td>${etiquetaEnvio(o.tipo_envio)}</td>
+          <td>${formatoEuro(o.costes_extra)}</td>
+          <td>${formatoEuro(o.coste_total)}</td>
+          <td>${formatoEuro(o.coste_unitario)}</td>
+          <td style="max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${o.observaciones || ''}">${o.observaciones || '—'}</td>
+          <td style="white-space:nowrap; text-align:right;">
+            <button class="btn btn-ghost btn-sm" onclick="mostrarModalPedido('${o.id}')">✏️</button>
+            <button class="btn btn-danger btn-sm" onclick="eliminarPedido('${o.id}')">🗑️</button>
+          </td>
+        </tr>`;
+      }
+      const nProducciones = lista.length;
+      const cantidadTotal = lista.reduce((acc, o) => acc + Number(o.cantidad || 0), 0);
+      const costeAcumulado = lista.reduce((acc, o) => acc + Number(o.coste_total || 0), 0);
+      html += `<tr class="totales">
+        <td colspan="3">TOTAL — ${nProducciones} producción(es)</td>
+        <td>${cantidadTotal}</td>
+        <td></td>
+        <td></td>
+        <td>${formatoEuro(costeAcumulado)}</td>
+        <td colspan="3"></td>
+      </tr>`;
+      html += '</tbody></table>';
+      cont.innerHTML = html;
+    }
+
+    function poblarSelectsPedido(clientePrefillId) {
+      const selC = document.getElementById('pedidoCliente');
+      selC.innerHTML = clientes.map(c => `<option value="${c.id}">${c.nombre_empresa}</option>`).join('');
+      if (clientePrefillId) selC.value = clientePrefillId;
+
+      const selP = document.getElementById('pedidoProducto');
+      selP.innerHTML = productos.filter(p => p.activo).map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+    }
+
+    function actualizarPreviewCosteUnitario() {
+      const cantidad = parseFloat(document.getElementById('pedidoCantidad').value);
+      const costeTotal = parseFloat(document.getElementById('pedidoCosteTotal').value);
+      const el = document.getElementById('pedidoPreviewCosteUnitario');
+      if (cantidad > 0 && !isNaN(costeTotal)) {
+        el.textContent = `Coste unitario: ${formatoEuro(costeTotal / cantidad)}`;
+      } else {
+        el.textContent = 'Coste unitario: —';
+      }
+    }
+
+    function mostrarModalPedido(id = null, clientePrefillId = null) {
+      poblarSelectsPedido(clientePrefillId);
+      if (id) {
+        const o = ordenes.find(x => x.id === id);
+        // Si el producto de este pedido está inactivo, lo añadimos igualmente a la lista para que se pueda ver/conservar
+        const prod = productos.find(p => p.id === o.producto_id);
+        if (prod && !prod.activo) {
+          const selP = document.getElementById('pedidoProducto');
+          selP.innerHTML += `<option value="${prod.id}">${prod.nombre} (inactivo)</option>`;
+        }
+        document.getElementById('tituloModalPedido').textContent = 'Editar pedido';
+        document.getElementById('pedidoId').value = o.id;
+        document.getElementById('pedidoCliente').value = o.cliente_id;
+        document.getElementById('pedidoProducto').value = o.producto_id;
+        document.getElementById('pedidoFecha').value = o.fecha;
+        document.getElementById('pedidoCantidad').value = o.cantidad;
+        document.getElementById('pedidoTipoEnvio').value = o.tipo_envio;
+        document.getElementById('pedidoCostesExtra').value = o.costes_extra;
+        document.getElementById('pedidoCosteTotal').value = o.coste_total;
+        document.getElementById('pedidoObservaciones').value = o.observaciones || '';
+        sugerirVariantes('pedido');
+        document.getElementById('pedidoVariante').value = o.variante || '';
+      } else {
+        document.getElementById('tituloModalPedido').textContent = 'Nuevo pedido';
+        document.getElementById('pedidoId').value = '';
+        document.getElementById('pedidoFecha').value = new Date().toISOString().slice(0, 10);
+        document.getElementById('pedidoCantidad').value = '';
+        document.getElementById('pedidoTipoEnvio').value = 'terrestre';
+        document.getElementById('pedidoCostesExtra').value = 0;
+        document.getElementById('pedidoCosteTotal').value = '';
+        document.getElementById('pedidoObservaciones').value = '';
+        document.getElementById('pedidoVariante').value = '';
+        sugerirVariantes('pedido');
+      }
+      actualizarPreviewCosteUnitario();
+      abrirModal('modalPedido');
+    }
+
+    async function guardarPedido() {
+      const clienteId = document.getElementById('pedidoCliente').value;
+      const productoId = document.getElementById('pedidoProducto').value;
+      const fecha = document.getElementById('pedidoFecha').value;
+      const cantidad = parseInt(document.getElementById('pedidoCantidad').value);
+      const costeTotal = parseFloat(document.getElementById('pedidoCosteTotal').value);
+
+      if (!clienteId) { alert('❌ Elige un cliente'); return; }
+      if (!productoId) { alert('❌ Elige un producto'); return; }
+      if (!fecha) { alert('❌ Indica la fecha'); return; }
+      if (!cantidad || cantidad <= 0) { alert('❌ La cantidad debe ser mayor que 0'); return; }
+      if (isNaN(costeTotal) || costeTotal < 0) { alert('❌ Indica el coste total del pedido'); return; }
+
+      const payload = {
+        cliente_id: clienteId,
+        producto_id: productoId,
+        fecha,
+        cantidad,
+        variante: document.getElementById('pedidoVariante').value.trim() || null,
+        tipo_envio: document.getElementById('pedidoTipoEnvio').value,
+        costes_extra: parseFloat(document.getElementById('pedidoCostesExtra').value) || 0,
+        coste_total: costeTotal,
+        observaciones: document.getElementById('pedidoObservaciones').value.trim() || null
+      };
+      // coste_unitario NO se incluye: es una columna calculada por la propia base de datos.
+
+      const idStr = document.getElementById('pedidoId').value;
+      let error;
+      if (idStr) {
+        ({ error } = await sb.from('ordenes_produccion').update(payload).eq('id', idStr));
+      } else {
+        ({ error } = await sb.from('ordenes_produccion').insert(payload));
+      }
+      if (error) { alert('❌ Error al guardar: ' + error.message); return; }
+      cerrarModal('modalPedido');
+      toast(idStr ? '✓ Pedido actualizado' : '✓ Pedido creado');
+
+      const { data } = await sb.from('ordenes_produccion').select('*').order('fecha', { ascending: false });
+      ordenes = data || [];
+
+      if (document.getElementById('ficha-cliente-page').classList.contains('active')) {
+        verFichaCliente(clienteFichaActualId);
+      } else {
+        renderOrdenesTabla();
+      }
+    }
+
+    async function eliminarPedido(id) {
+      if (!confirmarAccion('¿Eliminar este pedido? Esta acción no se puede deshacer.')) return;
+      const { error } = await sb.from('ordenes_produccion').delete().eq('id', id);
+      if (error) { alert('❌ Error al eliminar: ' + error.message); return; }
+      toast('✓ Pedido eliminado');
+      ordenes = ordenes.filter(x => x.id !== id);
+      if (document.getElementById('ficha-cliente-page').classList.contains('active')) {
+        verFichaCliente(clienteFichaActualId);
+      } else {
+        renderOrdenesTabla();
+      }
+    }
+
+
+    // ════════════════════════════════════════
+    //  MÓDULO PRESUPUESTOS
+    // ════════════════════════════════════════
+    function poblarSelectsFiltroPresupuestos() {
+      const selC = document.getElementById('filtroPresupuestosCliente');
+      const selP = document.getElementById('filtroPresupuestosProducto');
+      const vC = selC.value, vP = selP.value;
+      selC.innerHTML = '<option value="">Todos los clientes</option>' +
+        clientes.map(c => `<option value="${c.id}">${c.nombre_empresa}</option>`).join('');
+      selP.innerHTML = '<option value="">Todos los productos</option>' +
+        productos.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+      const selA = document.getElementById('filtroPresupuestosAnio');
+      const vA = selA.value;
+      selA.innerHTML = opcionesAnio(aniosDe(presupuestos));
+      selC.value = vC; selP.value = vP; selA.value = vA;
+    }
+
+    function colorMargen(pct) {
+      const n = Number(pct);
+      if (n >= 30) return 'var(--success)';
+      if (n >= 15) return 'var(--warning)';
+      return 'var(--danger)';
+    }
+
+    function renderTablaPresupuestos(contenedorId, lista) {
+      const cont = document.getElementById(contenedorId);
+      if (!lista.length) {
+        cont.innerHTML = `<div class="empty"><div class="empty-icon">💶</div><p>No hay presupuestos para mostrar todavía.</p></div>`;
+        return;
+      }
+      const ordenada = lista.slice().sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+      let html = `<table><thead><tr>
+        <th>Fecha</th><th>Cliente</th><th>Producto</th><th>Cant.</th>
+        <th>Coste interno</th><th>Precio cliente</th><th>Beneficio</th><th>Margen</th><th>Obs.</th><th></th>
+      </tr></thead><tbody>`;
+      for (const p of ordenada) {
+        const cliente = clientes.find(c => c.id === p.cliente_id);
+        const producto = productos.find(pr => pr.id === p.producto_id);
+        const margenColor = colorMargen(p.margen_pct);
+        html += `<tr>
+          <td style="white-space:nowrap;">${formatoFecha(p.fecha)}</td>
+          <td>${cliente ? cliente.nombre_empresa : '—'}</td>
+          <td>${producto ? producto.nombre : '—'}${p.variante ? ' <span style="color:var(--muted)">· ' + p.variante + '</span>' : ''}</td>
+          <td>${p.cantidad}</td>
+          <td>${formatoEuro(p.coste_interno_unitario)}</td>
+          <td>${formatoEuro(p.precio_cliente_unitario)}</td>
+          <td style="color:${colorMargen(p.margen_pct)}">${formatoEuro(p.beneficio_unitario)}</td>
+          <td><span style="font-weight:700; color:${margenColor}">${Number(p.margen_pct).toFixed(1)}%</span></td>
+          <td style="max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${p.observaciones || ''}">${p.observaciones || '—'}</td>
+          <td style="white-space:nowrap; text-align:right;">
+            <button class="btn btn-ghost btn-sm" onclick="mostrarModalPresupuesto('${p.id}')">✏️</button>
+            <button class="btn btn-danger btn-sm" onclick="eliminarPresupuesto('${p.id}')">🗑️</button>
+          </td>
+        </tr>`;
+      }
+      html += '</tbody></table>';
+      cont.innerHTML = html;
+    }
+
+    function renderPresupuestosTabla() {
+      const filtroCliente = document.getElementById('filtroPresupuestosCliente').value;
+      const filtroProducto = document.getElementById('filtroPresupuestosProducto').value;
+      const filtroAnio = document.getElementById('filtroPresupuestosAnio').value;
+      let lista = presupuestos.slice();
+      if (filtroCliente) lista = lista.filter(p => p.cliente_id === filtroCliente);
+      if (filtroProducto) lista = lista.filter(p => p.producto_id === filtroProducto);
+      if (filtroAnio) lista = lista.filter(p => (p.fecha || '').slice(0, 4) === filtroAnio);
+      renderTablaPresupuestos('presupuestos-tabla', lista);
+    }
+
+    function actualizarPreviewMargen() {
+      const coste = parseFloat(document.getElementById('presupuestoCostInterno').value);
+      const precio = parseFloat(document.getElementById('presupuestoPrecioCliente').value);
+      const el = document.getElementById('presupuestoPreviewMargen');
+      if (!isNaN(coste) && !isNaN(precio) && precio > 0) {
+        const beneficio = precio - coste;
+        const margen = (beneficio / precio * 100).toFixed(1);
+        const color = colorMargen(margen);
+        el.innerHTML = `Beneficio: <strong style="color:${color}">${formatoEuro(beneficio)}</strong> &nbsp;·&nbsp; Margen: <strong style="color:${color}">${margen}%</strong>`;
+      } else {
+        el.innerHTML = 'Beneficio: — · Margen: —';
+      }
+    }
+
+    function poblarSelectsPresupuesto(clientePrefillId) {
+      const selC = document.getElementById('presupuestoCliente');
+      selC.innerHTML = clientes.map(c => `<option value="${c.id}">${c.nombre_empresa}</option>`).join('');
+      if (clientePrefillId) selC.value = clientePrefillId;
+      const selP = document.getElementById('presupuestoProducto');
+      selP.innerHTML = productos.filter(p => p.activo).map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+    }
+
+    function mostrarModalPresupuesto(id = null, clientePrefillId = null) {
+      poblarSelectsPresupuesto(clientePrefillId);
+      if (id) {
+        const p = presupuestos.find(x => x.id === id);
+        const prod = productos.find(pr => pr.id === p.producto_id);
+        if (prod && !prod.activo) {
+          const selP = document.getElementById('presupuestoProducto');
+          selP.innerHTML += `<option value="${prod.id}">${prod.nombre} (inactivo)</option>`;
+        }
+        document.getElementById('tituloModalPresupuesto').textContent = 'Editar presupuesto';
+        document.getElementById('presupuestoId').value = p.id;
+        document.getElementById('presupuestoCliente').value = p.cliente_id;
+        document.getElementById('presupuestoProducto').value = p.producto_id;
+        document.getElementById('presupuestoFecha').value = p.fecha;
+        document.getElementById('presupuestoCantidad').value = p.cantidad;
+        document.getElementById('presupuestoCostInterno').value = p.coste_interno_unitario;
+        document.getElementById('presupuestoPrecioCliente').value = p.precio_cliente_unitario;
+        document.getElementById('presupuestoObservaciones').value = p.observaciones || '';
+        document.getElementById('presupuestoDescripcion').value = p.descripcion || '';
+        sugerirVariantes('presupuesto');
+        document.getElementById('presupuestoVariante').value = p.variante || '';
+      } else {
+        document.getElementById('tituloModalPresupuesto').textContent = 'Nuevo presupuesto';
+        document.getElementById('presupuestoId').value = '';
+        document.getElementById('presupuestoFecha').value = new Date().toISOString().slice(0, 10);
+        document.getElementById('presupuestoCantidad').value = '';
+        document.getElementById('presupuestoCostInterno').value = '';
+        document.getElementById('presupuestoPrecioCliente').value = '';
+        document.getElementById('presupuestoObservaciones').value = '';
+        document.getElementById('presupuestoDescripcion').value = '';
+        document.getElementById('presupuestoVariante').value = '';
+        sugerirVariantes('presupuesto');
+      }
+      actualizarPreviewMargen();
+      abrirModal('modalPresupuesto');
+    }
+
+    async function guardarPresupuesto() {
+      const clienteId = document.getElementById('presupuestoCliente').value;
+      const productoId = document.getElementById('presupuestoProducto').value;
+      const fecha = document.getElementById('presupuestoFecha').value;
+      const cantidad = parseInt(document.getElementById('presupuestoCantidad').value);
+      const costeInterno = parseFloat(document.getElementById('presupuestoCostInterno').value);
+      const precioCliente = parseFloat(document.getElementById('presupuestoPrecioCliente').value);
+
+      if (!clienteId) { alert('❌ Elige un cliente'); return; }
+      if (!productoId) { alert('❌ Elige un producto'); return; }
+      if (!fecha) { alert('❌ Indica la fecha'); return; }
+      if (!cantidad || cantidad <= 0) { alert('❌ La cantidad debe ser mayor que 0'); return; }
+      if (isNaN(costeInterno) || costeInterno < 0) { alert('❌ Indica el coste interno unitario'); return; }
+      if (isNaN(precioCliente) || precioCliente < 0) { alert('❌ Indica el precio al cliente'); return; }
+
+      const payload = {
+        cliente_id: clienteId,
+        producto_id: productoId,
+        fecha,
+        cantidad,
+        coste_interno_unitario: costeInterno,
+        precio_cliente_unitario: precioCliente,
+        variante: document.getElementById('presupuestoVariante').value.trim() || null,
+        descripcion: document.getElementById('presupuestoDescripcion').value.trim() || null,
+        observaciones: document.getElementById('presupuestoObservaciones').value.trim() || null
+      };
+      // beneficio_unitario y margen_pct son columnas calculadas: no se incluyen.
+
+      const idStr = document.getElementById('presupuestoId').value;
+      let error;
+      if (idStr) {
+        ({ error } = await sb.from('presupuestos').update(payload).eq('id', idStr));
+      } else {
+        ({ error } = await sb.from('presupuestos').insert(payload));
+      }
+      if (error) { alert('❌ Error al guardar: ' + error.message); return; }
+      cerrarModal('modalPresupuesto');
+      toast(idStr ? '✓ Presupuesto actualizado' : '✓ Presupuesto creado');
+
+      const { data } = await sb.from('presupuestos').select('*').order('fecha', { ascending: false });
+      presupuestos = data || [];
+
+      if (document.getElementById('ficha-cliente-page').classList.contains('active')) {
+        verFichaCliente(clienteFichaActualId);
+      } else {
+        renderPresupuestosTabla();
+      }
+    }
+
+    async function eliminarPresupuesto(id) {
+      if (!confirmarAccion('¿Eliminar este presupuesto? Esta acción no se puede deshacer.')) return;
+      const { error } = await sb.from('presupuestos').delete().eq('id', id);
+      if (error) { alert('❌ Error al eliminar: ' + error.message); return; }
+      toast('✓ Presupuesto eliminado');
+      presupuestos = presupuestos.filter(x => x.id !== id);
+      if (document.getElementById('ficha-cliente-page').classList.contains('active')) {
+        verFichaCliente(clienteFichaActualId);
+      } else {
+        renderPresupuestosTabla();
+      }
+    }
+
+
+    // ════════════════════════════════════════
+    //  MÓDULO GENERACIÓN DE PDF (presupuesto comercial)
+    // ════════════════════════════════════════
+// Constructor del docDefinition de pdfmake para el presupuesto comercial de Equipo 47.
+// IMPORTANTE (privacidad): este documento SOLO usa el precio del cliente.
+// Nunca recibe ni imprime coste interno, beneficio ni margen.
+
+const EMPRESA_PDF = {
+  legal: 'GRUPO ESTUDIO E INVERSIÓN 47 S.L.',
+  cif: 'B56538309',
+  direccion: 'C/ Torquemada Nº18 Bajo 4. 28043, Madrid',
+  emailProducciones: 'PRODUCCIONES@EQUIPO47.COM',
+  web: 'EQUIPO47.COM'
+};
+
+const COL_PDF = {
+  navy: '#2E3D54',
+  orange: '#E8622A',
+  band: '#F4F5F7',
+  line: '#E4E7EB',
+  gray: '#6B7280',
+  dark: '#1F2733'
+};
+
+function pdfEuro(n) {
+  const num = Number(n) || 0;
+  return num.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' €';
+}
+
+function pdfFecha(iso) {
+  if (!iso) return '';
+  const d = new Date(iso + 'T00:00:00');
+  return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+// datos = { clienteNombre, fecha (iso), referencia?, validez15 (bool), lineas: [{producto, descripcion, cantidad, precioUnitario}] }
+// logoDataUrl = dataURL de la imagen del logo, o null (se dibuja "E47" en texto)
+// Logo E47 en blanco (vectorial) para incrustar en el PDF sobre el fondo navy.
+    const LOGO_SVG = `<svg fill="#ffffff" id="Capa_4_copia_3" data-name="Capa 4 copia 3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500"> <g> <polygon points="72 279.97 22.33 279.98 0 341.17 129.36 341.17 143.2 302.72 63.75 302.59 72 279.97"/> <polygon points="54.02 193.13 183.45 192.91 195.84 158.97 66.47 159 54.02 193.13"/> <polygon points="49.27 206.12 41.02 228.74 27.13 266.83 144.12 266.79 158.02 228.71 90.7 228.73 98.95 206.11 49.27 206.12"/> <polygon points="485.43 197.13 500 158.88 362.44 158.83 351.67 188.32 348.44 197.17 434.34 197.15 315.57 341.17 366.65 341.17 485.43 197.13"/> </g> <g> <polygon points="260.42 266.8 260.42 266.8 222.37 266.81 278.68 216.74 263.11 259.43 307 259.54 323.36 215.17 343.67 158.96 299.43 158.85 169.39 266.82 156.33 302.6 291.27 302.57 291.27 302.57 313.34 302.56 326.39 266.78 260.42 266.8"/> <polygon points="244.6 310.15 233.29 341.15 277.2 341.13 288.51 310.14 244.6 310.15"/> </g> </svg>`;
+
+    function construirDocDefinition(datos, logoDataUrl) {
+  const lineas = datos.lineas || [];
+  let total = 0;
+
+  const filas = [[
+    { text: 'PRODUCTO', style: 'th' },
+    { text: 'DESCRIPCIÓN', style: 'th' },
+    { text: 'UDS.', style: 'th', alignment: 'center' },
+    { text: 'PRECIO UNIDAD', style: 'th', alignment: 'right' },
+    { text: 'TOTAL SIN IVA', style: 'th', alignment: 'right' }
+  ]];
+
+  lineas.forEach((l, i) => {
+    const lineaTotal = (Number(l.cantidad) || 0) * (Number(l.precioUnitario) || 0);
+    total += lineaTotal;
+    const bg = i % 2 === 0 ? null : COL_PDF.band;
+    filas.push([
+      { text: l.producto || '', bold: true, color: COL_PDF.dark, fillColor: bg, margin: [0, 6, 0, 6] },
+      { text: l.descripcion || '', color: COL_PDF.gray, fillColor: bg, margin: [0, 6, 0, 6] },
+      { text: String(l.cantidad ?? ''), alignment: 'center', color: COL_PDF.dark, fillColor: bg, margin: [0, 6, 0, 6] },
+      { text: pdfEuro(l.precioUnitario), alignment: 'right', color: COL_PDF.dark, fillColor: bg, margin: [0, 6, 0, 6] },
+      { text: pdfEuro(lineaTotal), alignment: 'right', bold: true, color: COL_PDF.dark, fillColor: bg, margin: [0, 6, 0, 6] }
+    ]);
+  });
+
+  // Bloque de marca (navy) con logo + datos fiscales
+  const bloqueMarca = {
+    table: {
+      widths: ['*'],
+      body: [[{
+        fillColor: COL_PDF.navy,
+        margin: [16, 14, 16, 14],
+        stack: [
+          logoDataUrl && logoDataUrl.indexOf('<svg') !== -1
+            ? { svg: logoDataUrl, width: 66, margin: [0, 0, 0, 8] }
+            : (logoDataUrl
+                ? { image: logoDataUrl, width: 66, margin: [0, 0, 0, 8] }
+                : { text: 'E47', color: '#fff', bold: true, italics: true, fontSize: 30, margin: [0, 0, 0, 6] }),
+          { text: EMPRESA_PDF.legal, color: '#ffffff', bold: true, fontSize: 10.5 },
+          { text: 'CIF: ' + EMPRESA_PDF.cif, color: '#C9D0DB', fontSize: 8, margin: [0, 5, 0, 0] },
+          { text: EMPRESA_PDF.direccion, color: '#C9D0DB', fontSize: 8, margin: [0, 1, 0, 0] }
+        ]
+      }]]
+    },
+    layout: 'noBorders'
+  };
+
+  const cabecera = {
+    columns: [
+      { width: '58%', stack: [bloqueMarca] },
+      {
+        width: '42%',
+        margin: [0, 10, 0, 0],
+        stack: [
+          { text: 'PRESUPUESTO', color: COL_PDF.navy, bold: true, fontSize: 26, alignment: 'right' },
+          { canvas: [{ type: 'rect', x: 92, y: 6, w: 90, h: 3, color: COL_PDF.orange }] },
+          datos.referencia
+            ? { text: 'Nº ' + datos.referencia, color: COL_PDF.gray, fontSize: 9, alignment: 'right', margin: [0, 12, 0, 0] }
+            : {}
+        ]
+      }
+    ]
+  };
+
+  // Banda de cliente / fecha / validez
+  const celdasInfo = [
+    {
+      stack: [
+        { text: 'CLIENTE', color: COL_PDF.orange, bold: true, fontSize: 9 },
+        { text: datos.clienteNombre || '—', color: COL_PDF.dark, bold: true, fontSize: 13, margin: [0, 3, 0, 0] }
+      ],
+      margin: [14, 12, 14, 12]
+    },
+    {
+      stack: [
+        { text: 'FECHA', color: COL_PDF.orange, bold: true, fontSize: 9 },
+        { text: pdfFecha(datos.fecha), color: COL_PDF.dark, fontSize: 13, margin: [0, 3, 0, 0] }
+      ],
+      margin: [14, 12, 14, 12]
+    }
+  ];
+  if (datos.validez15) {
+    celdasInfo.push({
+      stack: [
+        { text: 'VALIDEZ', color: COL_PDF.orange, bold: true, fontSize: 9 },
+        { text: '15 días naturales', color: COL_PDF.dark, fontSize: 13, margin: [0, 3, 0, 0] }
+      ],
+      margin: [14, 12, 14, 12]
+    });
+  }
+
+  const bandaInfo = {
+    table: { widths: celdasInfo.map(() => '*'), body: [celdasInfo] },
+    layout: {
+      fillColor: () => COL_PDF.band,
+      hLineWidth: () => 0,
+      vLineWidth: () => 0
+    },
+    margin: [0, 22, 0, 22]
+  };
+
+  const tabla = {
+    table: { headerRows: 1, widths: ['20%', '*', '10%', '17%', '18%'], body: filas },
+    layout: {
+      hLineWidth: (i) => (i === 1 ? 0 : 0.6),
+      vLineWidth: () => 0,
+      hLineColor: () => COL_PDF.line,
+      fillColor: (rowIndex) => (rowIndex === 0 ? COL_PDF.navy : null),
+      paddingLeft: () => 8, paddingRight: () => 8,
+      paddingTop: () => 0, paddingBottom: () => 0
+    }
+  };
+
+  const totales = {
+    columns: [
+      { width: '*', text: '' },
+      {
+        width: 'auto',
+        margin: [0, 16, 0, 0],
+        table: {
+          body: [[
+            { text: 'TOTAL SIN IVA', bold: true, color: '#fff', fillColor: COL_PDF.navy, fontSize: 11, margin: [14, 8, 14, 8] },
+            { text: pdfEuro(total), bold: true, color: '#fff', fillColor: COL_PDF.navy, fontSize: 13, alignment: 'right', margin: [14, 8, 14, 8] }
+          ]]
+        },
+        layout: 'noBorders'
+      }
+    ]
+  };
+
+  const notaIva = { text: 'Todos los precios se indican SIN IVA.', italics: true, color: COL_PDF.gray, fontSize: 8, alignment: 'right', margin: [0, 6, 0, 0] };
+
+  return {
+    pageSize: 'A4',
+    pageMargins: [42, 46, 42, 92],
+    content: [cabecera, bandaInfo, tabla, totales, notaIva],
+    styles: {
+      th: { color: '#ffffff', bold: true, fontSize: 9, margin: [0, 8, 0, 8] }
+    },
+    defaultStyle: { font: 'Roboto', fontSize: 10, color: COL_PDF.dark },
+    footer: function () {
+      const stack = [];
+      if (datos.validez15) {
+        stack.push({
+          text: 'Validez del presupuesto: 15 días naturales. El precio final podría variar en función de las modificaciones de diseño o ajustes definitivos solicitados por el cliente.',
+          alignment: 'center', italics: true, fontSize: 8, color: COL_PDF.gray, margin: [70, 0, 70, 10]
+        });
+      }
+      stack.push({
+        table: {
+          widths: ['*', '*'],
+          body: [[
+            { text: EMPRESA_PDF.emailProducciones, color: '#fff', fillColor: COL_PDF.navy, alignment: 'center', fontSize: 9, bold: true, margin: [0, 8, 0, 8] },
+            { text: EMPRESA_PDF.web, color: '#fff', fillColor: COL_PDF.orange, alignment: 'center', fontSize: 9, bold: true, margin: [0, 8, 0, 8] }
+          ]]
+        },
+        layout: 'noBorders',
+        margin: [42, 0, 42, 0]
+      });
+      return stack;
+    }
+  };
+}
+
+    // Cargar el logo del sitio como dataURL (para incrustarlo en el PDF).
+    // Si no se puede (p.ej. en local sin la imagen), el PDF usa el texto "E47".
+    async function obtenerLogoDataUrl() {
+      try {
+        const resp = await fetch('/images/brand/logo.png');
+        if (!resp.ok) return null;
+        const blob = await resp.blob();
+        return await new Promise((res) => {
+          const r = new FileReader();
+          r.onloadend = () => res(r.result);
+          r.onerror = () => res(null);
+          r.readAsDataURL(blob);
+        });
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function abrirModalPDF(clientePrefillId = null) {
+      const sel = document.getElementById('pdfCliente');
+      sel.innerHTML = clientes.map(c => `<option value="${c.id}">${c.nombre_empresa}</option>`).join('');
+      if (clientePrefillId) sel.value = clientePrefillId;
+      document.getElementById('pdfFecha').value = new Date().toISOString().slice(0, 10);
+      document.getElementById('pdfReferencia').value = '';
+      document.getElementById('pdfValidez15').checked = true;
+      renderLineasPDF();
+      abrirModal('modalPDF');
+    }
+
+    // Punto 5 de las mejoras: marcar o desmarcar todas las líneas de golpe,
+    // en vez de ir desmarcándolas una a una.
+    function marcarLineasPDF(valor) {
+      document.querySelectorAll('.pdf-linea-chk').forEach(chk => { chk.checked = valor; });
+    }
+
+    function renderLineasPDF() {
+      const clienteId = document.getElementById('pdfCliente').value;
+      const cont = document.getElementById('pdfLineas');
+      const lineas = presupuestos.filter(p => p.cliente_id === clienteId);
+      if (!lineas.length) {
+        cont.innerHTML = '<p style="padding:16px; color:var(--muted); font-size:13px;">Este cliente no tiene presupuestos guardados. Crea uno antes de generar el PDF.</p>';
+        return;
+      }
+      cont.innerHTML = lineas.map(p => {
+        const prod = productos.find(x => x.id === p.producto_id);
+        const totalLinea = (Number(p.cantidad) || 0) * (Number(p.precio_cliente_unitario) || 0);
+        return `<label style="display:flex; align-items:center; gap:10px; padding:10px 14px; border-bottom:1px solid var(--border); cursor:pointer; font-size:13px;">
+          <input type="checkbox" class="pdf-linea-chk" value="${p.id}" checked style="width:auto;">
+          <span style="flex:1;">
+            <strong>${etiquetaProducto(p.producto_id, p.variante)}</strong>${p.descripcion ? ' · <span style="color:var(--muted)">' + p.descripcion + '</span>' : ''}<br>
+            <span style="color:var(--muted); font-size:12px;">${formatoFecha(p.fecha)} · ${p.cantidad} uds × ${formatoEuro(p.precio_cliente_unitario)} = ${formatoEuro(totalLinea)}</span>
+          </span>
+        </label>`;
+      }).join('');
+    }
+
+    async function descargarPDF() {
+      const clienteId = document.getElementById('pdfCliente').value;
+      const cliente = clientes.find(c => c.id === clienteId);
+      if (!cliente) { alert('❌ Elige un cliente'); return; }
+
+      const idsSeleccionados = Array.from(document.querySelectorAll('.pdf-linea-chk:checked')).map(chk => chk.value);
+      if (!idsSeleccionados.length) { alert('❌ Marca al menos una línea para incluir en el presupuesto'); return; }
+
+      // Solo se toman datos comerciales: producto, descripción, cantidad y PRECIO DEL CLIENTE.
+      // Nunca coste interno, beneficio ni margen.
+      const lineas = idsSeleccionados.map(id => {
+        const p = presupuestos.find(x => x.id === id);
+        return {
+          producto: etiquetaProducto(p.producto_id, p.variante),
+          descripcion: p.descripcion || '',
+          cantidad: p.cantidad,
+          precioUnitario: p.precio_cliente_unitario
+        };
+      });
+
+      const datos = {
+        clienteNombre: cliente.nombre_empresa,
+        fecha: document.getElementById('pdfFecha').value,
+        referencia: document.getElementById('pdfReferencia').value.trim() || null,
+        validez15: document.getElementById('pdfValidez15').checked,
+        lineas
+      };
+
+      const dd = construirDocDefinition(datos, LOGO_SVG);
+      const nombreArchivo = `Presupuesto_${cliente.nombre_empresa.replace(/[^a-zA-Z0-9]/g, '_')}_${datos.fecha}.pdf`;
+      pdfMake.createPdf(dd).download(nombreArchivo);
+      toast('✓ Presupuesto generado');
+      cerrarModal('modalPDF');
+    }
+
+    // ── INIT ────────────────────────────────
+    document.addEventListener('DOMContentLoaded', async () => {
+      aplicarTema();
+      const { data: { session } } = await sb.auth.getSession();
+      if (session) {
+        document.getElementById('login-overlay').style.display = 'none';
+        await cargarTodo();
+      } else {
+        document.getElementById('login-overlay').style.display = 'flex';
+      }
+    });
+  </script>
+</body>
+</html>
