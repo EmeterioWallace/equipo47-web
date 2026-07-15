@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
+
     :root {
       --black: #0a0a0a;
       --dark: #141414;
@@ -370,10 +371,41 @@
       .main { padding: 14px; }
       .page-header h1 { font-size: 24px; }
     }
+  
+    /* Editor de líneas dentro de la carpeta */
+    .lineas-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 4px; }
+    .lineas-tabla { width: 100%; min-width: 720px; border-collapse: collapse; }
+    .lineas-tabla th { padding: 8px 10px; font-size: 10px; }
+    .lineas-tabla td { padding: 6px; border-bottom: 1px solid var(--border); }
+    .lineas-tabla input, .lineas-tabla select {
+      width: 100%; padding: 7px 8px; background: var(--black); border: 1px solid var(--border);
+      border-radius: 3px; font-family: 'DM Sans', sans-serif; font-size: 12px; color: var(--text);
+    }
+    .lineas-tabla input:focus, .lineas-tabla select:focus { outline: none; border-color: var(--accent); }
+    .resumen-carpeta {
+      display: flex; flex-wrap: wrap; gap: 18px; background: var(--card);
+      border: 1px solid var(--border); border-radius: 4px; padding: 12px 16px; margin: 16px 0;
+    }
+    .resumen-carpeta div { font-size: 12px; color: var(--muted); }
+    .resumen-carpeta strong { display: block; font-size: 15px; color: var(--text); margin-top: 2px; }
+    /* Estado de pagos */
+    .seccion-pagos {
+      font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;
+      color: var(--accent); margin: 26px 0 12px;
+    }
+    .bloque-linea { border: 1px solid var(--border); border-radius: 4px; padding: 12px 14px; margin-bottom: 10px; }
+    .mini-input {
+      padding: 7px 8px; background: var(--black); border: 1px solid var(--border); border-radius: 3px;
+      color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 12px;
+    }
+    .mini-input:focus { outline: none; border-color: var(--accent); }
+    .apunte {
+      display: flex; justify-content: space-between; align-items: center; gap: 8px;
+      font-size: 12px; padding: 6px 0; border-top: 1px solid var(--border);
+    }
   </style>
 </head>
 <body>
-  <!-- BARRA SUPERIOR (solo móvil) -->
   <div class="topbar-movil">
     <img src="/images/brand/logo.png" alt="E47" class="topbar-logo" onerror="this.style.display='none'">
     <span class="topbar-titulo">Producciones</span>
@@ -381,7 +413,6 @@
   </div>
   <div class="menu-overlay" id="menuOverlay" onclick="cerrarMenuMovil()"></div>
 
-  <!-- SIDEBAR -->
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-logo">
       <div class="marca-fila">
@@ -395,11 +426,11 @@
       <div class="nav-item active" data-pagina="clientes" onclick="mostrarPagina('clientes')">
         <span class="icon">👥</span><span>Clientes</span>
       </div>
-      <div class="nav-item" data-pagina="ordenes" onclick="mostrarPagina('ordenes')">
-        <span class="icon">📦</span><span>Órdenes de producción</span>
-      </div>
       <div class="nav-item" data-pagina="presupuestos" onclick="mostrarPagina('presupuestos')">
-        <span class="icon">💶</span><span>Presupuestos</span>
+        <span class="icon">📝</span><span>Presupuestos</span>
+      </div>
+      <div class="nav-item" data-pagina="aprobados" onclick="mostrarPagina('aprobados')">
+        <span class="icon">✅</span><span>Pedidos aprobados</span>
       </div>
       <div class="nav-item" data-pagina="productos" onclick="mostrarPagina('productos')">
         <span class="icon">🏷️</span><span>Productos</span>
@@ -411,7 +442,6 @@
     </div>
   </aside>
 
-  <!-- MAIN -->
   <main class="main">
 
     <!-- CLIENTES -->
@@ -421,7 +451,7 @@
           <h1>CLIENTES</h1>
           <p>Directorio de clientes de producciones</p>
         </div>
-        <div style="display:flex; gap:10px;">
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
           <input type="text" id="buscadorClientes" placeholder="Buscar por nombre o CIF..." oninput="renderClientesTabla()" style="padding:10px 12px; background:var(--card); border:1px solid var(--border); border-radius:4px; color:var(--text); font-size:13px; min-width:220px;">
           <button class="btn btn-primary" onclick="mostrarModalCliente()">➕ Nuevo cliente</button>
         </div>
@@ -438,9 +468,8 @@
           <p id="fichaClienteDatos">—</p>
         </div>
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <button class="btn btn-ghost" onclick="abrirModalPDF(clienteFichaActualId)">📄 Generar presupuesto PDF</button>
-          <button class="btn btn-ghost" onclick="mostrarModalPresupuesto(null, clienteFichaActualId)">➕ Nuevo presupuesto</button>
-          <button class="btn btn-primary" onclick="mostrarModalPedido(null, clienteFichaActualId)">➕ Nuevo pedido</button>
+          <button class="btn btn-ghost" onclick="abrirModalPDF(clienteFichaActualId)">📄 Generar PDF</button>
+          <button class="btn btn-primary" onclick="mostrarModalPresupuesto(null, clienteFichaActualId)">➕ Nuevo presupuesto</button>
         </div>
       </div>
 
@@ -455,107 +484,95 @@
 
       <div class="grid">
         <div class="card">
-          <h3>📦 Producciones realizadas</h3>
-          <p id="fichaKpiProducciones" style="font-size: 32px; color: var(--accent); margin: 12px 0;">—</p>
-          <p>Total de pedidos registrados</p>
+          <h3>✅ Pedidos aprobados</h3>
+          <p id="fichaKpiPedidos" style="font-size: 32px; color: var(--accent); margin: 12px 0;">—</p>
+          <p>Presupuestos que el cliente aceptó</p>
         </div>
         <div class="card">
-          <h3>💶 Inversión total</h3>
-          <p id="fichaKpiInversion" style="font-size: 32px; color: var(--accent); margin: 12px 0;">—</p>
-          <p>Suma del coste total de todos sus pedidos</p>
+          <h3>💶 Volumen de compra</h3>
+          <p id="fichaKpiVolumen" style="font-size: 32px; color: var(--accent); margin: 12px 0;">—</p>
+          <p>Lo que el cliente nos ha comprado (sin IVA)</p>
+        </div>
+        <div class="card">
+          <h3>📈 Beneficio generado</h3>
+          <p id="fichaKpiBeneficio" style="font-size: 32px; color: var(--success); margin: 12px 0;">—</p>
+          <p>Descontando costes internos y transporte</p>
         </div>
         <div class="card">
           <h3>🏷️ Productos solicitados</h3>
           <p id="fichaKpiProductos" style="font-size: 14px; color: var(--text); margin: 12px 0; line-height:1.6;">—</p>
-          <p>Productos distintos que ha pedido este cliente</p>
+          <p>Productos distintos que ha pedido</p>
         </div>
       </div>
 
-      <div class="card" style="margin-bottom:16px; background:transparent; border:none; padding:0;">
-        <h3 style="margin-bottom:0;">Histórico de producción</h3>
-      </div>
-      <div id="ficha-ordenes-tabla" class="loading">Cargando...</div>
+      <h3 style="font-size:14px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--accent); margin:32px 0 16px;">Pedidos aprobados</h3>
+      <div id="ficha-aprobados-tabla"></div>
 
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:32px; margin-bottom:16px;">
-        <h3 style="font-size:14px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--accent);">Presupuestos enviados</h3>
-        <button class="btn btn-ghost btn-sm" onclick="mostrarModalPresupuesto(null, clienteFichaActualId)">➕ Nuevo presupuesto</button>
-      </div>
+      <h3 style="font-size:14px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--muted); margin:32px 0 16px;">Presupuestos sin aprobar (histórico de referencia)</h3>
       <div id="ficha-presupuestos-tabla"></div>
     </section>
 
-    <!-- ÓRDENES DE PRODUCCIÓN -->
-    <section class="page" id="ordenes-page">
-      <div class="page-header">
-        <div>
-          <h1>ÓRDENES DE PRODUCCIÓN</h1>
-          <p>Historial completo de pedidos de fabricación</p>
-        </div>
-        <button class="btn btn-primary" onclick="mostrarModalPedido()">➕ Nuevo pedido</button>
-      </div>
-      <div class="form-row" style="margin-bottom:20px;">
-        <div class="form-group">
-          <label>Cliente</label>
-          <select id="filtroOrdenesCliente" onchange="renderOrdenesTabla()">
-            <option value="">Todos los clientes</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Producto</label>
-          <select id="filtroOrdenesProducto" onchange="renderOrdenesTabla()">
-            <option value="">Todos los productos</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Año</label>
-          <select id="filtroOrdenesAnio" onchange="renderOrdenesTabla()">
-            <option value="">Todos los años</option>
-          </select>
-        </div>
-      </div>
-      <div id="ordenes-tabla" class="loading">Cargando...</div>
-    </section>
-
-    <!-- PRESUPUESTOS -->
+    <!-- PRESUPUESTOS (todos) -->
     <section class="page" id="presupuestos-page">
       <div class="page-header">
         <div>
           <h1>PRESUPUESTOS</h1>
-          <p>Historial de precios y márgenes por cliente</p>
+          <p>Todos los presupuestos preparados, aprobados o no</p>
         </div>
-        <div style="display:flex; gap:10px;">
-          <button class="btn btn-ghost" onclick="abrirModalPDF()">📄 Generar presupuesto PDF</button>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn btn-ghost" onclick="abrirModalPDF()">📄 Generar PDF</button>
           <button class="btn btn-primary" onclick="mostrarModalPresupuesto()">➕ Nuevo presupuesto</button>
         </div>
       </div>
       <div class="form-row" style="margin-bottom:20px;">
         <div class="form-group">
           <label>Cliente</label>
-          <select id="filtroPresupuestosCliente" onchange="renderPresupuestosTabla()">
-            <option value="">Todos los clientes</option>
-          </select>
+          <select id="filtroPresCliente" onchange="renderPresupuestosTabla()"><option value="">Todos los clientes</option></select>
         </div>
         <div class="form-group">
-          <label>Producto</label>
-          <select id="filtroPresupuestosProducto" onchange="renderPresupuestosTabla()">
-            <option value="">Todos los productos</option>
+          <label>Estado</label>
+          <select id="filtroPresEstado" onchange="renderPresupuestosTabla()">
+            <option value="">Todos</option>
+            <option value="realizado">Sin aprobar</option>
+            <option value="aprobado">Aprobados</option>
           </select>
         </div>
         <div class="form-group">
           <label>Año</label>
-          <select id="filtroPresupuestosAnio" onchange="renderPresupuestosTabla()">
-            <option value="">Todos los años</option>
-          </select>
+          <select id="filtroPresAnio" onchange="renderPresupuestosTabla()"><option value="">Todos los años</option></select>
         </div>
       </div>
       <div id="presupuestos-tabla" class="loading">Cargando...</div>
     </section>
 
-    <!-- PRODUCTOS (catálogo) -->
+    <!-- PEDIDOS APROBADOS -->
+    <section class="page" id="aprobados-page">
+      <div class="page-header">
+        <div>
+          <h1>PEDIDOS APROBADOS</h1>
+          <p>Presupuestos que el cliente aceptó: son los pedidos en firme</p>
+        </div>
+        <button class="btn btn-ghost" onclick="abrirModalPDF()">📄 Generar PDF</button>
+      </div>
+      <div class="form-row" style="margin-bottom:20px;">
+        <div class="form-group">
+          <label>Cliente</label>
+          <select id="filtroAprCliente" onchange="renderAprobadosTabla()"><option value="">Todos los clientes</option></select>
+        </div>
+        <div class="form-group">
+          <label>Año</label>
+          <select id="filtroAprAnio" onchange="renderAprobadosTabla()"><option value="">Todos los años</option></select>
+        </div>
+      </div>
+      <div id="aprobados-tabla" class="loading">Cargando...</div>
+    </section>
+
+    <!-- PRODUCTOS -->
     <section class="page" id="productos-page">
       <div class="page-header">
         <div>
           <h1>PRODUCTOS</h1>
-          <p>Catálogo de productos que se fabrican (camisetas, bolígrafos, pulseras...)</p>
+          <p>Catálogo de productos que se fabrican. La variante (sublimados, nylon...) se escribe en cada presupuesto.</p>
         </div>
         <button class="btn btn-primary" onclick="mostrarModalProducto()">➕ Nuevo producto</button>
       </div>
@@ -614,12 +631,12 @@
         <input type="hidden" id="productoId">
         <div class="form-group">
           <label>Nombre del producto *</label>
-          <input type="text" id="productoNombre" placeholder="Ej: Camisetas">
+          <input type="text" id="productoNombre" placeholder="Ej: Calcetines">
         </div>
         <div class="form-group" id="grupoProductoActivo" style="display:none;">
           <label>Estado</label>
           <select id="productoActivo">
-            <option value="true">Activo (aparece para elegir en pedidos)</option>
+            <option value="true">Activo (aparece para elegir en presupuestos)</option>
             <option value="false">Inactivo (se conserva el histórico, pero no aparece)</option>
           </select>
         </div>
@@ -631,64 +648,104 @@
     </div>
   </div>
 
-  <!-- MODAL PRESUPUESTO -->
+  <!-- MODAL PRESUPUESTO (carpeta con varias líneas) -->
   <div id="modalPresupuesto" class="modal">
-    <div class="modal-content">
+    <div class="modal-content" style="max-width:940px;">
       <div class="modal-header"><h2 id="tituloModalPresupuesto">Nuevo presupuesto</h2></div>
       <div class="modal-body">
         <input type="hidden" id="presupuestoId">
         <div class="form-row">
           <div class="form-group">
+            <label>Nombre del presupuesto *</label>
+            <input type="text" id="presNombre" placeholder="Ej: Carrera de la Mujer - 13 julio">
+          </div>
+          <div class="form-group">
             <label>Cliente *</label>
-            <select id="presupuestoCliente"></select>
-          </div>
-          <div class="form-group">
-            <label>Producto *</label>
-            <select id="presupuestoProducto" onchange="sugerirVariantes('presupuesto')"></select>
+            <select id="presCliente"></select>
           </div>
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Variante / característica</label>
-            <input type="text" id="presupuestoVariante" list="variantesPresupuesto" placeholder="Ej: Sublimados" autocomplete="off">
-            <datalist id="variantesPresupuesto"></datalist>
-          </div>
-          <div class="form-group">
-            <label>Descripción (aparece en el PDF)</label>
-            <input type="text" id="presupuestoDescripcion" placeholder="Ej: Toallas de microfibra">
-          </div>
+        <div class="form-group" style="max-width:220px;">
+          <label>Fecha *</label>
+          <input type="date" id="presFecha">
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Fecha *</label>
-            <input type="date" id="presupuestoFecha">
-          </div>
-          <div class="form-group">
-            <label>Cantidad *</label>
-            <input type="number" id="presupuestoCantidad" min="1" step="1">
-          </div>
+
+        <label style="display:block; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted); margin-bottom:8px;">Productos de este presupuesto</label>
+        <div class="lineas-wrap">
+          <table class="lineas-tabla">
+            <thead><tr>
+              <th style="width:19%">Producto *</th>
+              <th style="width:14%">Variante</th>
+              <th style="width:22%">Descripción (PDF)</th>
+              <th style="width:11%">Cantidad *</th>
+              <th style="width:14%">Coste interno €</th>
+              <th style="width:14%">Precio cliente €</th>
+              <th style="width:6%"></th>
+            </tr></thead>
+            <tbody id="lineasBody"></tbody>
+          </table>
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Coste interno unitario (€) *</label>
-            <input type="number" id="presupuestoCostInterno" min="0" step="0.0001" oninput="actualizarPreviewMargen()">
-          </div>
-          <div class="form-group">
-            <label>Precio al cliente unitario (€) *</label>
-            <input type="number" id="presupuestoPrecioCliente" min="0" step="0.0001" oninput="actualizarPreviewMargen()">
-          </div>
-        </div>
-        <div id="presupuestoPreviewMargen" style="background:var(--card); border:1px solid var(--border); border-radius:4px; padding:12px 16px; margin-bottom:16px; font-size:13px; color:var(--muted);">
-          Beneficio: — · Margen: —
-        </div>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="anadirLinea()" style="margin-top:10px;">➕ Añadir producto</button>
+
+        <div class="resumen-carpeta" id="resumenCarpeta"></div>
+
         <div class="form-group">
           <label>Observaciones</label>
-          <textarea id="presupuestoObservaciones" rows="2" placeholder="Condiciones, validez, descuentos..."></textarea>
+          <textarea id="presObservaciones" rows="2" placeholder="Condiciones, validez, descuentos..."></textarea>
         </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-ghost" onclick="cerrarModal('modalPresupuesto')">Cancelar</button>
         <button type="button" class="btn btn-primary" onclick="guardarPresupuesto()">💾 Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL ESTADO DE PAGOS -->
+  <div id="modalPagos" class="modal">
+    <div class="modal-content" style="max-width:960px;">
+      <div class="modal-header">
+        <h2>Estado de pagos</h2>
+        <p id="pagosSubtitulo" style="font-size:13px; color:var(--muted); margin-top:4px;"></p>
+      </div>
+      <div class="modal-body">
+        <div class="grid" id="pagosResumen" style="margin-bottom:8px;"></div>
+
+        <h3 class="seccion-pagos">💶 Cobros del cliente</h3>
+        <div id="pagosCobros"></div>
+        <div class="form-row" style="margin-top:10px; align-items:flex-end;">
+          <div class="form-group"><label>Fecha</label><input type="date" id="cobroFecha"></div>
+          <div class="form-group"><label>Importe €</label><input type="number" id="cobroImporte" min="0" step="0.01"></div>
+          <div class="form-group"><label>Concepto</label><input type="text" id="cobroConcepto" placeholder="Ej: Anticipo 30%"></div>
+          <div class="form-group" style="flex:0 0 auto;"><button type="button" class="btn btn-primary" onclick="anadirCobro()">➕ Añadir cobro</button></div>
+        </div>
+
+        <h3 class="seccion-pagos">🏭 Pagos a proveedores, producto a producto</h3>
+        <div id="pagosLineas"></div>
+
+        <h3 class="seccion-pagos">🚚 Transporte y otros gastos</h3>
+        <div id="pagosGastos"></div>
+        <div class="form-row" style="margin-top:10px; align-items:flex-end;">
+          <div class="form-group"><label>Fecha</label><input type="date" id="gastoFecha"></div>
+          <div class="form-group"><label>Tipo</label>
+            <select id="gastoTipo" onchange="toggleModalidad()">
+              <option value="transporte">Transporte</option>
+              <option value="otro">Otro gasto</option>
+            </select>
+          </div>
+          <div class="form-group" id="grupoModalidad"><label>Modalidad</label>
+            <select id="gastoModalidad">
+              <option value="aereo">✈️ Aéreo</option>
+              <option value="maritimo">🚢 Marítimo</option>
+              <option value="terrestre">🚚 Terrestre</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Importe €</label><input type="number" id="gastoImporte" min="0" step="0.01"></div>
+          <div class="form-group"><label>Concepto</label><input type="text" id="gastoConcepto" placeholder="Ej: Contenedor Shanghai-Valencia"></div>
+          <div class="form-group" style="flex:0 0 auto;"><button type="button" class="btn btn-primary" onclick="anadirGasto()">➕ Añadir</button></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="cerrarModal('modalPagos')">Cerrar</button>
       </div>
     </div>
   </div>
@@ -701,34 +758,38 @@
         <div class="form-row">
           <div class="form-group">
             <label>Cliente *</label>
-            <select id="pdfCliente" onchange="renderLineasPDF()"></select>
+            <select id="pdfCliente" onchange="renderCarpetasPDF()"></select>
           </div>
           <div class="form-group">
-            <label>Fecha del presupuesto *</label>
-            <input type="date" id="pdfFecha">
+            <label>Presupuesto *</label>
+            <select id="pdfCarpeta" onchange="renderLineasPDF()"></select>
           </div>
         </div>
         <div class="form-row">
           <div class="form-group">
+            <label>Fecha del documento *</label>
+            <input type="date" id="pdfFecha">
+          </div>
+          <div class="form-group">
             <label>Nº de referencia (opcional)</label>
             <input type="text" id="pdfReferencia" placeholder="Ej: 2026-014">
           </div>
-          <div class="form-group" style="display:flex; align-items:flex-end;">
-            <label style="display:flex; align-items:center; gap:8px; text-transform:none; letter-spacing:0; font-size:13px; color:var(--text); cursor:pointer;">
-              <input type="checkbox" id="pdfValidez15" checked style="width:auto;">
-              Incluir cláusula "válido 15 días"
-            </label>
-          </div>
+        </div>
+        <div class="form-group">
+          <label style="display:flex; align-items:center; gap:8px; text-transform:none; letter-spacing:0; font-size:13px; color:var(--text); cursor:pointer;">
+            <input type="checkbox" id="pdfValidez15" checked style="width:auto;">
+            Incluir cláusula "válido 15 días"
+          </label>
         </div>
         <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:8px; flex-wrap:wrap;">
-          <label style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted); margin:0;">Líneas a incluir (solo se muestra el precio del cliente)</label>
+          <label style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted); margin:0;">Líneas a incluir</label>
           <div style="display:flex; gap:6px;">
             <button type="button" class="btn btn-ghost btn-sm" onclick="marcarLineasPDF(true)">Seleccionar todo</button>
             <button type="button" class="btn btn-ghost btn-sm" onclick="marcarLineasPDF(false)">Deseleccionar todo</button>
           </div>
         </div>
-        <div id="pdfLineas" style="border:1px solid var(--border); border-radius:4px; max-height:260px; overflow-y:auto;"></div>
-        <p style="font-size:12px; color:var(--muted); margin-top:10px;">🔒 El documento descargado nunca incluye el coste interno ni el margen; solo el precio final del cliente.</p>
+        <div id="pdfLineas" style="border:1px solid var(--border); border-radius:4px; max-height:240px; overflow-y:auto;"></div>
+        <p style="font-size:12px; color:var(--muted); margin-top:10px;">🔒 El documento nunca incluye el coste interno ni el margen; solo el precio del cliente.</p>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-ghost" onclick="cerrarModal('modalPDF')">Cancelar</button>
@@ -737,69 +798,7 @@
     </div>
   </div>
 
-  <!-- MODAL PEDIDO (orden de producción) -->
-  <div id="modalPedido" class="modal">
-    <div class="modal-content">
-      <div class="modal-header"><h2 id="tituloModalPedido">Nuevo pedido</h2></div>
-      <div class="modal-body">
-        <input type="hidden" id="pedidoId">
-        <div class="form-row">
-          <div class="form-group">
-            <label>Cliente *</label>
-            <select id="pedidoCliente"></select>
-          </div>
-          <div class="form-group">
-            <label>Producto *</label>
-            <select id="pedidoProducto" onchange="sugerirVariantes('pedido')"></select>
-          </div>
-        </div>
-        <div class="form-group">
-          <label>Variante / característica</label>
-          <input type="text" id="pedidoVariante" list="variantesPedido" placeholder="Ej: Sublimados" autocomplete="off">
-          <datalist id="variantesPedido"></datalist>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Fecha *</label>
-            <input type="date" id="pedidoFecha">
-          </div>
-          <div class="form-group">
-            <label>Cantidad *</label>
-            <input type="number" id="pedidoCantidad" min="1" step="1" oninput="actualizarPreviewCosteUnitario()">
-          </div>
-          <div class="form-group">
-            <label>Tipo de envío *</label>
-            <select id="pedidoTipoEnvio">
-              <option value="aereo">Aéreo (avión)</option>
-              <option value="maritimo">Marítimo (mar)</option>
-              <option value="terrestre">Terrestre</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Costes extra (diseño, moldes, aduanas...)</label>
-            <input type="number" id="pedidoCostesExtra" min="0" step="0.01" value="0">
-          </div>
-          <div class="form-group">
-            <label>Coste total del pedido *</label>
-            <input type="number" id="pedidoCosteTotal" min="0" step="0.01" oninput="actualizarPreviewCosteUnitario()">
-          </div>
-        </div>
-        <p id="pedidoPreviewCosteUnitario" style="font-size:13px; color:var(--muted); margin:-8px 0 16px;">Coste unitario: —</p>
-        <div class="form-group">
-          <label>Observaciones</label>
-          <textarea id="pedidoObservaciones" rows="2" placeholder="Cualquier particularidad de este pedido"></textarea>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-ghost" onclick="cerrarModal('modalPedido')">Cancelar</button>
-        <button type="button" class="btn btn-primary" onclick="guardarPedido()">💾 Guardar</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- PANTALLA DE LOGIN -->
+  <!-- LOGIN -->
   <div id="login-overlay" style="position:fixed; inset:0; background:#0f1117; z-index:99999; display:flex; align-items:center; justify-content:center;">
     <div style="background:var(--card); padding:32px; border-radius:14px; width:340px; max-width:90%; border:1px solid var(--border);">
       <h2 style="margin:0 0 4px; color:var(--text); font-size:20px;">🔐 Equipo 47 · Producciones</h2>
@@ -819,15 +818,14 @@
 
   <div id="toast-cont"></div>
 
-  <!-- SCRIPTS -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/pdfmake@0.2.20/build/pdfmake.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/pdfmake@0.2.20/build/vfs_fonts.js"></script>
   <script>
     // ════════════════════════════════════════
     //  CONFIGURACIÓN DE SUPABASE
-    //  Sustituye estos dos valores por los de tu proyecto
-    //  "equipo47-producciones" (Settings → API en Supabase).
+    //  Sustituye estos dos valores por los de tu proyecto e47-producciones
+    //  (Project Settings → Data API).
     // ════════════════════════════════════════
     const SUPABASE_URL = 'https://ciszgyorsveumnrtcejn.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpc3pneW9yc3ZldW1ucnRjZWpuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3ODk0MDYsImV4cCI6MjA5NzM2NTQwNn0.O56WDFFdtZMc1mXpgCEkgQF8ZTT5tnCpzg8xN4H_qK8';
@@ -837,9 +835,13 @@
     // ── ESTADO GLOBAL ───────────────────────
     let clientes = [];
     let productos = [];
-    let ordenes = [];
-    let presupuestos = [];
+    let presupuestos = [];   // cabeceras (las "carpetas")
+    let lineas = [];         // productos dentro de cada carpeta
+    let cobros = [];         // dinero que entra (cliente → nosotros)
+    let pagos = [];          // dinero que sale (nosotros → proveedores / transporte)
+    let pagosPresupuestoId = null;
     let clienteFichaActualId = null;
+    let lineasEditor = [];   // líneas que se están editando en el modal
 
     // ── UTILIDADES ──────────────────────────
     function toast(msg) {
@@ -850,19 +852,18 @@
       cont.appendChild(el);
       setTimeout(() => el.remove(), 3500);
     }
-
     function confirmarAccion(msg) { return window.confirm(msg); }
-
     function formatoEuro(n) {
       return (Number(n) || 0).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
     }
-
     function formatoFecha(f) {
       if (!f) return '—';
       const d = new Date(f + 'T00:00:00');
       return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
     }
-
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
     function abrirModal(id) { document.getElementById(id).classList.add('open'); }
     function cerrarModal(id) { document.getElementById(id).classList.remove('open'); }
 
@@ -875,23 +876,20 @@
       document.getElementById('sidebar').classList.remove('abierto');
       document.getElementById('menuOverlay').classList.remove('activo');
     }
-
     function mostrarPagina(pagina) {
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
       document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-
       document.getElementById(`${pagina}-page`).classList.add('active');
       const navItem = document.querySelector(`.nav-item[data-pagina="${pagina}"]`);
       if (navItem) navItem.classList.add('active');
       cerrarMenuMovil();
-
       if (pagina === 'clientes') renderClientesTabla();
-      if (pagina === 'ordenes') { poblarSelectsFiltroOrdenes(); renderOrdenesTabla(); }
-      if (pagina === 'presupuestos') { poblarSelectsFiltroPresupuestos(); renderPresupuestosTabla(); }
+      if (pagina === 'presupuestos') { poblarFiltrosPresupuestos(); renderPresupuestosTabla(); }
+      if (pagina === 'aprobados') { poblarFiltrosAprobados(); renderAprobadosTabla(); }
       if (pagina === 'productos') renderProductosTabla();
     }
 
-    // ── TEMA CLARO / OSCURO ─────────────────
+    // ── TEMA ────────────────────────────────
     function aplicarTema() {
       const claro = localStorage.getItem('produccionesTema') === 'claro';
       document.body.classList.toggle('tema-claro', claro);
@@ -901,8 +899,7 @@
     function toggleTema() {
       const claro = document.body.classList.toggle('tema-claro');
       localStorage.setItem('produccionesTema', claro ? 'claro' : 'oscuro');
-      const btn = document.getElementById('btnTema');
-      btn.textContent = claro ? '🌙 Tema oscuro' : '☀️ Tema claro';
+      document.getElementById('btnTema').textContent = claro ? '🌙 Tema oscuro' : '☀️ Tema claro';
     }
 
     // ── AUTENTICACIÓN ───────────────────────
@@ -916,7 +913,7 @@
         errEl.style.display = 'block';
         return;
       }
-      const { data, error } = await sb.auth.signInWithPassword({ email, password });
+      const { error } = await sb.auth.signInWithPassword({ email, password });
       if (error) {
         errEl.textContent = '❌ Email o contraseña incorrectos';
         errEl.style.display = 'block';
@@ -925,32 +922,88 @@
       document.getElementById('login-overlay').style.display = 'none';
       await cargarTodo();
     }
-
     async function cerrarSesion() {
       if (!confirmarAccion('¿Cerrar sesión?')) return;
       await sb.auth.signOut();
       location.reload();
     }
 
-    // ════════════════════════════════════════
-    //  CARGA INICIAL DE DATOS
-    // ════════════════════════════════════════
+    // ── CARGA INICIAL ───────────────────────
     async function cargarTodo() {
-      const [resClientes, resProductos, resOrdenes, resPresupuestos] = await Promise.all([
+      const [rc, rp, rpr, rl, rco, rpa] = await Promise.all([
         sb.from('clientes').select('*').order('nombre_empresa'),
         sb.from('productos').select('*').order('nombre'),
-        sb.from('ordenes_produccion').select('*').order('fecha', { ascending: false }),
-        sb.from('presupuestos').select('*').order('fecha', { ascending: false })
+        sb.from('presupuestos').select('*').order('fecha', { ascending: false }),
+        sb.from('presupuesto_lineas').select('*').order('posicion'),
+        sb.from('cobros').select('*').order('fecha'),
+        sb.from('pagos').select('*').order('fecha')
       ]);
-      clientes = resClientes.data || [];
-      productos = resProductos.data || [];
-      ordenes = resOrdenes.data || [];
-      presupuestos = resPresupuestos.data || [];
+      clientes = rc.data || [];
+      productos = rp.data || [];
+      presupuestos = rpr.data || [];
+      lineas = rl.data || [];
+      cobros = rco.data || [];
+      pagos = rpa.data || [];
       mostrarPagina('clientes');
+    }
+    async function recargarPresupuestos() {
+      const [rpr, rl] = await Promise.all([
+        sb.from('presupuestos').select('*').order('fecha', { ascending: false }),
+        sb.from('presupuesto_lineas').select('*').order('posicion')
+      ]);
+      presupuestos = rpr.data || [];
+      lineas = rl.data || [];
+    }
+    async function recargarDinero() {
+      const [rco, rpa] = await Promise.all([
+        sb.from('cobros').select('*').order('fecha'),
+        sb.from('pagos').select('*').order('fecha')
+      ]);
+      cobros = rco.data || [];
+      pagos = rpa.data || [];
+    }
+
+    // ── HELPERS DE PRODUCTO / AÑO ───────────
+    function etiquetaProducto(productoId, variante) {
+      const p = productos.find(x => x.id === productoId);
+      const base = p ? p.nombre : '—';
+      return variante ? base + ' · ' + variante : base;
+    }
+    function aniosDe(lista) {
+      const set = new Set(lista.map(x => (x.fecha || '').slice(0, 4)).filter(Boolean));
+      return [...set].sort((a, b) => b.localeCompare(a));
+    }
+    function opcionesAnio(anios) {
+      return '<option value="">Todos los años</option>' + anios.map(a => `<option value="${a}">${a}</option>`).join('');
+    }
+    function variantesUsadas(productoId) {
+      const usadas = lineas.filter(l => l.producto_id === productoId && l.variante).map(l => l.variante);
+      return [...new Set(usadas)].sort((a, b) => a.localeCompare(b));
+    }
+
+    // ── CÁLCULOS DE UNA CARPETA ─────────────
+    // Total cliente = lo que paga el cliente por los productos (sin IVA).
+    // Coste interno = lo que nos cuesta fabricarlos.
+    // El transporte NO va aquí: no se presupuesta aparte (si acaso ya está
+    // repartido dentro del precio de cada producto). El gasto real en
+    // transporte se registra en el apartado de pagos.
+    function totalesCarpeta(presupuestoId) {
+      const ls = lineas.filter(l => l.presupuesto_id === presupuestoId);
+      const totalCliente = ls.reduce((a, l) => a + (Number(l.cantidad) || 0) * (Number(l.precio_cliente_unitario) || 0), 0);
+      const costeInterno = ls.reduce((a, l) => a + (Number(l.cantidad) || 0) * (Number(l.coste_interno_unitario) || 0), 0);
+      const beneficio = totalCliente - costeInterno;
+      const margen = totalCliente > 0 ? (beneficio / totalCliente * 100) : 0;
+      return { totalCliente, costeInterno, beneficio, margen, nLineas: ls.length };
+    }
+    function colorMargen(pct) {
+      const n = Number(pct);
+      if (n >= 30) return 'var(--success)';
+      if (n >= 15) return 'var(--warning)';
+      return 'var(--danger)';
     }
 
     // ════════════════════════════════════════
-    //  MÓDULO CLIENTES
+    //  CLIENTES
     // ════════════════════════════════════════
     function renderClientesTabla() {
       const cont = document.getElementById('clientes-tabla');
@@ -959,35 +1012,31 @@
       if (filtro) {
         lista = lista.filter(c =>
           (c.nombre_empresa || '').toLowerCase().includes(filtro) ||
-          (c.cif_nif || '').toLowerCase().includes(filtro)
-        );
+          (c.cif_nif || '').toLowerCase().includes(filtro));
       }
       if (!lista.length) {
         cont.innerHTML = `<div class="empty"><div class="empty-icon">👥</div><p>${clientes.length ? 'Ningún cliente coincide con la búsqueda.' : 'No hay clientes todavía. Crea el primero con "Nuevo cliente".'}</p></div>`;
         return;
       }
-      let html = `<table><thead><tr>
-        <th>Empresa</th><th>CIF/NIF</th><th>Contacto</th><th>Teléfono</th><th>Email</th><th></th>
-      </tr></thead><tbody>`;
+      let html = `<table><thead><tr><th>Empresa</th><th>CIF/NIF</th><th>Contacto</th><th>Teléfono</th><th>Email</th><th></th></tr></thead><tbody>`;
       for (const c of lista) {
         html += `<tr>
-          <td><strong>${c.nombre_empresa}</strong></td>
-          <td>${c.cif_nif || '—'}</td>
-          <td>${c.persona_contacto || '—'}</td>
-          <td>${c.telefono || '—'}</td>
-          <td>${c.email || '—'}</td>
+          <td><strong>${esc(c.nombre_empresa)}</strong></td>
+          <td>${esc(c.cif_nif) || '—'}</td>
+          <td>${esc(c.persona_contacto) || '—'}</td>
+          <td>${esc(c.telefono) || '—'}</td>
+          <td>${esc(c.email) || '—'}</td>
           <td style="white-space:nowrap; text-align:right;">
             <button class="btn btn-ghost btn-sm" onclick="verFichaCliente('${c.id}')">👁️ Ver ficha</button>
             <button class="btn btn-ghost btn-sm" onclick="mostrarModalCliente('${c.id}')">✏️</button>
             <button class="btn btn-danger btn-sm" onclick="eliminarCliente('${c.id}')">🗑️</button>
-          </td>
-        </tr>`;
+          </td></tr>`;
       }
-      html += '</tbody></table>';
-      cont.innerHTML = html;
+      cont.innerHTML = html + '</tbody></table>';
     }
 
     function mostrarModalCliente(id = null) {
+      const campos = ['clienteNombreEmpresa','clienteCifNif','clientePersonaContacto','clienteTelefono','clienteEmail','clienteDireccion'];
       if (id) {
         const c = clientes.find(x => x.id === id);
         document.getElementById('tituloModalCliente').textContent = 'Editar cliente';
@@ -1001,12 +1050,7 @@
       } else {
         document.getElementById('tituloModalCliente').textContent = 'Nuevo cliente';
         document.getElementById('clienteId').value = '';
-        document.getElementById('clienteNombreEmpresa').value = '';
-        document.getElementById('clienteCifNif').value = '';
-        document.getElementById('clientePersonaContacto').value = '';
-        document.getElementById('clienteTelefono').value = '';
-        document.getElementById('clienteEmail').value = '';
-        document.getElementById('clienteDireccion').value = '';
+        campos.forEach(k => document.getElementById(k).value = '');
       }
       abrirModal('modalCliente');
     }
@@ -1023,12 +1067,9 @@
         direccion: document.getElementById('clienteDireccion').value.trim() || null
       };
       const idStr = document.getElementById('clienteId').value;
-      let error;
-      if (idStr) {
-        ({ error } = await sb.from('clientes').update(payload).eq('id', idStr));
-      } else {
-        ({ error } = await sb.from('clientes').insert(payload));
-      }
+      const { error } = idStr
+        ? await sb.from('clientes').update(payload).eq('id', idStr)
+        : await sb.from('clientes').insert(payload);
       if (error) { alert('❌ Error al guardar: ' + error.message); return; }
       cerrarModal('modalCliente');
       toast(idStr ? '✓ Cliente actualizado' : '✓ Cliente creado');
@@ -1041,10 +1082,7 @@
       const c = clientes.find(x => x.id === id);
       if (!confirmarAccion(`¿Eliminar al cliente "${c?.nombre_empresa}"? Esta acción no se puede deshacer.`)) return;
       const { error } = await sb.from('clientes').delete().eq('id', id);
-      if (error) {
-        alert('❌ No se puede eliminar: este cliente tiene producciones registradas. Si ya no lo necesitas, considera dejarlo simplemente sin usar.');
-        return;
-      }
+      if (error) { alert('❌ No se puede eliminar: este cliente tiene presupuestos registrados.'); return; }
       toast('✓ Cliente eliminado');
       clientes = clientes.filter(x => x.id !== id);
       renderClientesTabla();
@@ -1055,20 +1093,13 @@
       clienteFichaActualId = id;
       const c = clientes.find(x => x.id === id);
       if (!c) return;
-
       document.getElementById('fichaClienteNombre').textContent = c.nombre_empresa.toUpperCase();
       const datos = [c.cif_nif, c.persona_contacto, c.telefono, c.email].filter(Boolean).join(' · ');
       document.getElementById('fichaClienteDatos').textContent = datos || 'Sin datos de contacto adicionales';
 
-      // Poblar el selector de año con los años que tiene este cliente (órdenes + presupuestos)
-      const datosCliente = [
-        ...ordenes.filter(o => o.cliente_id === id),
-        ...presupuestos.filter(p => p.cliente_id === id)
-      ];
       const selA = document.getElementById('fichaAnio');
-      selA.innerHTML = opcionesAnio(aniosDe(datosCliente));
+      selA.innerHTML = opcionesAnio(aniosDe(presupuestos.filter(p => p.cliente_id === id)));
       selA.value = '';
-
       aplicarFiltroFicha();
 
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -1076,34 +1107,41 @@
       document.getElementById('ficha-cliente-page').classList.add('active');
     }
 
-    // Aplica el año seleccionado a los KPIs y a las dos tablas de la ficha
     function aplicarFiltroFicha() {
       const id = clienteFichaActualId;
       const anio = document.getElementById('fichaAnio').value;
+      let delCliente = presupuestos.filter(p => p.cliente_id === id);
+      if (anio) delCliente = delCliente.filter(p => (p.fecha || '').slice(0, 4) === anio);
 
-      let ordenesCliente = ordenes.filter(o => o.cliente_id === id);
-      let presupuestosCliente = presupuestos.filter(p => p.cliente_id === id);
-      if (anio) {
-        ordenesCliente = ordenesCliente.filter(o => (o.fecha || '').slice(0, 4) === anio);
-        presupuestosCliente = presupuestosCliente.filter(p => (p.fecha || '').slice(0, 4) === anio);
-      }
+      const aprobados = delCliente.filter(p => p.estado === 'aprobado');
+      const sinAprobar = delCliente.filter(p => p.estado !== 'aprobado');
 
-      const inversionTotal = ordenesCliente.reduce((acc, o) => acc + Number(o.coste_total || 0), 0);
-      const productosIds = [...new Set(ordenesCliente.map(o => o.producto_id))];
-      const nombresProductos = productosIds.map(pid => productos.find(p => p.id === pid)?.nombre || '—');
+      // Los KPIs salen de los pedidos aprobados: son los que de verdad se han vendido.
+      let volumen = 0, beneficio = 0;
+      aprobados.forEach(p => {
+        const t = totalesCarpeta(p.id);
+        volumen += t.totalCliente;
+        beneficio += t.beneficio;
+      });
+      const idsAprobados = aprobados.map(p => p.id);
+      const prodIds = [...new Set(lineas.filter(l => idsAprobados.includes(l.presupuesto_id)).map(l => l.producto_id))];
+      const nombresProd = prodIds.map(pid => productos.find(p => p.id === pid)?.nombre || '—');
 
-      document.getElementById('fichaKpiProducciones').textContent = ordenesCliente.length;
-      document.getElementById('fichaKpiInversion').textContent = formatoEuro(inversionTotal);
-      document.getElementById('fichaKpiProductos').textContent = nombresProductos.length
-        ? nombresProductos.join(', ')
-        : (anio ? 'Sin pedidos en ' + anio : 'Todavía no tiene pedidos');
+      document.getElementById('fichaKpiPedidos').textContent = aprobados.length;
+      document.getElementById('fichaKpiVolumen').textContent = formatoEuro(volumen);
+      const elBen = document.getElementById('fichaKpiBeneficio');
+      elBen.textContent = formatoEuro(beneficio);
+      elBen.style.color = beneficio >= 0 ? 'var(--success)' : 'var(--danger)';
+      document.getElementById('fichaKpiProductos').textContent = nombresProd.length
+        ? nombresProd.join(', ')
+        : (anio ? 'Sin pedidos aprobados en ' + anio : 'Todavía no tiene pedidos aprobados');
 
-      renderTablaOrdenes('ficha-ordenes-tabla', ordenesCliente);
-      renderTablaPresupuestos('ficha-presupuestos-tabla', presupuestosCliente);
+      renderTablaCarpetas('ficha-aprobados-tabla', aprobados, true);
+      renderTablaCarpetas('ficha-presupuestos-tabla', sinAprobar);
     }
 
     // ════════════════════════════════════════
-    //  MÓDULO PRODUCTOS (catálogo)
+    //  PRODUCTOS
     // ════════════════════════════════════════
     function renderProductosTabla() {
       const cont = document.getElementById('productos-tabla');
@@ -1111,18 +1149,17 @@
         cont.innerHTML = `<div class="empty"><div class="empty-icon">🏷️</div><p>No hay productos todavía. Crea el primero con "Nuevo producto".</p></div>`;
         return;
       }
-      let html = `<table><thead><tr><th>Producto</th><th>Estado</th><th></th></tr></thead><tbody>`;
+      let html = `<table><thead><tr><th>Producto</th><th>Variantes usadas</th><th>Estado</th><th></th></tr></thead><tbody>`;
       for (const p of productos) {
+        const vs = variantesUsadas(p.id);
         html += `<tr>
-          <td><strong>${p.nombre}</strong></td>
+          <td><strong>${esc(p.nombre)}</strong></td>
+          <td style="color:var(--muted); font-size:12px;">${vs.length ? vs.map(esc).join(' · ') : '—'}</td>
           <td><span class="badge badge-${p.activo ? 'success' : 'warning'}">${p.activo ? 'Activo' : 'Inactivo'}</span></td>
-          <td style="text-align:right;">
-            <button class="btn btn-ghost btn-sm" onclick="mostrarModalProducto('${p.id}')">✏️ Editar</button>
-          </td>
+          <td style="text-align:right;"><button class="btn btn-ghost btn-sm" onclick="mostrarModalProducto('${p.id}')">✏️ Editar</button></td>
         </tr>`;
       }
-      html += '</tbody></table>';
-      cont.innerHTML = html;
+      cont.innerHTML = html + '</tbody></table>';
     }
 
     function mostrarModalProducto(id = null) {
@@ -1149,12 +1186,9 @@
       if (!nombre) { alert('❌ El nombre del producto es obligatorio'); return; }
       const idStr = document.getElementById('productoId').value;
       const payload = { nombre, activo: document.getElementById('productoActivo').value === 'true' };
-      let error;
-      if (idStr) {
-        ({ error } = await sb.from('productos').update(payload).eq('id', idStr));
-      } else {
-        ({ error } = await sb.from('productos').insert({ nombre, activo: true }));
-      }
+      const { error } = idStr
+        ? await sb.from('productos').update(payload).eq('id', idStr)
+        : await sb.from('productos').insert({ nombre, activo: true });
       if (error) { alert('❌ Error al guardar: ' + error.message); return; }
       cerrarModal('modalProducto');
       toast(idStr ? '✓ Producto actualizado' : '✓ Producto creado');
@@ -1164,428 +1198,565 @@
     }
 
     // ════════════════════════════════════════
-    //  MÓDULO ÓRDENES DE PRODUCCIÓN
+    //  PRESUPUESTOS (carpetas)
     // ════════════════════════════════════════
-    function etiquetaEnvio(tipo) {
-      return ({ aereo: 'Aéreo', maritimo: 'Marítimo', terrestre: 'Terrestre' })[tipo] || tipo;
-    }
-
-    // ── VARIANTES DE PRODUCTO ───────────────
-    // El catálogo guarda el "qué" (Calcetines); la variante es la característica
-    // distintiva que se escribe en cada presupuesto/pedido (Sublimados, Nylon...).
-    // Así las estadísticas siguen agrupando por producto en vez de dispersarse.
-    function etiquetaProducto(productoId, variante) {
-      const p = productos.find(x => x.id === productoId);
-      const base = p ? p.nombre : '—';
-      return variante ? base + ' · ' + variante : base;
-    }
-
-    // Rellena el desplegable de sugerencias con las variantes ya usadas
-    // para ese producto, para no tener que reescribirlas cada vez.
-    function sugerirVariantes(tipo) {
-      const selId = tipo === 'presupuesto' ? 'presupuestoProducto' : 'pedidoProducto';
-      const dlId = tipo === 'presupuesto' ? 'variantesPresupuesto' : 'variantesPedido';
-      const productoId = document.getElementById(selId).value;
-      const usadas = [...presupuestos, ...ordenes]
-        .filter(x => x.producto_id === productoId && x.variante)
-        .map(x => x.variante);
-      const unicas = [...new Set(usadas)].sort((a, b) => a.localeCompare(b));
-      document.getElementById(dlId).innerHTML = unicas.map(v => `<option value="${v}">`).join('');
-    }
-
-    // ── AÑOS (filtro temporal) ──────────────
-    function aniosDe(lista) {
-      const set = new Set(lista.map(x => (x.fecha || '').slice(0, 4)).filter(Boolean));
-      return [...set].sort((a, b) => b.localeCompare(a));
-    }
-    function opcionesAnio(anios) {
-      return '<option value="">Todos los años</option>' +
-        anios.map(a => `<option value="${a}">${a}</option>`).join('');
-    }
-
-    function poblarSelectsFiltroOrdenes() {
-      const selC = document.getElementById('filtroOrdenesCliente');
-      const selP = document.getElementById('filtroOrdenesProducto');
-      const vC = selC.value, vP = selP.value;
-      selC.innerHTML = '<option value="">Todos los clientes</option>' +
-        clientes.map(c => `<option value="${c.id}">${c.nombre_empresa}</option>`).join('');
-      selP.innerHTML = '<option value="">Todos los productos</option>' +
-        productos.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
-      const selA = document.getElementById('filtroOrdenesAnio');
-      const vA = selA.value;
-      selA.innerHTML = opcionesAnio(aniosDe(ordenes));
-      selC.value = vC; selP.value = vP; selA.value = vA;
-    }
-
-    function renderOrdenesTabla() {
-      const filtroCliente = document.getElementById('filtroOrdenesCliente').value;
-      const filtroProducto = document.getElementById('filtroOrdenesProducto').value;
-      const filtroAnio = document.getElementById('filtroOrdenesAnio').value;
-      let lista = ordenes.slice();
-      if (filtroCliente) lista = lista.filter(o => o.cliente_id === filtroCliente);
-      if (filtroProducto) lista = lista.filter(o => o.producto_id === filtroProducto);
-      if (filtroAnio) lista = lista.filter(o => (o.fecha || '').slice(0, 4) === filtroAnio);
-      renderTablaOrdenes('ordenes-tabla', lista);
-    }
-
-    function renderTablaOrdenes(contenedorId, lista) {
-      const cont = document.getElementById(contenedorId);
-      if (!lista.length) {
-        cont.innerHTML = `<div class="empty"><div class="empty-icon">📦</div><p>No hay pedidos para mostrar todavía.</p></div>`;
-        return;
-      }
-      const ordenada = lista.slice().sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
-      let html = `<table><thead><tr>
-        <th>Fecha</th><th>Cliente</th><th>Producto</th><th>Cant.</th><th>Envío</th>
-        <th>Costes extra</th><th>Coste total</th><th>Coste unitario</th><th>Obs.</th><th></th>
-      </tr></thead><tbody>`;
-      for (const o of ordenada) {
-        const cliente = clientes.find(c => c.id === o.cliente_id);
-        const producto = productos.find(p => p.id === o.producto_id);
-        html += `<tr>
-          <td style="white-space:nowrap;">${formatoFecha(o.fecha)}</td>
-          <td>${cliente ? cliente.nombre_empresa : '—'}</td>
-          <td>${producto ? producto.nombre : '—'}${o.variante ? ' <span style="color:var(--muted)">· ' + o.variante + '</span>' : ''}</td>
-          <td>${o.cantidad}</td>
-          <td>${etiquetaEnvio(o.tipo_envio)}</td>
-          <td>${formatoEuro(o.costes_extra)}</td>
-          <td>${formatoEuro(o.coste_total)}</td>
-          <td>${formatoEuro(o.coste_unitario)}</td>
-          <td style="max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${o.observaciones || ''}">${o.observaciones || '—'}</td>
-          <td style="white-space:nowrap; text-align:right;">
-            <button class="btn btn-ghost btn-sm" onclick="mostrarModalPedido('${o.id}')">✏️</button>
-            <button class="btn btn-danger btn-sm" onclick="eliminarPedido('${o.id}')">🗑️</button>
-          </td>
-        </tr>`;
-      }
-      const nProducciones = lista.length;
-      const cantidadTotal = lista.reduce((acc, o) => acc + Number(o.cantidad || 0), 0);
-      const costeAcumulado = lista.reduce((acc, o) => acc + Number(o.coste_total || 0), 0);
-      html += `<tr class="totales">
-        <td colspan="3">TOTAL — ${nProducciones} producción(es)</td>
-        <td>${cantidadTotal}</td>
-        <td></td>
-        <td></td>
-        <td>${formatoEuro(costeAcumulado)}</td>
-        <td colspan="3"></td>
-      </tr>`;
-      html += '</tbody></table>';
-      cont.innerHTML = html;
-    }
-
-    function poblarSelectsPedido(clientePrefillId) {
-      const selC = document.getElementById('pedidoCliente');
-      selC.innerHTML = clientes.map(c => `<option value="${c.id}">${c.nombre_empresa}</option>`).join('');
-      if (clientePrefillId) selC.value = clientePrefillId;
-
-      const selP = document.getElementById('pedidoProducto');
-      selP.innerHTML = productos.filter(p => p.activo).map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
-    }
-
-    function actualizarPreviewCosteUnitario() {
-      const cantidad = parseFloat(document.getElementById('pedidoCantidad').value);
-      const costeTotal = parseFloat(document.getElementById('pedidoCosteTotal').value);
-      const el = document.getElementById('pedidoPreviewCosteUnitario');
-      if (cantidad > 0 && !isNaN(costeTotal)) {
-        el.textContent = `Coste unitario: ${formatoEuro(costeTotal / cantidad)}`;
-      } else {
-        el.textContent = 'Coste unitario: —';
-      }
-    }
-
-    function mostrarModalPedido(id = null, clientePrefillId = null) {
-      poblarSelectsPedido(clientePrefillId);
-      if (id) {
-        const o = ordenes.find(x => x.id === id);
-        // Si el producto de este pedido está inactivo, lo añadimos igualmente a la lista para que se pueda ver/conservar
-        const prod = productos.find(p => p.id === o.producto_id);
-        if (prod && !prod.activo) {
-          const selP = document.getElementById('pedidoProducto');
-          selP.innerHTML += `<option value="${prod.id}">${prod.nombre} (inactivo)</option>`;
-        }
-        document.getElementById('tituloModalPedido').textContent = 'Editar pedido';
-        document.getElementById('pedidoId').value = o.id;
-        document.getElementById('pedidoCliente').value = o.cliente_id;
-        document.getElementById('pedidoProducto').value = o.producto_id;
-        document.getElementById('pedidoFecha').value = o.fecha;
-        document.getElementById('pedidoCantidad').value = o.cantidad;
-        document.getElementById('pedidoTipoEnvio').value = o.tipo_envio;
-        document.getElementById('pedidoCostesExtra').value = o.costes_extra;
-        document.getElementById('pedidoCosteTotal').value = o.coste_total;
-        document.getElementById('pedidoObservaciones').value = o.observaciones || '';
-        sugerirVariantes('pedido');
-        document.getElementById('pedidoVariante').value = o.variante || '';
-      } else {
-        document.getElementById('tituloModalPedido').textContent = 'Nuevo pedido';
-        document.getElementById('pedidoId').value = '';
-        document.getElementById('pedidoFecha').value = new Date().toISOString().slice(0, 10);
-        document.getElementById('pedidoCantidad').value = '';
-        document.getElementById('pedidoTipoEnvio').value = 'terrestre';
-        document.getElementById('pedidoCostesExtra').value = 0;
-        document.getElementById('pedidoCosteTotal').value = '';
-        document.getElementById('pedidoObservaciones').value = '';
-        document.getElementById('pedidoVariante').value = '';
-        sugerirVariantes('pedido');
-      }
-      actualizarPreviewCosteUnitario();
-      abrirModal('modalPedido');
-    }
-
-    async function guardarPedido() {
-      const clienteId = document.getElementById('pedidoCliente').value;
-      const productoId = document.getElementById('pedidoProducto').value;
-      const fecha = document.getElementById('pedidoFecha').value;
-      const cantidad = parseInt(document.getElementById('pedidoCantidad').value);
-      const costeTotal = parseFloat(document.getElementById('pedidoCosteTotal').value);
-
-      if (!clienteId) { alert('❌ Elige un cliente'); return; }
-      if (!productoId) { alert('❌ Elige un producto'); return; }
-      if (!fecha) { alert('❌ Indica la fecha'); return; }
-      if (!cantidad || cantidad <= 0) { alert('❌ La cantidad debe ser mayor que 0'); return; }
-      if (isNaN(costeTotal) || costeTotal < 0) { alert('❌ Indica el coste total del pedido'); return; }
-
-      const payload = {
-        cliente_id: clienteId,
-        producto_id: productoId,
-        fecha,
-        cantidad,
-        variante: document.getElementById('pedidoVariante').value.trim() || null,
-        tipo_envio: document.getElementById('pedidoTipoEnvio').value,
-        costes_extra: parseFloat(document.getElementById('pedidoCostesExtra').value) || 0,
-        coste_total: costeTotal,
-        observaciones: document.getElementById('pedidoObservaciones').value.trim() || null
-      };
-      // coste_unitario NO se incluye: es una columna calculada por la propia base de datos.
-
-      const idStr = document.getElementById('pedidoId').value;
-      let error;
-      if (idStr) {
-        ({ error } = await sb.from('ordenes_produccion').update(payload).eq('id', idStr));
-      } else {
-        ({ error } = await sb.from('ordenes_produccion').insert(payload));
-      }
-      if (error) { alert('❌ Error al guardar: ' + error.message); return; }
-      cerrarModal('modalPedido');
-      toast(idStr ? '✓ Pedido actualizado' : '✓ Pedido creado');
-
-      const { data } = await sb.from('ordenes_produccion').select('*').order('fecha', { ascending: false });
-      ordenes = data || [];
-
-      if (document.getElementById('ficha-cliente-page').classList.contains('active')) {
-        verFichaCliente(clienteFichaActualId);
-      } else {
-        renderOrdenesTabla();
-      }
-    }
-
-    async function eliminarPedido(id) {
-      if (!confirmarAccion('¿Eliminar este pedido? Esta acción no se puede deshacer.')) return;
-      const { error } = await sb.from('ordenes_produccion').delete().eq('id', id);
-      if (error) { alert('❌ Error al eliminar: ' + error.message); return; }
-      toast('✓ Pedido eliminado');
-      ordenes = ordenes.filter(x => x.id !== id);
-      if (document.getElementById('ficha-cliente-page').classList.contains('active')) {
-        verFichaCliente(clienteFichaActualId);
-      } else {
-        renderOrdenesTabla();
-      }
-    }
-
-
-    // ════════════════════════════════════════
-    //  MÓDULO PRESUPUESTOS
-    // ════════════════════════════════════════
-    function poblarSelectsFiltroPresupuestos() {
-      const selC = document.getElementById('filtroPresupuestosCliente');
-      const selP = document.getElementById('filtroPresupuestosProducto');
-      const vC = selC.value, vP = selP.value;
-      selC.innerHTML = '<option value="">Todos los clientes</option>' +
-        clientes.map(c => `<option value="${c.id}">${c.nombre_empresa}</option>`).join('');
-      selP.innerHTML = '<option value="">Todos los productos</option>' +
-        productos.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
-      const selA = document.getElementById('filtroPresupuestosAnio');
-      const vA = selA.value;
+    function poblarFiltrosPresupuestos() {
+      const selC = document.getElementById('filtroPresCliente');
+      const selA = document.getElementById('filtroPresAnio');
+      const vC = selC.value, vA = selA.value;
+      selC.innerHTML = '<option value="">Todos los clientes</option>' + clientes.map(c => `<option value="${c.id}">${esc(c.nombre_empresa)}</option>`).join('');
       selA.innerHTML = opcionesAnio(aniosDe(presupuestos));
-      selC.value = vC; selP.value = vP; selA.value = vA;
+      selC.value = vC; selA.value = vA;
     }
-
-    function colorMargen(pct) {
-      const n = Number(pct);
-      if (n >= 30) return 'var(--success)';
-      if (n >= 15) return 'var(--warning)';
-      return 'var(--danger)';
-    }
-
-    function renderTablaPresupuestos(contenedorId, lista) {
-      const cont = document.getElementById(contenedorId);
-      if (!lista.length) {
-        cont.innerHTML = `<div class="empty"><div class="empty-icon">💶</div><p>No hay presupuestos para mostrar todavía.</p></div>`;
-        return;
-      }
-      const ordenada = lista.slice().sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
-      let html = `<table><thead><tr>
-        <th>Fecha</th><th>Cliente</th><th>Producto</th><th>Cant.</th>
-        <th>Coste interno</th><th>Precio cliente</th><th>Beneficio</th><th>Margen</th><th>Obs.</th><th></th>
-      </tr></thead><tbody>`;
-      for (const p of ordenada) {
-        const cliente = clientes.find(c => c.id === p.cliente_id);
-        const producto = productos.find(pr => pr.id === p.producto_id);
-        const margenColor = colorMargen(p.margen_pct);
-        html += `<tr>
-          <td style="white-space:nowrap;">${formatoFecha(p.fecha)}</td>
-          <td>${cliente ? cliente.nombre_empresa : '—'}</td>
-          <td>${producto ? producto.nombre : '—'}${p.variante ? ' <span style="color:var(--muted)">· ' + p.variante + '</span>' : ''}</td>
-          <td>${p.cantidad}</td>
-          <td>${formatoEuro(p.coste_interno_unitario)}</td>
-          <td>${formatoEuro(p.precio_cliente_unitario)}</td>
-          <td style="color:${colorMargen(p.margen_pct)}">${formatoEuro(p.beneficio_unitario)}</td>
-          <td><span style="font-weight:700; color:${margenColor}">${Number(p.margen_pct).toFixed(1)}%</span></td>
-          <td style="max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${p.observaciones || ''}">${p.observaciones || '—'}</td>
-          <td style="white-space:nowrap; text-align:right;">
-            <button class="btn btn-ghost btn-sm" onclick="mostrarModalPresupuesto('${p.id}')">✏️</button>
-            <button class="btn btn-danger btn-sm" onclick="eliminarPresupuesto('${p.id}')">🗑️</button>
-          </td>
-        </tr>`;
-      }
-      html += '</tbody></table>';
-      cont.innerHTML = html;
+    function poblarFiltrosAprobados() {
+      const selC = document.getElementById('filtroAprCliente');
+      const selA = document.getElementById('filtroAprAnio');
+      const vC = selC.value, vA = selA.value;
+      const apr = presupuestos.filter(p => p.estado === 'aprobado');
+      selC.innerHTML = '<option value="">Todos los clientes</option>' + clientes.map(c => `<option value="${c.id}">${esc(c.nombre_empresa)}</option>`).join('');
+      selA.innerHTML = opcionesAnio(aniosDe(apr));
+      selC.value = vC; selA.value = vA;
     }
 
     function renderPresupuestosTabla() {
-      const filtroCliente = document.getElementById('filtroPresupuestosCliente').value;
-      const filtroProducto = document.getElementById('filtroPresupuestosProducto').value;
-      const filtroAnio = document.getElementById('filtroPresupuestosAnio').value;
+      const fc = document.getElementById('filtroPresCliente').value;
+      const fe = document.getElementById('filtroPresEstado').value;
+      const fa = document.getElementById('filtroPresAnio').value;
       let lista = presupuestos.slice();
-      if (filtroCliente) lista = lista.filter(p => p.cliente_id === filtroCliente);
-      if (filtroProducto) lista = lista.filter(p => p.producto_id === filtroProducto);
-      if (filtroAnio) lista = lista.filter(p => (p.fecha || '').slice(0, 4) === filtroAnio);
-      renderTablaPresupuestos('presupuestos-tabla', lista);
+      if (fc) lista = lista.filter(p => p.cliente_id === fc);
+      if (fe) lista = lista.filter(p => p.estado === fe);
+      if (fa) lista = lista.filter(p => (p.fecha || '').slice(0, 4) === fa);
+      renderTablaCarpetas('presupuestos-tabla', lista);
+    }
+    function renderAprobadosTabla() {
+      const fc = document.getElementById('filtroAprCliente').value;
+      const fa = document.getElementById('filtroAprAnio').value;
+      let lista = presupuestos.filter(p => p.estado === 'aprobado');
+      if (fc) lista = lista.filter(p => p.cliente_id === fc);
+      if (fa) lista = lista.filter(p => (p.fecha || '').slice(0, 4) === fa);
+      renderTablaCarpetas('aprobados-tabla', lista, true);
     }
 
-    function actualizarPreviewMargen() {
-      const coste = parseFloat(document.getElementById('presupuestoCostInterno').value);
-      const precio = parseFloat(document.getElementById('presupuestoPrecioCliente').value);
-      const el = document.getElementById('presupuestoPreviewMargen');
-      if (!isNaN(coste) && !isNaN(precio) && precio > 0) {
-        const beneficio = precio - coste;
-        const margen = (beneficio / precio * 100).toFixed(1);
-        const color = colorMargen(margen);
-        el.innerHTML = `Beneficio: <strong style="color:${color}">${formatoEuro(beneficio)}</strong> &nbsp;·&nbsp; Margen: <strong style="color:${color}">${margen}%</strong>`;
-      } else {
-        el.innerHTML = 'Beneficio: — · Margen: —';
+    // conPagos: en las vistas de pedidos aprobados se añade la columna del
+    // dinero pendiente, para verlo sin tener que abrir cada pedido.
+    function renderTablaCarpetas(contenedorId, lista, conPagos = false) {
+      const cont = document.getElementById(contenedorId);
+      if (!lista.length) {
+        cont.innerHTML = `<div class="empty"><div class="empty-icon">📝</div><p>No hay presupuestos para mostrar.</p></div>`;
+        return;
       }
+      const ordenada = lista.slice().sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+      let html = `<table><thead><tr>
+        <th>Fecha</th><th>Presupuesto</th><th>Cliente</th><th>Productos</th>
+        <th>Total cliente</th><th>Coste interno</th><th>Beneficio</th><th>Margen</th>${conPagos ? '<th>Pendiente pago</th>' : ''}<th>Estado</th><th></th>
+      </tr></thead><tbody>`;
+      let sumaCliente = 0, sumaBeneficio = 0, sumaPendientePago = 0;
+      for (const p of ordenada) {
+        const cliente = clientes.find(c => c.id === p.cliente_id);
+        const t = totalesCarpeta(p.id);
+        sumaCliente += t.totalCliente; sumaBeneficio += t.beneficio;
+        const col = colorMargen(t.margen);
+        const ls = lineas.filter(l => l.presupuesto_id === p.id);
+        const resumenProd = ls.map(l => etiquetaProducto(l.producto_id, l.variante)).join(', ');
+        const aprobado = p.estado === 'aprobado';
+        let celdaPagos = '';
+        if (conPagos) {
+          const tp = totalesPagos(p.id);
+          const sp = semaforo(tp.pagadoProveedores, tp.costeInterno);
+          sumaPendientePago += tp.pendientePago;
+          celdaPagos = `<td style="white-space:nowrap;"><span style="color:${sp.color}; font-weight:600;">${sp.icono} ${formatoEuro(tp.pendientePago)}</span></td>`;
+        }
+        html += `<tr>
+          <td style="white-space:nowrap;">${formatoFecha(p.fecha)}</td>
+          <td><strong>${esc(p.nombre)}</strong></td>
+          <td>${cliente ? esc(cliente.nombre_empresa) : '—'}</td>
+          <td style="max-width:200px; font-size:12px; color:var(--muted);" title="${esc(resumenProd)}">${t.nLineas} · ${esc(resumenProd.slice(0, 60))}${resumenProd.length > 60 ? '…' : ''}</td>
+          <td>${formatoEuro(t.totalCliente)}</td>
+          <td>${formatoEuro(t.costeInterno)}</td>
+          <td style="color:${col}">${formatoEuro(t.beneficio)}</td>
+          <td><span style="font-weight:700; color:${col}">${t.margen.toFixed(1)}%</span></td>
+          ${celdaPagos}
+          <td><span class="badge badge-${aprobado ? 'success' : 'warning'}">${aprobado ? 'Aprobado' : 'Sin aprobar'}</span></td>
+          <td style="white-space:nowrap; text-align:right;">
+            ${aprobado ? `<button class="btn btn-primary btn-sm" onclick="abrirModalPagos('${p.id}')" title="Estado de pagos">💰</button>` : ''}
+            <button class="btn ${aprobado ? 'btn-ghost' : 'btn-success'} btn-sm" onclick="cambiarEstado('${p.id}', ${aprobado ? 'false' : 'true'})" title="${aprobado ? 'Devolver a sin aprobar' : 'Marcar como aprobado'}">${aprobado ? '↩' : '✓'}</button>
+            <button class="btn btn-ghost btn-sm" onclick="mostrarModalPresupuesto('${p.id}')">✏️</button>
+            <button class="btn btn-danger btn-sm" onclick="eliminarPresupuesto('${p.id}')">🗑️</button>
+          </td></tr>`;
+      }
+      html += `<tr class="totales">
+        <td colspan="4">TOTAL — ${ordenada.length} presupuesto(s)</td>
+        <td>${formatoEuro(sumaCliente)}</td>
+        <td></td>
+        <td>${formatoEuro(sumaBeneficio)}</td>
+        <td></td>
+        ${conPagos ? `<td>${formatoEuro(sumaPendientePago)}</td>` : ''}
+        <td colspan="2"></td>
+      </tr>`;
+      cont.innerHTML = html + '</tbody></table>';
     }
 
-    function poblarSelectsPresupuesto(clientePrefillId) {
-      const selC = document.getElementById('presupuestoCliente');
-      selC.innerHTML = clientes.map(c => `<option value="${c.id}">${c.nombre_empresa}</option>`).join('');
-      if (clientePrefillId) selC.value = clientePrefillId;
-      const selP = document.getElementById('presupuestoProducto');
-      selP.innerHTML = productos.filter(p => p.activo).map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+    // ── EDITOR DE LÍNEAS ────────────────────
+    function opcionesProducto(seleccionado) {
+      let lista = productos.filter(p => p.activo);
+      // Si la línea usa un producto que ya está inactivo, se añade igualmente
+      // para no perderlo al editar un presupuesto antiguo.
+      if (seleccionado && !lista.some(p => p.id === seleccionado)) {
+        const p = productos.find(x => x.id === seleccionado);
+        if (p) lista = [...lista, p];
+      }
+      return lista.map(p => `<option value="${p.id}" ${p.id === seleccionado ? 'selected' : ''}>${esc(p.nombre)}${p.activo ? '' : ' (inactivo)'}</option>`).join('');
+    }
+
+    function renderLineasEditor() {
+      const body = document.getElementById('lineasBody');
+      if (!lineasEditor.length) {
+        body.innerHTML = `<tr><td colspan="7" style="padding:16px; text-align:center; color:var(--muted); font-size:13px;">Todavía no hay productos. Pulsa "Añadir producto".</td></tr>`;
+        actualizarResumenCarpeta();
+        return;
+      }
+      body.innerHTML = lineasEditor.map((l, i) => `
+        <tr>
+          <td><select onchange="setLinea(${i},'producto_id',this.value)">${opcionesProducto(l.producto_id)}</select></td>
+          <td>
+            <input type="text" value="${esc(l.variante)}" list="dlv${i}" placeholder="Sublimados" oninput="setLinea(${i},'variante',this.value)" autocomplete="off">
+            <datalist id="dlv${i}">${variantesUsadas(l.producto_id).map(v => `<option value="${esc(v)}">`).join('')}</datalist>
+          </td>
+          <td><input type="text" value="${esc(l.descripcion)}" placeholder="Buff de microfibra" oninput="setLinea(${i},'descripcion',this.value)"></td>
+          <td><input type="number" min="1" step="1" value="${esc(l.cantidad)}" oninput="setLinea(${i},'cantidad',this.value)"></td>
+          <td><input type="number" min="0" step="0.01" value="${esc(l.coste_interno_unitario)}" oninput="setLinea(${i},'coste_interno_unitario',this.value)"></td>
+          <td><input type="number" min="0" step="0.01" value="${esc(l.precio_cliente_unitario)}" oninput="setLinea(${i},'precio_cliente_unitario',this.value)"></td>
+          <td style="text-align:center;"><button type="button" class="btn btn-danger btn-sm" onclick="quitarLinea(${i})">🗑️</button></td>
+        </tr>`).join('');
+      actualizarResumenCarpeta();
+    }
+
+    function setLinea(i, campo, valor) {
+      lineasEditor[i][campo] = valor;
+      // Al cambiar de producto, refrescamos las variantes sugeridas de esa fila
+      if (campo === 'producto_id') {
+        const dl = document.getElementById('dlv' + i);
+        if (dl) dl.innerHTML = variantesUsadas(valor).map(v => `<option value="${esc(v)}">`).join('');
+      }
+      actualizarResumenCarpeta();
+    }
+    function anadirLinea() {
+      const primerProducto = productos.find(p => p.activo);
+      if (!primerProducto) { alert('❌ Primero crea algún producto en el catálogo.'); return; }
+      lineasEditor.push({ id: null, producto_id: primerProducto.id, variante: '', descripcion: '', cantidad: '', coste_interno_unitario: '', precio_cliente_unitario: '' });
+      renderLineasEditor();
+    }
+    function quitarLinea(i) {
+      lineasEditor.splice(i, 1);
+      renderLineasEditor();
+    }
+
+    // Resumen en vivo: se recalcula según se escribe, antes de guardar.
+    function actualizarResumenCarpeta() {
+      let totalCliente = 0, costeInterno = 0;
+      lineasEditor.forEach(l => {
+        const c = parseFloat(l.cantidad) || 0;
+        totalCliente += c * (parseFloat(l.precio_cliente_unitario) || 0);
+        costeInterno += c * (parseFloat(l.coste_interno_unitario) || 0);
+      });
+      const beneficio = totalCliente - costeInterno;
+      const margen = totalCliente > 0 ? (beneficio / totalCliente * 100) : 0;
+      const col = colorMargen(margen);
+      document.getElementById('resumenCarpeta').innerHTML = `
+        <div>Total cliente (sin IVA)<strong>${formatoEuro(totalCliente)}</strong></div>
+        <div>Coste interno<strong>${formatoEuro(costeInterno)}</strong></div>
+        <div>Beneficio<strong style="color:${col}">${formatoEuro(beneficio)}</strong></div>
+        <div>Margen<strong style="color:${col}">${margen.toFixed(1)}%</strong></div>`;
     }
 
     function mostrarModalPresupuesto(id = null, clientePrefillId = null) {
-      poblarSelectsPresupuesto(clientePrefillId);
+      const selC = document.getElementById('presCliente');
+      selC.innerHTML = clientes.map(c => `<option value="${c.id}">${esc(c.nombre_empresa)}</option>`).join('');
       if (id) {
         const p = presupuestos.find(x => x.id === id);
-        const prod = productos.find(pr => pr.id === p.producto_id);
-        if (prod && !prod.activo) {
-          const selP = document.getElementById('presupuestoProducto');
-          selP.innerHTML += `<option value="${prod.id}">${prod.nombre} (inactivo)</option>`;
-        }
         document.getElementById('tituloModalPresupuesto').textContent = 'Editar presupuesto';
         document.getElementById('presupuestoId').value = p.id;
-        document.getElementById('presupuestoCliente').value = p.cliente_id;
-        document.getElementById('presupuestoProducto').value = p.producto_id;
-        document.getElementById('presupuestoFecha').value = p.fecha;
-        document.getElementById('presupuestoCantidad').value = p.cantidad;
-        document.getElementById('presupuestoCostInterno').value = p.coste_interno_unitario;
-        document.getElementById('presupuestoPrecioCliente').value = p.precio_cliente_unitario;
-        document.getElementById('presupuestoObservaciones').value = p.observaciones || '';
-        document.getElementById('presupuestoDescripcion').value = p.descripcion || '';
-        sugerirVariantes('presupuesto');
-        document.getElementById('presupuestoVariante').value = p.variante || '';
+        document.getElementById('presNombre').value = p.nombre || '';
+        selC.value = p.cliente_id;
+        document.getElementById('presFecha').value = p.fecha;
+        document.getElementById('presObservaciones').value = p.observaciones || '';
+        lineasEditor = lineas.filter(l => l.presupuesto_id === id).map(l => ({
+          id: l.id, producto_id: l.producto_id, variante: l.variante || '', descripcion: l.descripcion || '',
+          cantidad: l.cantidad, coste_interno_unitario: l.coste_interno_unitario, precio_cliente_unitario: l.precio_cliente_unitario
+        }));
       } else {
         document.getElementById('tituloModalPresupuesto').textContent = 'Nuevo presupuesto';
         document.getElementById('presupuestoId').value = '';
-        document.getElementById('presupuestoFecha').value = new Date().toISOString().slice(0, 10);
-        document.getElementById('presupuestoCantidad').value = '';
-        document.getElementById('presupuestoCostInterno').value = '';
-        document.getElementById('presupuestoPrecioCliente').value = '';
-        document.getElementById('presupuestoObservaciones').value = '';
-        document.getElementById('presupuestoDescripcion').value = '';
-        document.getElementById('presupuestoVariante').value = '';
-        sugerirVariantes('presupuesto');
+        document.getElementById('presNombre').value = '';
+        if (clientePrefillId) selC.value = clientePrefillId;
+        document.getElementById('presFecha').value = new Date().toISOString().slice(0, 10);
+        document.getElementById('presObservaciones').value = '';
+        lineasEditor = [];
+        anadirLineaSilencioso();
       }
-      actualizarPreviewMargen();
+      renderLineasEditor();
       abrirModal('modalPresupuesto');
+    }
+    function anadirLineaSilencioso() {
+      const p = productos.find(x => x.activo);
+      if (p) lineasEditor.push({ id: null, producto_id: p.id, variante: '', descripcion: '', cantidad: '', coste_interno_unitario: '', precio_cliente_unitario: '' });
     }
 
     async function guardarPresupuesto() {
-      const clienteId = document.getElementById('presupuestoCliente').value;
-      const productoId = document.getElementById('presupuestoProducto').value;
-      const fecha = document.getElementById('presupuestoFecha').value;
-      const cantidad = parseInt(document.getElementById('presupuestoCantidad').value);
-      const costeInterno = parseFloat(document.getElementById('presupuestoCostInterno').value);
-      const precioCliente = parseFloat(document.getElementById('presupuestoPrecioCliente').value);
-
+      const nombre = document.getElementById('presNombre').value.trim();
+      const clienteId = document.getElementById('presCliente').value;
+      const fecha = document.getElementById('presFecha').value;
+      if (!nombre) { alert('❌ Ponle un nombre al presupuesto (ej: "Carrera de la Mujer - 13 julio")'); return; }
       if (!clienteId) { alert('❌ Elige un cliente'); return; }
-      if (!productoId) { alert('❌ Elige un producto'); return; }
       if (!fecha) { alert('❌ Indica la fecha'); return; }
-      if (!cantidad || cantidad <= 0) { alert('❌ La cantidad debe ser mayor que 0'); return; }
-      if (isNaN(costeInterno) || costeInterno < 0) { alert('❌ Indica el coste interno unitario'); return; }
-      if (isNaN(precioCliente) || precioCliente < 0) { alert('❌ Indica el precio al cliente'); return; }
+      if (!lineasEditor.length) { alert('❌ Añade al menos un producto'); return; }
 
-      const payload = {
-        cliente_id: clienteId,
-        producto_id: productoId,
-        fecha,
-        cantidad,
-        coste_interno_unitario: costeInterno,
-        precio_cliente_unitario: precioCliente,
-        variante: document.getElementById('presupuestoVariante').value.trim() || null,
-        descripcion: document.getElementById('presupuestoDescripcion').value.trim() || null,
-        observaciones: document.getElementById('presupuestoObservaciones').value.trim() || null
-      };
-      // beneficio_unitario y margen_pct son columnas calculadas: no se incluyen.
-
-      const idStr = document.getElementById('presupuestoId').value;
-      let error;
-      if (idStr) {
-        ({ error } = await sb.from('presupuestos').update(payload).eq('id', idStr));
-      } else {
-        ({ error } = await sb.from('presupuestos').insert(payload));
+      for (let i = 0; i < lineasEditor.length; i++) {
+        const l = lineasEditor[i];
+        const n = i + 1;
+        if (!l.producto_id) { alert(`❌ Fila ${n}: elige un producto`); return; }
+        const cant = parseInt(l.cantidad);
+        if (!cant || cant <= 0) { alert(`❌ Fila ${n}: la cantidad debe ser mayor que 0`); return; }
+        const ci = parseFloat(l.coste_interno_unitario);
+        if (isNaN(ci) || ci < 0) { alert(`❌ Fila ${n}: indica el coste interno`); return; }
+        const pc = parseFloat(l.precio_cliente_unitario);
+        if (isNaN(pc) || pc < 0) { alert(`❌ Fila ${n}: indica el precio al cliente`); return; }
       }
-      if (error) { alert('❌ Error al guardar: ' + error.message); return; }
+
+      const cab = {
+        cliente_id: clienteId,
+        nombre,
+        fecha,
+        observaciones: document.getElementById('presObservaciones').value.trim() || null
+      };
+      const idStr = document.getElementById('presupuestoId').value;
+      let presupuestoId = idStr;
+
+      if (idStr) {
+        const { error } = await sb.from('presupuestos').update(cab).eq('id', idStr);
+        if (error) { alert('❌ Error al guardar: ' + error.message); return; }
+      } else {
+        const { data, error } = await sb.from('presupuestos').insert(cab).select('id').single();
+        if (error) { alert('❌ Error al guardar: ' + error.message); return; }
+        presupuestoId = data.id;
+      }
+
+      // Sincronizar las líneas: se actualizan las que ya existían, se insertan
+      // las nuevas y se borran las que se hayan quitado en el editor.
+      const idsEnEditor = lineasEditor.filter(l => l.id).map(l => l.id);
+      const idsEnBd = lineas.filter(l => l.presupuesto_id === presupuestoId).map(l => l.id);
+      const aBorrar = idsEnBd.filter(x => !idsEnEditor.includes(x));
+
+      const errores = [];
+      for (let i = 0; i < lineasEditor.length; i++) {
+        const l = lineasEditor[i];
+        const fila = {
+          presupuesto_id: presupuestoId,
+          producto_id: l.producto_id,
+          variante: (l.variante || '').trim() || null,
+          descripcion: (l.descripcion || '').trim() || null,
+          cantidad: parseInt(l.cantidad),
+          coste_interno_unitario: parseFloat(l.coste_interno_unitario),
+          precio_cliente_unitario: parseFloat(l.precio_cliente_unitario),
+          posicion: i
+        };
+        const { error } = l.id
+          ? await sb.from('presupuesto_lineas').update(fila).eq('id', l.id)
+          : await sb.from('presupuesto_lineas').insert(fila);
+        if (error) errores.push(error.message);
+      }
+      if (aBorrar.length) {
+        const { error } = await sb.from('presupuesto_lineas').delete().in('id', aBorrar);
+        if (error) errores.push(error.message);
+      }
+      if (errores.length) { alert('❌ Error al guardar los productos: ' + errores[0]); return; }
+
       cerrarModal('modalPresupuesto');
       toast(idStr ? '✓ Presupuesto actualizado' : '✓ Presupuesto creado');
-
-      const { data } = await sb.from('presupuestos').select('*').order('fecha', { ascending: false });
-      presupuestos = data || [];
-
-      if (document.getElementById('ficha-cliente-page').classList.contains('active')) {
-        verFichaCliente(clienteFichaActualId);
-      } else {
-        renderPresupuestosTabla();
-      }
+      await recargarPresupuestos();
+      refrescarVistaActual();
     }
 
     async function eliminarPresupuesto(id) {
-      if (!confirmarAccion('¿Eliminar este presupuesto? Esta acción no se puede deshacer.')) return;
+      const p = presupuestos.find(x => x.id === id);
+      if (!confirmarAccion(`¿Eliminar el presupuesto "${p?.nombre}" y todos sus productos? Esta acción no se puede deshacer.`)) return;
       const { error } = await sb.from('presupuestos').delete().eq('id', id);
       if (error) { alert('❌ Error al eliminar: ' + error.message); return; }
       toast('✓ Presupuesto eliminado');
-      presupuestos = presupuestos.filter(x => x.id !== id);
+      await recargarPresupuestos();
+      refrescarVistaActual();
+    }
+
+    async function cambiarEstado(id, aprobar) {
+      const p = presupuestos.find(x => x.id === id);
+      if (!aprobar && !confirmarAccion(`"${p?.nombre}" volverá a estar sin aprobar. ¿Seguro?`)) return;
+      const payload = aprobar
+        ? { estado: 'aprobado', fecha_aprobacion: new Date().toISOString().slice(0, 10) }
+        : { estado: 'realizado', fecha_aprobacion: null };
+      const { error } = await sb.from('presupuestos').update(payload).eq('id', id);
+      if (error) { alert('❌ Error: ' + error.message); return; }
+      toast(aprobar ? '✓ Presupuesto aprobado: ya es un pedido' : '✓ Devuelto a sin aprobar');
+      await recargarPresupuestos();
+      refrescarVistaActual();
+    }
+
+    function refrescarVistaActual() {
       if (document.getElementById('ficha-cliente-page').classList.contains('active')) {
         verFichaCliente(clienteFichaActualId);
+      } else if (document.getElementById('aprobados-page').classList.contains('active')) {
+        poblarFiltrosAprobados(); renderAprobadosTabla();
       } else {
-        renderPresupuestosTabla();
+        poblarFiltrosPresupuestos(); renderPresupuestosTabla();
       }
     }
 
 
     // ════════════════════════════════════════
-    //  MÓDULO GENERACIÓN DE PDF (presupuesto comercial)
+    //  ESTADO DE PAGOS
+    // ════════════════════════════════════════
+    // Dos flujos de dinero, separados a propósito:
+    //   · COBROS   → lo que el cliente nos paga.
+    //   · PAGOS    → lo que nosotros pagamos: a proveedores (por producto)
+    //                y de transporte / otros gastos (del pedido entero).
+    // El número clave para Alejandro es "pendiente de pago": lo que hay
+    // que tener controlado para los próximos meses.
+
+    function totalesPagos(presupuestoId) {
+      const t = totalesCarpeta(presupuestoId);
+      const cobrado = cobros.filter(c => c.presupuesto_id === presupuestoId)
+        .reduce((a, c) => a + (Number(c.importe) || 0), 0);
+      const delPedido = pagos.filter(p => p.presupuesto_id === presupuestoId);
+      const pagadoProveedores = delPedido.filter(p => p.tipo === 'producto')
+        .reduce((a, p) => a + (Number(p.importe) || 0), 0);
+      const gastoTransporte = delPedido.filter(p => p.tipo === 'transporte')
+        .reduce((a, p) => a + (Number(p.importe) || 0), 0);
+      const gastoOtros = delPedido.filter(p => p.tipo === 'otro')
+        .reduce((a, p) => a + (Number(p.importe) || 0), 0);
+      return {
+        ...t,
+        cobrado,
+        pendienteCobro: t.totalCliente - cobrado,
+        pagadoProveedores,
+        pendientePago: t.costeInterno - pagadoProveedores,
+        gastoTransporte,
+        gastoOtros
+      };
+    }
+
+    // Semáforo: 🔴 sin pagar · 🟡 a medias · 🟢 liquidado.
+    // El margen de 0,01 evita que un redondeo deje algo en amarillo eternamente.
+    function semaforo(pagado, total) {
+      if (total <= 0) return { icono: '—', texto: '—', color: 'var(--muted)' };
+      if (pagado <= 0.005) return { icono: '🔴', texto: 'Pendiente', color: 'var(--danger)' };
+      if (pagado < total - 0.005) return { icono: '🟡', texto: 'Parcial', color: 'var(--warning)' };
+      return { icono: '🟢', texto: 'Liquidado', color: 'var(--success)' };
+    }
+
+    function etiquetaModalidad(m) {
+      return ({ aereo: '✈️ Aéreo', maritimo: '🚢 Marítimo', terrestre: '🚚 Terrestre' })[m] || m;
+    }
+
+    function abrirModalPagos(presupuestoId) {
+      pagosPresupuestoId = presupuestoId;
+      const p = presupuestos.find(x => x.id === presupuestoId);
+      const c = clientes.find(x => x.id === p.cliente_id);
+      document.getElementById('pagosSubtitulo').textContent =
+        `${p.nombre} · ${c ? c.nombre_empresa : '—'} · ${formatoFecha(p.fecha)}`;
+      const hoy = new Date().toISOString().slice(0, 10);
+      document.getElementById('cobroFecha').value = hoy;
+      document.getElementById('gastoFecha').value = hoy;
+      document.getElementById('cobroImporte').value = '';
+      document.getElementById('cobroConcepto').value = '';
+      document.getElementById('gastoImporte').value = '';
+      document.getElementById('gastoConcepto').value = '';
+      document.getElementById('gastoTipo').value = 'transporte';
+      toggleModalidad();
+      renderPagos();
+      abrirModal('modalPagos');
+    }
+
+    function toggleModalidad() {
+      const esTransporte = document.getElementById('gastoTipo').value === 'transporte';
+      document.getElementById('grupoModalidad').style.display = esTransporte ? '' : 'none';
+    }
+
+    function renderPagos() {
+      const id = pagosPresupuestoId;
+      const t = totalesPagos(id);
+      const sCobro = semaforo(t.cobrado, t.totalCliente);
+      const sPago = semaforo(t.pagadoProveedores, t.costeInterno);
+
+      document.getElementById('pagosResumen').innerHTML = `
+        <div class="card">
+          <h3>💶 Pendiente de cobro</h3>
+          <p style="font-size:28px; color:${sCobro.color}; margin:12px 0;">${formatoEuro(t.pendienteCobro)}</p>
+          <p>${sCobro.icono} Cobrado ${formatoEuro(t.cobrado)} de ${formatoEuro(t.totalCliente)}</p>
+        </div>
+        <div class="card">
+          <h3>🏭 Pendiente de pago</h3>
+          <p style="font-size:28px; color:${sPago.color}; margin:12px 0;">${formatoEuro(t.pendientePago)}</p>
+          <p>${sPago.icono} Pagado ${formatoEuro(t.pagadoProveedores)} de ${formatoEuro(t.costeInterno)} a proveedores</p>
+        </div>
+        <div class="card">
+          <h3>🚚 Gasto en transporte</h3>
+          <p style="font-size:28px; color:var(--accent); margin:12px 0;">${formatoEuro(t.gastoTransporte)}</p>
+          <p>${t.gastoOtros > 0 ? 'Más ' + formatoEuro(t.gastoOtros) + ' en otros gastos' : 'Sin otros gastos registrados'}</p>
+        </div>`;
+
+      renderPagosCobros();
+      renderPagosLineas();
+      renderPagosGastos();
+    }
+
+    function renderPagosCobros() {
+      const cs = cobros.filter(c => c.presupuesto_id === pagosPresupuestoId)
+        .sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+      const cont = document.getElementById('pagosCobros');
+      if (!cs.length) {
+        cont.innerHTML = '<p style="font-size:13px; color:var(--muted);">El cliente todavía no ha pagado nada.</p>';
+        return;
+      }
+      cont.innerHTML = cs.map(c => `
+        <div class="apunte">
+          <span>${formatoFecha(c.fecha)} · <strong>${formatoEuro(c.importe)}</strong>${c.concepto ? ' · ' + esc(c.concepto) : ''}</span>
+          <button type="button" class="btn btn-danger btn-sm" onclick="eliminarCobro('${c.id}')">🗑️</button>
+        </div>`).join('');
+    }
+
+    function renderPagosLineas() {
+      const ls = lineas.filter(l => l.presupuesto_id === pagosPresupuestoId);
+      const cont = document.getElementById('pagosLineas');
+      if (!ls.length) {
+        cont.innerHTML = '<p style="font-size:13px; color:var(--muted);">Este pedido no tiene productos.</p>';
+        return;
+      }
+      cont.innerHTML = ls.map(l => {
+        const coste = (Number(l.cantidad) || 0) * (Number(l.coste_interno_unitario) || 0);
+        const ps = pagos.filter(p => p.linea_id === l.id && p.tipo === 'producto')
+          .sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+        const pagado = ps.reduce((a, p) => a + (Number(p.importe) || 0), 0);
+        const pendiente = coste - pagado;
+        const s = semaforo(pagado, coste);
+        const pct = coste > 0 ? (pagado / coste * 100) : 0;
+        return `<div class="bloque-linea">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+            <strong>${esc(etiquetaProducto(l.producto_id, l.variante))}</strong>
+            <span style="font-size:12px; color:var(--muted);">
+              Coste ${formatoEuro(coste)} · Pagado ${formatoEuro(pagado)} (${pct.toFixed(0)}%) ·
+              <strong style="color:${s.color}">${s.icono} Quedan ${formatoEuro(pendiente)}</strong>
+            </span>
+          </div>
+          ${ps.map(p => `
+            <div class="apunte">
+              <span>${formatoFecha(p.fecha)} · <strong>${formatoEuro(p.importe)}</strong>${p.concepto ? ' · ' + esc(p.concepto) : ''}</span>
+              <button type="button" class="btn btn-danger btn-sm" onclick="eliminarPago('${p.id}')">🗑️</button>
+            </div>`).join('')}
+          <div style="display:flex; gap:6px; margin-top:10px; flex-wrap:wrap;">
+            <input type="date" class="mini-input" id="pf_${l.id}" value="${new Date().toISOString().slice(0,10)}" style="flex:0 0 140px;">
+            <input type="number" class="mini-input" id="pi_${l.id}" min="0" step="0.01" placeholder="Importe €" style="flex:1; min-width:110px;">
+            <input type="text" class="mini-input" id="pc_${l.id}" placeholder="Concepto (ej: 30% anticipo)" style="flex:2; min-width:150px;">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="rellenarResto('${l.id}', ${pendiente})" title="Poner lo que queda por pagar">Resto</button>
+            <button type="button" class="btn btn-primary btn-sm" onclick="anadirPagoLinea('${l.id}')">➕ Pago</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function rellenarResto(lineaId, pendiente) {
+      document.getElementById('pi_' + lineaId).value = Math.max(0, Number(pendiente)).toFixed(2);
+    }
+
+    function renderPagosGastos() {
+      const gs = pagos.filter(p => p.presupuesto_id === pagosPresupuestoId && p.tipo !== 'producto')
+        .sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+      const cont = document.getElementById('pagosGastos');
+      if (!gs.length) {
+        cont.innerHTML = '<p style="font-size:13px; color:var(--muted);">Todavía no hay gastos de transporte registrados.</p>';
+        return;
+      }
+      cont.innerHTML = gs.map(g => `
+        <div class="apunte">
+          <span>${formatoFecha(g.fecha)} · <strong>${formatoEuro(g.importe)}</strong> · ${g.tipo === 'transporte' ? etiquetaModalidad(g.modalidad_transporte) : 'Otro gasto'}${g.concepto ? ' · ' + esc(g.concepto) : ''}</span>
+          <button type="button" class="btn btn-danger btn-sm" onclick="eliminarPago('${g.id}')">🗑️</button>
+        </div>`).join('');
+    }
+
+    async function anadirCobro() {
+      const fecha = document.getElementById('cobroFecha').value;
+      const importe = parseFloat(document.getElementById('cobroImporte').value);
+      if (!fecha) { alert('❌ Indica la fecha del cobro'); return; }
+      if (isNaN(importe) || importe <= 0) { alert('❌ Indica un importe mayor que 0'); return; }
+      const { error } = await sb.from('cobros').insert({
+        presupuesto_id: pagosPresupuestoId, fecha, importe,
+        concepto: document.getElementById('cobroConcepto').value.trim() || null
+      });
+      if (error) { alert('❌ Error al guardar el cobro: ' + error.message); return; }
+      document.getElementById('cobroImporte').value = '';
+      document.getElementById('cobroConcepto').value = '';
+      toast('✓ Cobro registrado');
+      await recargarDinero();
+      renderPagos();
+      refrescarVistaActual();
+    }
+
+    async function eliminarCobro(id) {
+      if (!confirmarAccion('¿Eliminar este cobro?')) return;
+      const { error } = await sb.from('cobros').delete().eq('id', id);
+      if (error) { alert('❌ Error al eliminar: ' + error.message); return; }
+      toast('✓ Cobro eliminado');
+      await recargarDinero();
+      renderPagos();
+      refrescarVistaActual();
+    }
+
+    async function anadirPagoLinea(lineaId) {
+      const fecha = document.getElementById('pf_' + lineaId).value;
+      const importe = parseFloat(document.getElementById('pi_' + lineaId).value);
+      if (!fecha) { alert('❌ Indica la fecha del pago'); return; }
+      if (isNaN(importe) || importe <= 0) { alert('❌ Indica un importe mayor que 0'); return; }
+      const { error } = await sb.from('pagos').insert({
+        presupuesto_id: pagosPresupuestoId, linea_id: lineaId, tipo: 'producto', fecha, importe,
+        concepto: document.getElementById('pc_' + lineaId).value.trim() || null
+      });
+      if (error) { alert('❌ Error al guardar el pago: ' + error.message); return; }
+      toast('✓ Pago registrado');
+      await recargarDinero();
+      renderPagos();
+      refrescarVistaActual();
+    }
+
+    async function anadirGasto() {
+      const fecha = document.getElementById('gastoFecha').value;
+      const tipo = document.getElementById('gastoTipo').value;
+      const importe = parseFloat(document.getElementById('gastoImporte').value);
+      if (!fecha) { alert('❌ Indica la fecha del gasto'); return; }
+      if (isNaN(importe) || importe <= 0) { alert('❌ Indica un importe mayor que 0'); return; }
+      const { error } = await sb.from('pagos').insert({
+        presupuesto_id: pagosPresupuestoId, linea_id: null, tipo, fecha, importe,
+        modalidad_transporte: tipo === 'transporte' ? document.getElementById('gastoModalidad').value : null,
+        concepto: document.getElementById('gastoConcepto').value.trim() || null
+      });
+      if (error) { alert('❌ Error al guardar el gasto: ' + error.message); return; }
+      document.getElementById('gastoImporte').value = '';
+      document.getElementById('gastoConcepto').value = '';
+      toast('✓ Gasto registrado');
+      await recargarDinero();
+      renderPagos();
+      refrescarVistaActual();
+    }
+
+    async function eliminarPago(id) {
+      if (!confirmarAccion('¿Eliminar este pago?')) return;
+      const { error } = await sb.from('pagos').delete().eq('id', id);
+      if (error) { alert('❌ Error al eliminar: ' + error.message); return; }
+      toast('✓ Pago eliminado');
+      await recargarDinero();
+      renderPagos();
+      refrescarVistaActual();
+    }
+
+    // ════════════════════════════════════════
+    //  GENERACIÓN DE PDF
     // ════════════════════════════════════════
 // Constructor del docDefinition de pdfmake para el presupuesto comercial de Equipo 47.
 // IMPORTANTE (privacidad): este documento SOLO usa el precio del cliente.
@@ -1619,10 +1790,9 @@ function pdfFecha(iso) {
   return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
-// datos = { clienteNombre, fecha (iso), referencia?, validez15 (bool), lineas: [{producto, descripcion, cantidad, precioUnitario}] }
+// datos = { clienteNombre, fecha (iso), referencia?, validez15 (bool),
+//           lineas: [{producto, descripcion, cantidad, precioUnitario}] }
 // logoDataUrl = dataURL de la imagen del logo, o null (se dibuja "E47" en texto)
-// Logo E47 en blanco (vectorial) para incrustar en el PDF sobre el fondo navy.
-    const LOGO_SVG = `<svg fill="#ffffff" id="Capa_4_copia_3" data-name="Capa 4 copia 3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500"> <g> <polygon points="72 279.97 22.33 279.98 0 341.17 129.36 341.17 143.2 302.72 63.75 302.59 72 279.97"/> <polygon points="54.02 193.13 183.45 192.91 195.84 158.97 66.47 159 54.02 193.13"/> <polygon points="49.27 206.12 41.02 228.74 27.13 266.83 144.12 266.79 158.02 228.71 90.7 228.73 98.95 206.11 49.27 206.12"/> <polygon points="485.43 197.13 500 158.88 362.44 158.83 351.67 188.32 348.44 197.17 434.34 197.15 315.57 341.17 366.65 341.17 485.43 197.13"/> </g> <g> <polygon points="260.42 266.8 260.42 266.8 222.37 266.81 278.68 216.74 263.11 259.43 307 259.54 323.36 215.17 343.67 158.96 299.43 158.85 169.39 266.82 156.33 302.6 291.27 302.57 291.27 302.57 313.34 302.56 326.39 266.78 260.42 266.8"/> <polygon points="244.6 310.15 233.29 341.15 277.2 341.13 288.51 310.14 244.6 310.15"/> </g> </svg>`;
 
     function construirDocDefinition(datos, logoDataUrl) {
   const lineas = datos.lineas || [];
@@ -1648,6 +1818,7 @@ function pdfFecha(iso) {
       { text: pdfEuro(lineaTotal), alignment: 'right', bold: true, color: COL_PDF.dark, fillColor: bg, margin: [0, 6, 0, 6] }
     ]);
   });
+
 
   // Bloque de marca (navy) con logo + datos fiscales
   const bloqueMarca = {
@@ -1788,79 +1959,74 @@ function pdfFecha(iso) {
   };
 }
 
-    // Cargar el logo del sitio como dataURL (para incrustarlo en el PDF).
-    // Si no se puede (p.ej. en local sin la imagen), el PDF usa el texto "E47".
-    async function obtenerLogoDataUrl() {
-      try {
-        const resp = await fetch('/images/brand/logo.png');
-        if (!resp.ok) return null;
-        const blob = await resp.blob();
-        return await new Promise((res) => {
-          const r = new FileReader();
-          r.onloadend = () => res(r.result);
-          r.onerror = () => res(null);
-          r.readAsDataURL(blob);
-        });
-      } catch (e) {
-        return null;
-      }
-    }
+    const LOGO_SVG = `<svg fill="#ffffff" id="Capa_4_copia_3" data-name="Capa 4 copia 3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500"> <g> <polygon points="72 279.97 22.33 279.98 0 341.17 129.36 341.17 143.2 302.72 63.75 302.59 72 279.97"/> <polygon points="54.02 193.13 183.45 192.91 195.84 158.97 66.47 159 54.02 193.13"/> <polygon points="49.27 206.12 41.02 228.74 27.13 266.83 144.12 266.79 158.02 228.71 90.7 228.73 98.95 206.11 49.27 206.12"/> <polygon points="485.43 197.13 500 158.88 362.44 158.83 351.67 188.32 348.44 197.17 434.34 197.15 315.57 341.17 366.65 341.17 485.43 197.13"/> </g> <g> <polygon points="260.42 266.8 260.42 266.8 222.37 266.81 278.68 216.74 263.11 259.43 307 259.54 323.36 215.17 343.67 158.96 299.43 158.85 169.39 266.82 156.33 302.6 291.27 302.57 291.27 302.57 313.34 302.56 326.39 266.78 260.42 266.8"/> <polygon points="244.6 310.15 233.29 341.15 277.2 341.13 288.51 310.14 244.6 310.15"/> </g> </svg>`;
 
     function abrirModalPDF(clientePrefillId = null) {
       const sel = document.getElementById('pdfCliente');
-      sel.innerHTML = clientes.map(c => `<option value="${c.id}">${c.nombre_empresa}</option>`).join('');
+      sel.innerHTML = clientes.map(c => `<option value="${c.id}">${esc(c.nombre_empresa)}</option>`).join('');
       if (clientePrefillId) sel.value = clientePrefillId;
       document.getElementById('pdfFecha').value = new Date().toISOString().slice(0, 10);
       document.getElementById('pdfReferencia').value = '';
       document.getElementById('pdfValidez15').checked = true;
-      renderLineasPDF();
+      renderCarpetasPDF();
       abrirModal('modalPDF');
     }
 
-    // Punto 5 de las mejoras: marcar o desmarcar todas las líneas de golpe,
-    // en vez de ir desmarcándolas una a una.
-    function marcarLineasPDF(valor) {
-      document.querySelectorAll('.pdf-linea-chk').forEach(chk => { chk.checked = valor; });
+    function renderCarpetasPDF() {
+      const clienteId = document.getElementById('pdfCliente').value;
+      const sel = document.getElementById('pdfCarpeta');
+      const propias = presupuestos.filter(p => p.cliente_id === clienteId);
+      sel.innerHTML = propias.length
+        ? propias.map(p => `<option value="${p.id}">${esc(p.nombre)} (${formatoFecha(p.fecha)})</option>`).join('')
+        : '<option value="">— sin presupuestos —</option>';
+      renderLineasPDF();
     }
 
+
     function renderLineasPDF() {
-      const clienteId = document.getElementById('pdfCliente').value;
+      const carpetaId = document.getElementById('pdfCarpeta').value;
       const cont = document.getElementById('pdfLineas');
-      const lineas = presupuestos.filter(p => p.cliente_id === clienteId);
-      if (!lineas.length) {
-        cont.innerHTML = '<p style="padding:16px; color:var(--muted); font-size:13px;">Este cliente no tiene presupuestos guardados. Crea uno antes de generar el PDF.</p>';
+      const ls = lineas.filter(l => l.presupuesto_id === carpetaId);
+      if (!ls.length) {
+        cont.innerHTML = '<p style="padding:16px; color:var(--muted); font-size:13px;">Este presupuesto no tiene productos.</p>';
         return;
       }
-      cont.innerHTML = lineas.map(p => {
-        const prod = productos.find(x => x.id === p.producto_id);
-        const totalLinea = (Number(p.cantidad) || 0) * (Number(p.precio_cliente_unitario) || 0);
+      cont.innerHTML = ls.map(l => {
+        const totalLinea = (Number(l.cantidad) || 0) * (Number(l.precio_cliente_unitario) || 0);
         return `<label style="display:flex; align-items:center; gap:10px; padding:10px 14px; border-bottom:1px solid var(--border); cursor:pointer; font-size:13px;">
-          <input type="checkbox" class="pdf-linea-chk" value="${p.id}" checked style="width:auto;">
+          <input type="checkbox" class="pdf-linea-chk" value="${l.id}" checked style="width:auto;">
           <span style="flex:1;">
-            <strong>${etiquetaProducto(p.producto_id, p.variante)}</strong>${p.descripcion ? ' · <span style="color:var(--muted)">' + p.descripcion + '</span>' : ''}<br>
-            <span style="color:var(--muted); font-size:12px;">${formatoFecha(p.fecha)} · ${p.cantidad} uds × ${formatoEuro(p.precio_cliente_unitario)} = ${formatoEuro(totalLinea)}</span>
+            <strong>${esc(etiquetaProducto(l.producto_id, l.variante))}</strong>${l.descripcion ? ' · <span style="color:var(--muted)">' + esc(l.descripcion) + '</span>' : ''}<br>
+            <span style="color:var(--muted); font-size:12px;">${l.cantidad} uds × ${formatoEuro(l.precio_cliente_unitario)} = ${formatoEuro(totalLinea)}</span>
           </span>
         </label>`;
       }).join('');
     }
 
+    function marcarLineasPDF(valor) {
+      document.querySelectorAll('.pdf-linea-chk').forEach(chk => { chk.checked = valor; });
+    }
+
     async function descargarPDF() {
       const clienteId = document.getElementById('pdfCliente').value;
       const cliente = clientes.find(c => c.id === clienteId);
+      const carpetaId = document.getElementById('pdfCarpeta').value;
+      const cab = presupuestos.find(p => p.id === carpetaId);
       if (!cliente) { alert('❌ Elige un cliente'); return; }
+      if (!cab) { alert('❌ Elige un presupuesto'); return; }
 
-      const idsSeleccionados = Array.from(document.querySelectorAll('.pdf-linea-chk:checked')).map(chk => chk.value);
-      if (!idsSeleccionados.length) { alert('❌ Marca al menos una línea para incluir en el presupuesto'); return; }
+      const ids = Array.from(document.querySelectorAll('.pdf-linea-chk:checked')).map(c => c.value);
+      if (!ids.length) { alert('❌ Marca al menos una línea para incluir en el presupuesto'); return; }
 
-      // Solo se toman datos comerciales: producto, descripción, cantidad y PRECIO DEL CLIENTE.
-      // Nunca coste interno, beneficio ni margen.
-      const lineas = idsSeleccionados.map(id => {
-        const p = presupuestos.find(x => x.id === id);
+      // PRIVACIDAD: aquí solo se leen producto, descripción, cantidad y PRECIO DEL
+      // CLIENTE. El coste interno, el beneficio y el margen no se tocan nunca.
+      const lineasPDF = ids.map(id => {
+        const l = lineas.find(x => x.id === id);
         return {
-          producto: etiquetaProducto(p.producto_id, p.variante),
-          descripcion: p.descripcion || '',
-          cantidad: p.cantidad,
-          precioUnitario: p.precio_cliente_unitario
+          producto: etiquetaProducto(l.producto_id, l.variante),
+          descripcion: l.descripcion || '',
+          cantidad: l.cantidad,
+          precioUnitario: l.precio_cliente_unitario
         };
       });
 
@@ -1869,12 +2035,12 @@ function pdfFecha(iso) {
         fecha: document.getElementById('pdfFecha').value,
         referencia: document.getElementById('pdfReferencia').value.trim() || null,
         validez15: document.getElementById('pdfValidez15').checked,
-        lineas
+        lineas: lineasPDF
       };
 
       const dd = construirDocDefinition(datos, LOGO_SVG);
-      const nombreArchivo = `Presupuesto_${cliente.nombre_empresa.replace(/[^a-zA-Z0-9]/g, '_')}_${datos.fecha}.pdf`;
-      pdfMake.createPdf(dd).download(nombreArchivo);
+      const limpio = (s) => String(s).replace(/[^a-zA-Z0-9]/g, '_');
+      pdfMake.createPdf(dd).download(`Presupuesto_${limpio(cliente.nombre_empresa)}_${limpio(cab.nombre)}.pdf`);
       toast('✓ Presupuesto generado');
       cerrarModal('modalPDF');
     }
