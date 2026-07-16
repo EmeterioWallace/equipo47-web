@@ -611,9 +611,12 @@
       <div class="page-header">
         <div>
           <h1>PRODUCTOS</h1>
-          <p>Catálogo de productos que se fabrican. La variante (sublimados, nylon...) se escribe en cada presupuesto.</p>
+          <p>Catálogo de productos que se fabrican, con sus variantes (sublimados, nylon, poliéster...)</p>
         </div>
-        <button class="btn btn-primary" onclick="mostrarModalProducto()">➕ Nuevo producto</button>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn btn-danger" onclick="eliminarProductosSeleccionados()">🗑️ Eliminar seleccionados</button>
+          <button class="btn btn-primary" onclick="mostrarModalProducto()">➕ Nuevo producto</button>
+        </div>
       </div>
       <div id="productos-tabla" class="loading">Cargando...</div>
     </section>
@@ -678,6 +681,18 @@
             <option value="true">Activo (aparece para elegir en presupuestos)</option>
             <option value="false">Inactivo (se conserva el histórico, pero no aparece)</option>
           </select>
+        </div>
+        <div class="form-group">
+          <label>Variantes (opcional)</label>
+          <p style="font-size:12px; color:var(--muted); margin:-2px 0 8px;">
+            Lo que distingue una versión de otra: sublimados, nylon, poliéster... Luego se eligen
+            de la lista al hacer el presupuesto. Si un producto no tiene versiones, déjalo vacío.
+          </p>
+          <div id="listaVariantesProducto"></div>
+          <div style="display:flex; gap:6px; margin-top:8px;">
+            <input type="text" class="mini-input" id="nuevaVariante" placeholder="Ej: Sublimados" style="flex:1;" onkeydown="if(event.key==='Enter'){event.preventDefault(); anadirVarianteEditor();}">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="anadirVarianteEditor()">➕ Añadir</button>
+          </div>
         </div>
       </div>
       <div class="modal-footer">
@@ -906,6 +921,8 @@
     let productos = [];
     let presupuestos = [];   // cabeceras (las "carpetas")
     let lineas = [];         // productos dentro de cada carpeta
+    let variantesCatalogo = []; // variantes definidas dentro de cada producto
+    let variantesEditor = [];   // variantes que se están editando en el modal
     let lineasNegocio = [];  // agrupaciones de pedidos dentro de un cliente
     let cobros = [];         // dinero que entra (cliente → nosotros)
     let pagos = [];          // dinero que sale (nosotros → proveedores / transporte)
@@ -1000,15 +1017,17 @@
 
     // ── CARGA INICIAL ───────────────────────
     async function cargarTodo() {
-      const [rc, rp, rpr, rl, rco, rpa, rln] = await Promise.all([
+      const [rc, rp, rpr, rl, rco, rpa, rln, rvc] = await Promise.all([
         sb.from('clientes').select('*').order('nombre_empresa'),
         sb.from('productos').select('*').order('nombre'),
         sb.from('presupuestos').select('*').order('fecha', { ascending: false }),
         sb.from('presupuesto_lineas').select('*').order('posicion'),
         sb.from('cobros').select('*').order('fecha'),
         sb.from('pagos').select('*').order('fecha'),
-        sb.from('lineas_negocio').select('*').order('nombre')
+        sb.from('lineas_negocio').select('*').order('nombre'),
+        sb.from('producto_variantes').select('*').order('nombre')
       ]);
+      variantesCatalogo = rvc.data || [];
       lineasNegocio = rln.data || [];
       clientes = rc.data || [];
       productos = rp.data || [];
@@ -1048,9 +1067,20 @@
     function opcionesAnio(anios) {
       return '<option value="">Todos los años</option>' + anios.map(a => `<option value="${a}">${a}</option>`).join('');
     }
-    function variantesUsadas(productoId) {
-      const usadas = lineas.filter(l => l.producto_id === productoId && l.variante).map(l => l.variante);
-      return [...new Set(usadas)].sort((a, b) => a.localeCompare(b));
+    // Las variantes que se ofrecen para un producto: las del catálogo, más
+    // cualquiera que se hubiera escrito a mano en algún presupuesto y no esté
+    // en el catálogo (así nunca desaparece nada de lo ya escrito).
+    function variantesDeProducto(productoId) {
+      const todas = variantesCatalogo.filter(v => v.producto_id === productoId).map(v => v.nombre);
+      lineas.filter(l => l.producto_id === productoId && l.variante).forEach(l => {
+        if (!todas.some(x => x.toLowerCase() === l.variante.toLowerCase())) todas.push(l.variante);
+      });
+      return todas.sort((a, b) => a.localeCompare(b));
+    }
+
+    // Cuántas veces se ha usado un producto en presupuestos (para saber si se puede borrar)
+    function usosDeProducto(productoId) {
+      return lineas.filter(l => l.producto_id === productoId).length;
     }
 
     // ── CÁLCULOS DE UNA CARPETA ─────────────
@@ -1239,14 +1269,23 @@
         cont.innerHTML = `<div class="empty"><div class="empty-icon">🏷️</div><p>No hay productos todavía. Crea el primero con "Nuevo producto".</p></div>`;
         return;
       }
-      let html = `<table><thead><tr><th>Producto</th><th>Variantes usadas</th><th>Estado</th><th></th></tr></thead><tbody>`;
+      let html = `<table><thead><tr>
+        <th style="width:40px;"><input type="checkbox" onchange="marcarProductos(this.checked)" title="Seleccionar todos" style="width:auto; cursor:pointer;"></th>
+        <th>Producto</th><th>Variantes</th><th>Estado</th><th>En uso</th><th></th>
+      </tr></thead><tbody>`;
       for (const p of productos) {
-        const vs = variantesUsadas(p.id);
+        const vs = variantesDeProducto(p.id);
+        const usos = usosDeProducto(p.id);
         html += `<tr>
+          <td><input type="checkbox" class="prod-chk" value="${p.id}" style="width:auto; cursor:pointer;"></td>
           <td><strong>${esc(p.nombre)}</strong></td>
           <td style="color:var(--muted); font-size:12px;">${vs.length ? vs.map(esc).join(' · ') : '—'}</td>
           <td><span class="badge badge-${p.activo ? 'success' : 'warning'}">${p.activo ? 'Activo' : 'Inactivo'}</span></td>
-          <td style="text-align:right;"><button class="btn btn-ghost btn-sm" onclick="mostrarModalProducto('${p.id}')">✏️ Editar</button></td>
+          <td style="font-size:12px; color:var(--muted);">${usos ? usos + ' presupuesto(s)' : 'sin usar'}</td>
+          <td style="white-space:nowrap; text-align:right;">
+            <button class="btn btn-ghost btn-sm" onclick="mostrarModalProducto('${p.id}')">✏️ Editar</button>
+            <button class="btn btn-danger btn-sm" onclick="eliminarProducto('${p.id}')">🗑️</button>
+          </td>
         </tr>`;
       }
       cont.innerHTML = html + '</tbody></table>';
@@ -1261,29 +1300,163 @@
         document.getElementById('productoNombre').value = p.nombre;
         document.getElementById('productoActivo').value = String(p.activo);
         grupoActivo.style.display = 'block';
+        variantesEditor = variantesCatalogo.filter(v => v.producto_id === p.id).map(v => ({ id: v.id, nombre: v.nombre }));
       } else {
         document.getElementById('tituloModalProducto').textContent = 'Nuevo producto';
         document.getElementById('productoId').value = '';
         document.getElementById('productoNombre').value = '';
         document.getElementById('productoActivo').value = 'true';
         grupoActivo.style.display = 'none';
+        variantesEditor = [];
       }
+      document.getElementById('nuevaVariante').value = '';
+      renderVariantesEditor();
       abrirModal('modalProducto');
+    }
+
+    // ── VARIANTES DENTRO DEL PRODUCTO ───────
+    function renderVariantesEditor() {
+      const cont = document.getElementById('listaVariantesProducto');
+      if (!variantesEditor.length) {
+        cont.innerHTML = '<p style="font-size:13px; color:var(--muted);">Sin variantes. Este producto se pedirá tal cual.</p>';
+        return;
+      }
+      cont.innerHTML = variantesEditor.map((v, i) => `
+        <div class="apunte">
+          <span>${esc(v.nombre)}</span>
+          <button type="button" class="btn btn-danger btn-sm" onclick="quitarVarianteEditor(${i})">🗑️</button>
+        </div>`).join('');
+    }
+
+    function anadirVarianteEditor() {
+      const inp = document.getElementById('nuevaVariante');
+      const nombre = inp.value.trim();
+      if (!nombre) return;
+      if (variantesEditor.some(v => v.nombre.toLowerCase() === nombre.toLowerCase())) {
+        alert('❌ Este producto ya tiene esa variante');
+        return;
+      }
+      variantesEditor.push({ id: null, nombre });
+      inp.value = '';
+      inp.focus();
+      renderVariantesEditor();
+    }
+
+    function quitarVarianteEditor(i) {
+      variantesEditor.splice(i, 1);
+      renderVariantesEditor();
     }
 
     async function guardarProducto() {
       const nombre = document.getElementById('productoNombre').value.trim();
       if (!nombre) { alert('❌ El nombre del producto es obligatorio'); return; }
       const idStr = document.getElementById('productoId').value;
-      const payload = { nombre, activo: document.getElementById('productoActivo').value === 'true' };
-      const { error } = idStr
-        ? await sb.from('productos').update(payload).eq('id', idStr)
-        : await sb.from('productos').insert({ nombre, activo: true });
-      if (error) { alert('❌ Error al guardar: ' + error.message); return; }
+      let productoId = idStr;
+
+      if (idStr) {
+        const payload = { nombre, activo: document.getElementById('productoActivo').value === 'true' };
+        const { error } = await sb.from('productos').update(payload).eq('id', idStr);
+        if (error) { alert('❌ Error al guardar: ' + error.message); return; }
+      } else {
+        const { data, error } = await sb.from('productos').insert({ nombre, activo: true }).select('id').single();
+        if (error) { alert('❌ Error al guardar: ' + error.message); return; }
+        productoId = data.id;
+      }
+
+      // Sincronizar las variantes: se insertan las nuevas y se borran las quitadas.
+      // Borrar una variante del catálogo NO toca los presupuestos que ya la usan:
+      // ahí el texto se queda escrito tal cual.
+      const idsEnEditor = variantesEditor.filter(v => v.id).map(v => v.id);
+      const idsEnBd = variantesCatalogo.filter(v => v.producto_id === productoId).map(v => v.id);
+      const aBorrar = idsEnBd.filter(x => !idsEnEditor.includes(x));
+      const nuevas = variantesEditor.filter(v => !v.id).map(v => ({ producto_id: productoId, nombre: v.nombre }));
+
+      if (nuevas.length) {
+        const { error } = await sb.from('producto_variantes').insert(nuevas);
+        if (error) { alert('❌ Error al guardar las variantes: ' + error.message); return; }
+      }
+      if (aBorrar.length) {
+        const { error } = await sb.from('producto_variantes').delete().in('id', aBorrar);
+        if (error) { alert('❌ Error al borrar variantes: ' + error.message); return; }
+      }
+
       cerrarModal('modalProducto');
       toast(idStr ? '✓ Producto actualizado' : '✓ Producto creado');
-      const { data } = await sb.from('productos').select('*').order('nombre');
-      productos = data || [];
+      await recargarProductos();
+      renderProductosTabla();
+    }
+
+    async function recargarProductos() {
+      const [rp, rv] = await Promise.all([
+        sb.from('productos').select('*').order('nombre'),
+        sb.from('producto_variantes').select('*').order('nombre')
+      ]);
+      productos = rp.data || [];
+      variantesCatalogo = rv.data || [];
+    }
+
+    // ── BORRAR PRODUCTOS ────────────────────
+    // Un producto que ya aparece en presupuestos NO se borra: dejaría el
+    // histórico roto. En ese caso se ofrece desactivarlo, que lo quita de
+    // las listas pero conserva todo lo anterior.
+    function marcarProductos(valor) {
+      document.querySelectorAll('.prod-chk').forEach(chk => { chk.checked = valor; });
+    }
+
+    async function eliminarProducto(id) {
+      const p = productos.find(x => x.id === id);
+      const usos = usosDeProducto(id);
+      if (usos > 0) {
+        if (!confirmarAccion(
+          `"${p.nombre}" no se puede eliminar porque se usa en ${usos} presupuesto(s).\n\n` +
+          `Si lo borrásemos, esos presupuestos se quedarían sin producto.\n\n` +
+          `¿Quieres desactivarlo? Dejará de aparecer al hacer presupuestos nuevos, pero se conserva todo el histórico.`
+        )) return;
+        const { error } = await sb.from('productos').update({ activo: false }).eq('id', id);
+        if (error) { alert('❌ Error: ' + error.message); return; }
+        toast('✓ Producto desactivado');
+        await recargarProductos();
+        renderProductosTabla();
+        return;
+      }
+      if (!confirmarAccion(`¿Eliminar el producto "${p.nombre}"? Esta acción no se puede deshacer.`)) return;
+      const { error } = await sb.from('productos').delete().eq('id', id);
+      if (error) { alert('❌ Error al eliminar: ' + error.message); return; }
+      toast('✓ Producto eliminado');
+      await recargarProductos();
+      renderProductosTabla();
+    }
+
+    async function eliminarProductosSeleccionados() {
+      const ids = Array.from(document.querySelectorAll('.prod-chk:checked')).map(c => c.value);
+      if (!ids.length) { alert('❌ No has seleccionado ningún producto'); return; }
+
+      const borrables = ids.filter(id => usosDeProducto(id) === 0);
+      const enUso = ids.filter(id => usosDeProducto(id) > 0);
+      const nombre = (id) => productos.find(p => p.id === id)?.nombre || '';
+
+      if (!borrables.length) {
+        alert(
+          `Ninguno de los ${ids.length} productos seleccionados se puede eliminar, porque todos se usan en presupuestos:\n\n` +
+          enUso.map(id => `· ${nombre(id)} (${usosDeProducto(id)} presupuesto/s)`).join('\n') +
+          `\n\nPuedes desactivarlos uno a uno con la papelera de su fila.`
+        );
+        return;
+      }
+
+      let aviso = `Se van a eliminar ${borrables.length} producto(s):\n\n` +
+        borrables.map(id => '· ' + nombre(id)).join('\n');
+      if (enUso.length) {
+        aviso += `\n\nLos siguientes NO se tocarán, porque se usan en presupuestos:\n` +
+          enUso.map(id => `· ${nombre(id)} (${usosDeProducto(id)} presupuesto/s)`).join('\n');
+      }
+      aviso += '\n\n¿Seguimos?';
+      if (!confirmarAccion(aviso)) return;
+
+      const { error } = await sb.from('productos').delete().in('id', borrables);
+      if (error) { alert('❌ Error al eliminar: ' + error.message); return; }
+      toast(`✓ ${borrables.length} producto(s) eliminado(s)`);
+      await recargarProductos();
       renderProductosTabla();
     }
 
@@ -1411,7 +1584,7 @@
           <td><select onchange="setLinea(${i},'producto_id',this.value)">${opcionesProducto(l.producto_id)}</select></td>
           <td>
             <input type="text" value="${esc(l.variante)}" list="dlv${i}" placeholder="Sublimados" oninput="setLinea(${i},'variante',this.value)" autocomplete="off">
-            <datalist id="dlv${i}">${variantesUsadas(l.producto_id).map(v => `<option value="${esc(v)}">`).join('')}</datalist>
+            <datalist id="dlv${i}">${variantesDeProducto(l.producto_id).map(v => `<option value="${esc(v)}">`).join('')}</datalist>
           </td>
           <td><input type="text" value="${esc(l.descripcion)}" placeholder="Buff de microfibra" oninput="setLinea(${i},'descripcion',this.value)"></td>
           <td><input type="number" min="1" step="1" value="${esc(l.cantidad)}" oninput="setLinea(${i},'cantidad',this.value)"></td>
@@ -1427,7 +1600,7 @@
       // Al cambiar de producto, refrescamos las variantes sugeridas de esa fila
       if (campo === 'producto_id') {
         const dl = document.getElementById('dlv' + i);
-        if (dl) dl.innerHTML = variantesUsadas(valor).map(v => `<option value="${esc(v)}">`).join('');
+        if (dl) dl.innerHTML = variantesDeProducto(valor).map(v => `<option value="${esc(v)}">`).join('');
       }
       actualizarResumenCarpeta();
     }
