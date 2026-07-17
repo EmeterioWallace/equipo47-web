@@ -930,6 +930,23 @@
           <label>Buscar</label>
           <input type="text" id="buscadorCajas" placeholder="🔍 Código de caja o contenido..." onkeyup="renderCajas()">
         </div>
+        <div class="form-group">
+          <label>Ubicación</label>
+          <select id="filtroCajaUbicacion" onchange="renderCajas()">
+            <option value="">Todas</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Ordenar por</label>
+          <select id="ordenCajas" onchange="renderCajas()">
+            <option value="codigo-asc">Código (A → Z)</option>
+            <option value="codigo-desc">Código (Z → A)</option>
+            <option value="ubicacion">Ubicación</option>
+            <option value="uds-desc">Más unidades primero</option>
+            <option value="vacias">Vacías primero</option>
+            <option value="recientes">Más recientes</option>
+          </select>
+        </div>
       </div>
 
       <div id="cajas-tabla" class="loading">Cargando...</div>
@@ -1550,6 +1567,42 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" onclick="cerrarModalAdmin('modalMover')">Cancelar</button>
         <button type="button" class="btn btn-primary" onclick="ejecutarMover()">↔️ Mover</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL MOVER CAJA O PALÉ (cambiar de sitio sin tener que editarlo todo) -->
+  <div id="modalMoverCont" class="modal">
+    <div class="modal-content" style="max-width: 460px;">
+      <div class="modal-header">
+        <h2 id="moverContTitulo">↔️ Mover</h2>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="moverContTipo">
+        <input type="hidden" id="moverContId">
+        <div id="moverContInfo" style="background: var(--card); padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 14px;"></div>
+
+        <div class="form-group" id="grupoMoverContDestinoTipo">
+          <label>¿Dónde va a estar?</label>
+          <select id="moverContDestinoTipo" onchange="toggleDestinoMoverCont()">
+            <option value="pale">Sobre un palé</option>
+            <option value="ubicacion">Directa en una ubicación</option>
+          </select>
+        </div>
+
+        <div class="form-group" id="grupoMoverContPale">
+          <label>Palé destino</label>
+          <select id="moverContPale"><option value="">Seleccionar palé...</option></select>
+        </div>
+        <div class="form-group" id="grupoMoverContUbicacion" style="display:none;">
+          <label>Ubicación destino</label>
+          <select id="moverContUbicacion"><option value="">Seleccionar ubicación...</option></select>
+        </div>
+        <p style="font-size:11px; color:var(--muted);">Solo cambia de sitio. El contenido se va con él.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModalAdmin('modalMoverCont')">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="ejecutarMoverCont()">↔️ Mover</button>
       </div>
     </div>
   </div>
@@ -2936,6 +2989,15 @@
       const idStr = document.getElementById('productoId').value;
       const tiene = document.getElementById('productoTieneVariantes').value;
 
+      // Aviso si ya existe otro producto con el mismo nombre.
+      // No bloquea (puede haber algún caso legítimo), pero avisa: los nombres
+      // repetidos confunden al buscar y comparten la misma foto.
+      const { data: mismoNombre } = await sb.from('productos').select('id, nombre').ilike('nombre', nombre);
+      const otrosIguales = (mismoNombre || []).filter(p => !idStr || p.id !== parseInt(idStr));
+      if (otrosIguales.length) {
+        if (!confirmar(`⚠️ Ya existe un producto llamado "${otrosIguales[0].nombre}".\n\nLos nombres repetidos confunden al buscar y comparten la misma foto.\n\n¿Guardarlo igualmente?`)) return;
+      }
+
       if (tiene === 'si' && variantesTemporales.length === 0) {
         alert('❌ Añade al menos una variante o cambia a "producto simple"');
         return;
@@ -3316,6 +3378,13 @@
       const idStr = document.getElementById('ubicacionId').value;
       const descripcion = document.getElementById('ubicacionDescripcion').value.trim() || null;
 
+      // Aviso si ya existe otra ubicación con el mismo nombre
+      const { data: mismoNombre } = await sb.from('ubicaciones').select('id, nombre').ilike('nombre', nombre);
+      const otrasIguales = (mismoNombre || []).filter(u => !idStr || u.id !== parseInt(idStr));
+      if (otrasIguales.length) {
+        if (!confirmar(`⚠️ Ya existe una ubicación llamada "${otrasIguales[0].nombre}".\n\n¿Guardarla igualmente?`)) return;
+      }
+
       if (idStr) {
         const { error } = await sb.from('ubicaciones')
           .update({ nombre, descripcion })
@@ -3464,6 +3533,7 @@
             <td>${nCajas > 0 ? `<button class="btn btn-ghost btn-sm" onclick="togglePaleDetalle(${p.id})">${nCajas} 📦 ▾</button>` : '0'}</td>
             <td style="font-size: 12px; color: var(--muted);">${p.descripcion || '—'}</td>
             <td>
+              <button class="btn btn-secondary btn-sm acc-inv" onclick="mostrarModalMoverCont('pale', ${p.id})" title="Mover de sitio">↔️</button>
               <button class="btn btn-ghost btn-sm" onclick="mostrarQrPale(${p.id})" title="Código QR">🏷️</button>
               <button class="btn btn-ghost btn-sm" onclick="mostrarModalPale(${p.id})">✏️</button>
               <button class="btn btn-danger btn-sm" onclick="eliminarPaleAdmin(${p.id})">🗑️</button>
@@ -3514,13 +3584,26 @@
       abrirModalAdmin('modalPale');
     }
 
+    // Siguiente código libre: el número MÁS ALTO que exista + 1.
+    // Nunca reutiliza huecos: un código identifica una caja/palé para siempre,
+    // aunque se borre (si no, una etiqueta QR vieja apuntaría a otra cosa).
+    function siguienteCodigo(lista, prefijo) {
+      const escapado = prefijo.replace(/[.*+?^${}()|[\]\\-]/g, '\\$&');
+      const re = new RegExp('^' + escapado + '(\\d+)$');
+      let max = 0;
+      (lista || []).forEach(x => {
+        const m = (x.codigo || '').match(re);
+        if (m) { const n = parseInt(m[1], 10); if (n > max) max = n; }
+      });
+      return prefijo + String(max + 1).padStart(3, '0');
+    }
+
     function generarCodigoPale() {
-      const n = (pales.length + 1).toString().padStart(3, '0');
-      document.getElementById('paleCodigo').value = 'PAL-' + n;
+      document.getElementById('paleCodigo').value = siguienteCodigo(pales, 'PAL-');
     }
 
     async function guardarPale() { if (!exigeCap('inv')) return;
-      const codigo = document.getElementById('paleCodigo').value.trim() || ('PAL-' + Date.now());
+      let codigo = document.getElementById('paleCodigo').value.trim() || ('PAL-' + Date.now());
       const ubicacion_id = parseInt(document.getElementById('paleUbicacion').value) || null;
       const descripcion = document.getElementById('paleDescripcion').value.trim() || null;
       const idStr = document.getElementById('paleId').value;
@@ -3529,12 +3612,25 @@
         const { error } = await sb.from('pales')
           .update({ codigo, ubicacion_id, descripcion })
           .eq('id', parseInt(idStr));
-        if (error) { alert('❌ Error: ' + error.message); return; }
+        if (error) {
+          if (error.code === '23505') { alert(`❌ Ya existe otro palé con el código "${codigo}". Ponle uno distinto.`); return; }
+          alert('❌ Error: ' + error.message); return;
+        }
       } else {
-        const id = Date.now();
-        const { error } = await sb.from('pales')
-          .insert({ id, codigo, ubicacion_id, descripcion });
-        if (error) { alert('❌ Error: ' + error.message); return; }
+        // Insertar con reintento: si otra persona ha cogido ese código a la vez,
+        // la BD lo rechaza (código único) y probamos con el siguiente libre.
+        const codigoPedido = codigo;
+        let guardado = false;
+        for (let intento = 0; intento < 5 && !guardado; intento++) {
+          const { error } = await sb.from('pales')
+            .insert({ id: Date.now(), codigo, ubicacion_id, descripcion });
+          if (!error) { guardado = true; break; }
+          if (error.code !== '23505') { alert('❌ Error: ' + error.message); return; }
+          const { data: frescos } = await sb.from('pales').select('codigo');
+          codigo = siguienteCodigo(frescos || [], 'PAL-');
+        }
+        if (!guardado) { alert('❌ No se pudo guardar el palé. Inténtalo de nuevo.'); return; }
+        if (codigo !== codigoPedido) toast(`ℹ️ "${codigoPedido}" ya estaba cogido. Guardado como "${codigo}".`);
       }
 
       cerrarModalAdmin('modalPale');
@@ -3595,6 +3691,18 @@
       pales = await obtenerPales();
       ubicaciones = await obtenerUbicaciones();
 
+      // Rellenar el filtro de ubicación (solo las que tienen cajas)
+      const selUbi = document.getElementById('filtroCajaUbicacion');
+      if (selUbi) {
+        const usadas = [...new Set(cajas.map(c => ubicacionIdDeCaja(c)).filter(Boolean))];
+        const valActual = selUbi.value;
+        selUbi.innerHTML = '<option value="">Todas</option>' + usadas.map(uid => {
+          const u = ubicaciones.find(x => x.id === uid);
+          return u ? `<option value="${u.id}">${u.nombre}</option>` : '';
+        }).join('');
+        selUbi.value = valActual;
+      }
+
       renderCajas();
     }
 
@@ -3623,11 +3731,27 @@
       return '<span style="color: var(--muted);">Sin ubicar</span>';
     }
 
+    // Ubicación física real de una caja (resolviendo a través del palé si lo tiene)
+    function ubicacionIdDeCaja(c) {
+      if (c.ubicacion_id) return c.ubicacion_id;
+      if (c.pale_id) {
+        const p = (pales || []).find(x => x.id === c.pale_id);
+        return p ? p.ubicacion_id : null;
+      }
+      return null;
+    }
+
+    function udsDeCaja(id) {
+      return (stockItems || []).filter(s => s.caja_id === id).reduce((a, s) => a + (s.cantidad || 0), 0);
+    }
+
     function renderCajas() {
       const cont = document.getElementById('cajas-tabla');
       const texto = (document.getElementById('buscadorCajas').value || '').toLowerCase();
+      const filtroUbi = document.getElementById('filtroCajaUbicacion')?.value || '';
 
       let lista = cajas.slice();
+      if (filtroUbi) lista = lista.filter(c => String(ubicacionIdDeCaja(c)) === filtroUbi);
       if (texto) {
         lista = lista.filter(c => {
           if ((c.codigo || '').toLowerCase().includes(texto)) return true;
@@ -3646,7 +3770,22 @@
         return;
       }
 
-      let html = `
+      // Ordenación
+      const orden = document.getElementById('ordenCajas')?.value || 'codigo-asc';
+      const nombreUbiCaja = c => {
+        const u = ubicaciones.find(x => x.id === ubicacionIdDeCaja(c));
+        return u ? u.nombre : '';
+      };
+      lista.sort((a, b) => {
+        if (orden === 'codigo-desc') return (b.codigo || '').localeCompare(a.codigo || '', 'es', { numeric: true });
+        if (orden === 'ubicacion') return nombreUbiCaja(a).localeCompare(nombreUbiCaja(b), 'es', { numeric: true }) || (a.codigo || '').localeCompare(b.codigo || '', 'es', { numeric: true });
+        if (orden === 'uds-desc') return udsDeCaja(b.id) - udsDeCaja(a.id);
+        if (orden === 'vacias') return udsDeCaja(a.id) - udsDeCaja(b.id);
+        if (orden === 'recientes') return (b.created_at || '').localeCompare(a.created_at || '');
+        return (a.codigo || '').localeCompare(b.codigo || '', 'es', { numeric: true });  // codigo-asc
+      });
+
+      let html = `<p style="font-size:13px; color:var(--muted); margin-bottom:10px;">${lista.length} caja${lista.length === 1 ? '' : 's'}</p>
         <table>
           <thead>
             <tr>
@@ -3671,6 +3810,7 @@
             <td>${lineas.length}</td>
             <td><span class="badge badge-${totalUds === 0 ? 'warning' : 'success'}">${totalUds} uds</span></td>
             <td>
+              <button class="btn btn-secondary btn-sm acc-inv" onclick="event.stopPropagation(); mostrarModalMoverCont('caja', ${c.id})" title="Mover de sitio">↔️</button>
               <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); mostrarQrCaja(${c.id})" title="Código QR">🏷️</button>
               <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); mostrarModalCaja(${c.id})">✏️</button>
               <button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); eliminarCajaAdmin(${c.id})">🗑️</button>
@@ -3683,7 +3823,7 @@
               <div style="display:flex; justify-content:space-between; align-items:center; padding:7px 12px; border-bottom:1px solid var(--border);">
                 <span style="font-size:13px;">${nombreVarianteCompleto(l.variante_id)} — <strong>${l.cantidad} uds</strong></span>
                 <span style="display:flex; gap:4px;">
-                  <button class="btn btn-secondary btn-small" onclick="mostrarModalMover(${l.id})" title="Mover">↔️</button>
+                  <button class="btn btn-secondary btn-small acc-inv" onclick="mostrarModalMover(${l.id})" title="Mover a otra caja, palé o a sin organizar">↔️ Mover</button>
                   <button class="btn btn-ghost btn-small" onclick="mostrarModalLinea(${c.id}, ${l.id})">✏️</button>
                   <button class="btn btn-danger btn-small" onclick="eliminarLineaCaja(${l.id})">🗑️</button>
                 </span>
@@ -3979,12 +4119,11 @@
     }
 
     function generarCodigoCaja() {
-      const n = (cajas.length + 1).toString().padStart(3, '0');
-      document.getElementById('cajaCodigo').value = 'C-' + n;
+      document.getElementById('cajaCodigo').value = siguienteCodigo(cajas, 'C-');
     }
 
     async function guardarCaja() { if (!exigeCap('inv')) return;
-      const codigo = document.getElementById('cajaCodigo').value.trim() || ('C-' + Date.now());
+      let codigo = document.getElementById('cajaCodigo').value.trim() || ('C-' + Date.now());
       const tipo = document.getElementById('cajaUbicacionTipo').value;
       const descripcion = document.getElementById('cajaDescripcion').value.trim() || null;
 
@@ -4002,12 +4141,25 @@
         const { error } = await sb.from('cajas')
           .update({ codigo, pale_id, ubicacion_id, descripcion })
           .eq('id', parseInt(idStr));
-        if (error) { alert('❌ Error: ' + error.message); return; }
+        if (error) {
+          if (error.code === '23505') { alert(`❌ Ya existe otra caja con el código "${codigo}". Ponle uno distinto.`); return; }
+          alert('❌ Error: ' + error.message); return;
+        }
       } else {
-        const id = Date.now();
-        const { error } = await sb.from('cajas')
-          .insert({ id, codigo, pale_id, ubicacion_id, descripcion });
-        if (error) { alert('❌ Error: ' + error.message); return; }
+        // Insertar con reintento: si otra persona ha cogido ese código a la vez,
+        // la BD lo rechaza (código único) y probamos con el siguiente libre.
+        const codigoPedido = codigo;
+        let guardado = false;
+        for (let intento = 0; intento < 5 && !guardado; intento++) {
+          const { error } = await sb.from('cajas')
+            .insert({ id: Date.now(), codigo, pale_id, ubicacion_id, descripcion });
+          if (!error) { guardado = true; break; }
+          if (error.code !== '23505') { alert('❌ Error: ' + error.message); return; }
+          const { data: frescas } = await sb.from('cajas').select('codigo');
+          codigo = siguienteCodigo(frescas || [], 'C-');
+        }
+        if (!guardado) { alert('❌ No se pudo guardar la caja. Inténtalo de nuevo.'); return; }
+        if (codigo !== codigoPedido) toast(`ℹ️ "${codigoPedido}" ya estaba cogido. Guardada como "${codigo}".`);
       }
 
       cerrarModalAdmin('modalCaja');
@@ -4750,11 +4902,85 @@
       recargarVistaActual();
     }
 
+    // ── Mover una CAJA o un PALÉ de sitio (sin tener que editarlo todo) ──
+    async function mostrarModalMoverCont(tipo, id) {
+      pales = await obtenerPales();
+      ubicaciones = await obtenerUbicaciones();
+      if (!cajas.length) cajas = (await sb.from('cajas').select('*')).data || [];
+
+      const esCaja = (tipo === 'caja');
+      document.getElementById('moverContTipo').value = tipo;
+      document.getElementById('moverContId').value = id;
+      document.getElementById('moverContTitulo').textContent = esCaja ? '↔️ Mover caja' : '↔️ Mover palé';
+
+      let info = '';
+      if (esCaja) {
+        const c = cajas.find(x => x.id === id);
+        info = `<strong>📦 ${c?.codigo || 'Caja'}</strong><br><span style="color:var(--muted);">Ahora: ${ubicacionFisicaCaja(c).replace(/<[^>]*>/g, '')}</span>`;
+      } else {
+        const p = pales.find(x => x.id === id);
+        info = `<strong>🏛️ ${p?.codigo || 'Palé'}</strong><br><span style="color:var(--muted);">Ahora: ${ubicacionFisicaPale(p)}</span>`;
+      }
+      document.getElementById('moverContInfo').innerHTML = info;
+
+      // Un palé solo va a una ubicación; una caja puede ir a un palé o a una ubicación
+      document.getElementById('grupoMoverContDestinoTipo').style.display = esCaja ? 'block' : 'none';
+
+      document.getElementById('moverContPale').innerHTML = '<option value="">Seleccionar palé...</option>' +
+        pales.map(p => { const u = ubicaciones.find(x => x.id === p.ubicacion_id); return `<option value="${p.id}">${p.codigo}${u ? ` (${u.nombre})` : ''}</option>`; }).join('');
+      document.getElementById('moverContUbicacion').innerHTML = '<option value="">Seleccionar ubicación...</option>' +
+        ubicaciones.map(u => `<option value="${u.id}">${u.nombre}</option>`).join('');
+
+      document.getElementById('moverContDestinoTipo').value = esCaja ? 'pale' : 'ubicacion';
+      toggleDestinoMoverCont();
+      abrirModalAdmin('modalMoverCont');
+    }
+
+    function toggleDestinoMoverCont() {
+      const esCaja = document.getElementById('moverContTipo').value === 'caja';
+      const t = esCaja ? document.getElementById('moverContDestinoTipo').value : 'ubicacion';
+      document.getElementById('grupoMoverContPale').style.display = t === 'pale' ? 'block' : 'none';
+      document.getElementById('grupoMoverContUbicacion').style.display = t === 'ubicacion' ? 'block' : 'none';
+    }
+
+    async function ejecutarMoverCont() { if (!exigeCap('inv')) return;
+      const tipo = document.getElementById('moverContTipo').value;
+      const id = parseInt(document.getElementById('moverContId').value);
+      const esCaja = (tipo === 'caja');
+      const t = esCaja ? document.getElementById('moverContDestinoTipo').value : 'ubicacion';
+
+      if (esCaja) {
+        let pale_id = null, ubicacion_id = null;
+        if (t === 'pale') {
+          pale_id = parseInt(document.getElementById('moverContPale').value) || null;
+          if (!pale_id) { alert('❌ Selecciona el palé destino'); return; }
+        } else {
+          ubicacion_id = parseInt(document.getElementById('moverContUbicacion').value) || null;
+          if (!ubicacion_id) { alert('❌ Selecciona la ubicación destino'); return; }
+        }
+        const { error } = await sb.from('cajas').update({ pale_id, ubicacion_id }).eq('id', id);
+        if (error) { alert('❌ Error: ' + error.message); return; }
+        registrarActividad('mover', 'caja', `Movió la caja "${cajas.find(x => x.id === id)?.codigo}"`);
+      } else {
+        const ubicacion_id = parseInt(document.getElementById('moverContUbicacion').value) || null;
+        if (!ubicacion_id) { alert('❌ Selecciona la ubicación destino'); return; }
+        const { error } = await sb.from('pales').update({ ubicacion_id }).eq('id', id);
+        if (error) { alert('❌ Error: ' + error.message); return; }
+        registrarActividad('mover', 'palé', `Movió el palé "${pales.find(x => x.id === id)?.codigo}"`);
+      }
+
+      cerrarModalAdmin('modalMoverCont');
+      toast('✅ Movido');
+      recargarVistaActual();
+    }
+
     function recargarVistaActual() {
       const activa = document.querySelector('.page.active');
       if (!activa) return;
       if (activa.id === 'cajas-page') cargarCajasTabla();
       else if (activa.id === 'sueltos-page') cargarSueltosTabla();
+      else if (activa.id === 'pales-page') cargarPalesTabla();
+      else if (activa.id === 'ubicaciones-page') cargarUbicacionesTabla();
     }
 
     // ════════════════════════════════════════
