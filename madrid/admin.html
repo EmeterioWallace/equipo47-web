@@ -1424,6 +1424,18 @@
           <label>Descripción (opcional)</label>
           <textarea id="cajaDescripcion" rows="2" placeholder="Notas sobre esta caja..."></textarea>
         </div>
+
+        <div id="grupoCajaContenido" style="border-top:1px solid var(--border); padding-top:14px; margin-top:4px;">
+          <label style="display:block; margin-bottom:8px;">Contenido inicial (opcional)</label>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+            <select id="cajaNuevoProducto" onchange="cargarVariantesCajaNueva()" style="flex:2; min-width:150px;"><option value="">Producto...</option></select>
+            <select id="cajaNuevaVariante" onchange="mostrarDispCajaNueva()" style="flex:2; min-width:130px;"><option value="">Variante...</option></select>
+            <input type="number" id="cajaNuevaCantidad" min="1" placeholder="Uds" style="flex:1; min-width:70px;">
+            <button type="button" class="btn btn-success btn-small" onclick="anadirLineaCajaTemp()">+ Añadir</button>
+          </div>
+          <p id="dispCajaNueva" style="font-size:11px; color:var(--muted); margin-top:6px;"></p>
+          <div id="cajaLineasTempLista" style="margin-top:8px;"></div>
+        </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" onclick="cerrarModalAdmin('modalCaja')">Cancelar</button>
@@ -2193,6 +2205,11 @@
 
     function mostrarPagina(pagina) {
       if (!puedeVerPagina(pagina)) { pagina = 'dashboard'; }
+      // Al cambiar de pestaña se descarta lo que hubiera seleccionado: si te has
+      // ido sin hacer nada, no debe seguir marcado al volver.
+      if (typeof selCajas !== 'undefined') selCajas.clear();
+      if (typeof selPales !== 'undefined') selPales.clear();
+      if (typeof selArt !== 'undefined') selArt.clear();
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
       document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
       
@@ -4300,6 +4317,65 @@
     }
 
     // ── MODAL CAJA (contenedor) ─────────────
+    // ── Contenido inicial al CREAR una caja (se guarda junto con la caja) ──
+    let cajaLineasTemp = [];
+
+    function cargarVariantesCajaNueva() {
+      const prodId = parseInt(document.getElementById('cajaNuevoProducto').value);
+      const sel = document.getElementById('cajaNuevaVariante');
+      const vars = variantes.filter(v => v.producto_id === prodId);
+      sel.innerHTML = '<option value="">Variante...</option>' +
+        vars.map(v => `<option value="${v.id}">${etiquetaVariante(v)}</option>`).join('');
+      document.getElementById('dispCajaNueva').textContent = '';
+    }
+
+    function dispCajaNuevaDe(varId) {
+      const yaPuesto = cajaLineasTemp.filter(l => l.variante_id === varId).reduce((a, l) => a + l.cantidad, 0);
+      return Math.max(0, calcularDisponible(varId, null) - yaPuesto);
+    }
+
+    function mostrarDispCajaNueva() {
+      const varId = parseInt(document.getElementById('cajaNuevaVariante').value);
+      const p = document.getElementById('dispCajaNueva');
+      if (!varId) { p.textContent = ''; return; }
+      const disp = dispCajaNuevaDe(varId);
+      p.innerHTML = `Disponible sin organizar: <strong style="color:var(--accent);">${disp}</strong> uds`;
+      document.getElementById('cajaNuevaCantidad').setAttribute('data-max', disp);
+    }
+
+    function anadirLineaCajaTemp() {
+      const varId = parseInt(document.getElementById('cajaNuevaVariante').value);
+      const n = parseInt(document.getElementById('cajaNuevaCantidad').value);
+      if (!varId) { alert('❌ Elige el producto y la variante'); return; }
+      if (!n || n <= 0) { alert('❌ Indica la cantidad'); return; }
+      const disp = dispCajaNuevaDe(varId);
+      if (n > disp) { alert(`❌ Solo hay ${disp} uds sin organizar de ese artículo`); return; }
+      const yaEnLista = cajaLineasTemp.find(l => l.variante_id === varId);
+      if (yaEnLista) yaEnLista.cantidad += n;
+      else cajaLineasTemp.push({ variante_id: varId, cantidad: n });
+      document.getElementById('cajaNuevaCantidad').value = '';
+      renderCajaLineasTemp();
+    }
+
+    function quitarLineaCajaTemp(i) {
+      cajaLineasTemp.splice(i, 1);
+      renderCajaLineasTemp();
+    }
+
+    function renderCajaLineasTemp() {
+      const cont = document.getElementById('cajaLineasTempLista');
+      if (!cajaLineasTemp.length) {
+        cont.innerHTML = '<p style="font-size:12px; color:var(--muted);">Puedes dejarla vacía y llenarla después.</p>';
+        return;
+      }
+      cont.innerHTML = cajaLineasTemp.map((l, i) => `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:5px 8px; border-bottom:1px solid var(--border); font-size:13px;">
+          <span>${nombreVarianteCompleto(l.variante_id)} — <strong>${l.cantidad} uds</strong></span>
+          <button type="button" class="btn btn-danger btn-small" onclick="quitarLineaCajaTemp(${i})">🗑️</button>
+        </div>`).join('');
+      mostrarDispCajaNueva();
+    }
+
     async function mostrarModalCaja(id = null) {
       pales = await obtenerPales();
       ubicaciones = await obtenerUbicaciones();
@@ -4328,6 +4404,8 @@
           document.getElementById('cajaUbicacionTipo').value = 'pale';
           document.getElementById('cajaPale').value = c.pale_id || '';
         }
+        // Al editar, el contenido se gestiona desde el desplegable de la caja
+        document.getElementById('grupoCajaContenido').style.display = 'none';
       } else {
         document.getElementById('tituloModalCaja').textContent = 'Nueva Caja';
         document.getElementById('cajaId').value = '';
@@ -4336,6 +4414,21 @@
         document.getElementById('cajaPale').value = '';
         document.getElementById('cajaUbicacion').value = '';
         generarCodigoCaja();
+
+        // Contenido inicial: solo al crear
+        document.getElementById('grupoCajaContenido').style.display = 'block';
+        cajaLineasTemp = [];
+        if (!productos.length) productos = await obtenerProductos();
+        if (!variantes.length) variantes = await obtenerVariantes();
+        if (!stockItems.length) stockItems = (await sb.from('stock').select('*')).data || [];
+        document.getElementById('cajaNuevoProducto').innerHTML = '<option value="">Producto...</option>' +
+          productos.slice().sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es'))
+            .map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+        document.getElementById('cajaNuevaVariante').innerHTML = '<option value="">Variante...</option>';
+        document.getElementById('cajaNuevaCantidad').value = '';
+        document.getElementById('dispCajaNueva').textContent = '';
+        renderCajaLineasTemp();
+        refrescarBuscador('cajaNuevoProducto', 'Buscar producto...');
       }
       toggleUbicacionCaja();
       abrirModalAdmin('modalCaja');
@@ -4378,10 +4471,11 @@
         // Insertar con reintento: si otra persona ha cogido ese código a la vez,
         // la BD lo rechaza (código único) y probamos con el siguiente libre.
         const codigoPedido = codigo;
+        const nuevoId = Date.now();
         let guardado = false;
         for (let intento = 0; intento < 5 && !guardado; intento++) {
           const { error } = await sb.from('cajas')
-            .insert({ id: Date.now(), codigo, pale_id, ubicacion_id, descripcion });
+            .insert({ id: nuevoId, codigo, pale_id, ubicacion_id, descripcion });
           if (!error) { guardado = true; break; }
           if (error.code !== '23505') { alert('❌ Error: ' + error.message); return; }
           const { data: frescas } = await sb.from('cajas').select('codigo');
@@ -4389,6 +4483,18 @@
         }
         if (!guardado) { alert('❌ No se pudo guardar la caja. Inténtalo de nuevo.'); return; }
         if (codigo !== codigoPedido) toast(`ℹ️ "${codigoPedido}" ya estaba cogido. Guardada como "${codigo}".`);
+
+        // Contenido inicial (si se añadió alguno al crearla)
+        if (cajaLineasTemp.length) {
+          const registros = cajaLineasTemp.map(l => ({
+            id: idUnico(), variante_id: l.variante_id, cantidad: l.cantidad,
+            caja_id: nuevoId, pale_id: null, ubicacion_id: null
+          }));
+          const { error: errStock } = await sb.from('stock').insert(registros);
+          if (errStock) toast('⚠️ La caja se creó, pero hubo un problema con el contenido: ' + errStock.message);
+          else toast(`✓ ${cajaLineasTemp.length} artículo(s) metidos en la caja`);
+          cajaLineasTemp = [];
+        }
       }
 
       cerrarModalAdmin('modalCaja');
@@ -5366,9 +5472,11 @@
           acciones += `
             <button class="btn btn-success btn-small" onclick="mostrarModalLineaSalida(${s.id})">+ Añadir artículo</button>
             <button class="btn btn-ghost btn-small" onclick="guardarComoPlantilla(${s.id})">⭐ Guardar plantilla</button>
+            <button class="btn btn-ghost btn-small acc-ops" onclick="deshacerSalida(${s.id})" title="Se marcó por error">↩️ Deshacer salida</button>
             <button class="btn btn-primary btn-small" onclick="registrarDevolucion(${s.id})">↩️ Registrar devolución</button>`;
         } else {
-          acciones += `<span style="font-size:12px; color:var(--muted);">Devuelta el ${fechaCorta(s.fecha_devolucion_real)}</span>`;
+          acciones += `<span style="font-size:12px; color:var(--muted); margin-right:8px;">Devuelta el ${fechaCorta(s.fecha_devolucion_real)}</span>
+            <button class="btn btn-ghost btn-small acc-ops" onclick="deshacerDevolucion(${s.id})" title="Se marcó por error">↩️ Deshacer devolución</button>`;
         }
 
         const convocados = eventoPersonas.filter(ep => ep.salida_id === s.id);
@@ -5630,6 +5738,30 @@
       const sd = salidas.find(x => x.id === id);
       registrarActividad('estado', 'salida', `Registró la devolución de "${sd?.evento}"`);
       await cargarSalidasTabla();
+    }
+
+    // ── Deshacer (para cuando se pulsa algo por error) ──
+    // Cada "deshacer" revierte exactamente lo que hizo su acción.
+    async function deshacerSalida(id) { if (!exigeCap('ops')) return;
+      const s = salidas.find(x => x.id === id);
+      if (!confirmar(`¿Deshacer la salida de "${s?.evento}"?\n\nVolverá a estado "preparado" (el material se considera de nuevo en el almacén, comprometido).`)) return;
+      const { error } = await sb.from('salidas').update({ estado: 'preparado' }).eq('id', id);
+      if (error) { toast('❌ Error: ' + error.message); return; }
+      toast('↩️ Salida deshecha — vuelve a "preparado"');
+      registrarActividad('estado', 'salida', `Deshizo la salida de "${s?.evento}" (volvió a preparado)`);
+      await cargarSalidasTabla();
+      setTimeout(() => toggleContenidoSalida(id), 120);
+    }
+
+    async function deshacerDevolucion(id) { if (!exigeCap('ops')) return;
+      const s = salidas.find(x => x.id === id);
+      if (!confirmar(`¿Deshacer la devolución de "${s?.evento}"?\n\nVolverá a estado "fuera" (el material se considera de nuevo fuera del almacén).`)) return;
+      const { error } = await sb.from('salidas').update({ estado: 'fuera', fecha_devolucion_real: null }).eq('id', id);
+      if (error) { toast('❌ Error: ' + error.message); return; }
+      toast('↩️ Devolución deshecha — vuelve a "fuera"');
+      registrarActividad('estado', 'salida', `Deshizo la devolución de "${s?.evento}"`);
+      await cargarSalidasTabla();
+      setTimeout(() => toggleContenidoSalida(id), 120);
     }
 
     // ── ALBARÁN IMPRIMIBLE (Fase 2) ─────────
@@ -6019,6 +6151,7 @@
             <button class="btn btn-secondary btn-small" onclick="cambiarEstadoRecepcion(${r.id}, 'parcial')">◐ Recibido parcial</button>`;
         }
         if (r.estado === 'correcto' || r.estado === 'parcial') {
+          botonesEstado += ` <button class="btn btn-ghost btn-small acc-ops" onclick="deshacerRecepcion(${r.id})" title="Se marcó por error">↩️ Deshacer</button>`;
           botonesEstado += ` <button class="btn btn-ghost btn-small" onclick="cambiarEstadoRecepcion(${r.id}, 'cerrado')">🔒 Cerrar</button>`;
         }
         if (cerrada) {
@@ -6147,6 +6280,17 @@
       toast('✓ Recepción eliminada');
       registrarActividad('borrar', 'recepción', `Eliminó la recepción "${r?.descripcion}"`);
       await cargarRecepcionesTabla();
+    }
+
+    async function deshacerRecepcion(id) { if (!exigeCap('ops')) return;
+      const r = recepciones.find(x => x.id === id);
+      if (!confirmar(`¿Deshacer la recepción de "${r?.descripcion || 'este envío'}"?\n\nVolverá a estado "pendiente" y se quitará la fecha de recepción que se puso automáticamente.\n\n(Los bultos recibidos y las incidencias que hayas anotado se conservan.)`)) return;
+      const { error } = await sb.from('recepciones').update({ estado: 'pendiente', fecha_recepcion: null }).eq('id', id);
+      if (error) { toast('❌ Error: ' + error.message); return; }
+      toast('↩️ Recepción deshecha — vuelve a "pendiente"');
+      registrarActividad('estado', 'recepción', `Deshizo la recepción "${r?.descripcion}" (volvió a pendiente)`);
+      await cargarRecepcionesTabla();
+      setTimeout(() => toggleContenidoRecepcion(id), 120);
     }
 
     async function cambiarEstadoRecepcion(id, estado) { if (!exigeCap('ops')) return;
