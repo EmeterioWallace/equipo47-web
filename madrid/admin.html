@@ -566,6 +566,11 @@
     body:not(.cap-inv) .acc-inv { display: none !important; }
     body:not(.cap-ops) .acc-ops { display: none !important; }
 
+    /* Barra de acciones de selección múltiple */
+    .sel-barra { display:flex; align-items:center; gap:10px; flex-wrap:wrap; background:var(--card); border:1px solid var(--accent); border-radius:8px; padding:10px 14px; margin-bottom:12px; }
+    .sel-check { width:auto; cursor:pointer; }
+    td.sel-col, th.sel-col { width:34px; text-align:center; }
+
     /* Calendario */
     .cal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; gap:10px; flex-wrap:wrap; }
     .cal-nav { display:flex; align-items:center; gap:8px; }
@@ -1533,7 +1538,7 @@
         <input type="hidden" id="moverStockId">
         <div id="moverOrigenInfo" style="background: var(--card); padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 14px;"></div>
 
-        <div class="form-group">
+        <div class="form-group" id="grupoMoverCantidad">
           <label>¿Cuántas unidades mover? *</label>
           <div style="display: flex; gap: 8px; align-items: center;">
             <input type="number" id="moverCantidad" min="1" placeholder="Cantidad" style="flex: 1;">
@@ -2713,8 +2718,59 @@
       const cont = document.getElementById('productos-tabla');
       cont.innerHTML = '<div class="loading">Cargando...</div>';
       await cargarDatosGlobales();
+      // Necesario para poder decir dónde está guardado cada producto
+      stockItems = (await sb.from('stock').select('*')).data || [];
+      cajas = await obtenerCajas();
+      pales = await obtenerPales();
+      ubicaciones = await obtenerUbicaciones();
       cargarFiltroCategorias();
       renderProductos();
+    }
+
+    // ── ¿Dónde está guardado? ──
+    // Colocaciones de una variante: en qué sitio está y cuántas uds hay en cada uno.
+    function colocacionesVariante(varianteId) {
+      return (stockItems || []).filter(s => s.variante_id === varianteId).map(s => {
+        let texto;
+        if (s.caja_id) {
+          const c = (cajas || []).find(x => x.id === s.caja_id);
+          const donde = c ? ubicacionFisicaCaja(c).replace(/<[^>]*>/g, '') : '';
+          texto = `📦 ${c?.codigo || 'Caja'}${donde ? ' · ' + donde : ''}`;
+        } else if (s.pale_id) {
+          const p = (pales || []).find(x => x.id === s.pale_id);
+          texto = `🏛️ ${p?.codigo || 'Palé'} (suelto)${p ? ' · ' + ubicacionFisicaPale(p) : ''}`;
+        } else if (s.ubicacion_id) {
+          const u = (ubicaciones || []).find(x => x.id === s.ubicacion_id);
+          texto = `📍 ${u?.nombre || 'Ubicación'} (suelto)`;
+        } else {
+          texto = 'Sin ubicar';
+        }
+        return { texto, cantidad: s.cantidad || 0 };
+      });
+    }
+
+    // Resumen de dónde está un producto entero (para la fila de la tabla)
+    function resumenUbicacionProducto(varsProd) {
+      const varIds = varsProd.map(v => v.id);
+      const lineas = (stockItems || []).filter(s => varIds.includes(s.variante_id));
+      const total = varsProd.reduce((a, v) => a + (v.stock_total || 0), 0);
+      const colocado = lineas.reduce((a, s) => a + (s.cantidad || 0), 0);
+      const sinOrganizar = Math.max(0, total - colocado);
+      if (total === 0) return '<span style="color:var(--muted);">Sin stock</span>';
+
+      const nCajas = new Set(lineas.filter(s => s.caja_id).map(s => s.caja_id)).size;
+      const nPales = new Set(lineas.filter(s => !s.caja_id && s.pale_id).map(s => s.pale_id)).size;
+      const nUbis = new Set(lineas.filter(s => !s.caja_id && !s.pale_id && s.ubicacion_id).map(s => s.ubicacion_id)).size;
+
+      const partes = [];
+      if (nCajas) partes.push(`${nCajas} caja${nCajas === 1 ? '' : 's'}`);
+      if (nPales) partes.push(`${nPales} palé${nPales === 1 ? '' : 's'}`);
+      if (nUbis) partes.push(`${nUbis} ubicación${nUbis === 1 ? '' : 'es'}`);
+
+      const trozos = [];
+      if (partes.length) trozos.push(`📍 En ${partes.join(', ')}`);
+      if (sinOrganizar > 0) trozos.push(`<span style="color:var(--warning);">${sinOrganizar} sin organizar</span>`);
+      return trozos.join(' · ');
     }
 
     function renderProductos() {
@@ -2776,7 +2832,7 @@
         const stockTotal = varsProd.reduce((s, v) => s + (v.stock_total || 0), 0);
         // Stock bajo: alguna variante por debajo (o igual) de su propio mínimo
         const bajo = varsProd.some(v => (v.stock_minimo || 0) > 0 && (v.stock_total || 0) <= v.stock_minimo);
-        const tieneDesglose = p.tiene_variantes === 'si' && varsProd.length > 0;
+        const tieneDesglose = varsProd.length > 0;
 
         const variantesTxt = (p.tiene_variantes === 'no')
           ? '<span style="color: var(--muted);">Producto simple</span>'
@@ -2794,7 +2850,9 @@
 
         html += `
           <tr ${filaClick}>
-            <td>${flecha} <strong>${p.nombre}</strong></td>
+            <td>${flecha} <strong>${p.nombre}</strong>
+              <div style="font-size:11px; color:var(--muted); margin-top:3px; margin-left:18px;">${resumenUbicacionProducto(varsProd)}</div>
+            </td>
             <td style="font-size: 12px; color: var(--muted);">${nombreCategoria(p)}</td>
             <td style="font-size: 12px;">${variantesTxt}</td>
             <td><span class="badge badge-${badgeClass}">${stockTotal} uds${avisoBajo}</span></td>
@@ -2810,10 +2868,23 @@
             const vBadge = (v.stock_total || 0) === 0 ? 'danger' : (vBajo ? 'warning' : 'success');
             const vAviso = vBajo ? ' ⚠️' : '';
             const minTxt = (v.stock_minimo || 0) > 0 ? ` <span style="color:var(--muted); font-size:11px;">(mín. ${v.stock_minimo})</span>` : '';
+            // Dónde está esta variante exactamente
+            const cols = colocacionesVariante(v.id);
+            const colocado = cols.reduce((a, x) => a + x.cantidad, 0);
+            const sinOrg = Math.max(0, (v.stock_total || 0) - colocado);
+            const dondeTxt = (cols.length || sinOrg > 0)
+              ? `<div style="margin:4px 0 0 12px; font-size:11px; color:var(--muted);">
+                   ${cols.map(x => `<div>${x.texto} — <strong>${x.cantidad} uds</strong></div>`).join('')}
+                   ${sinOrg > 0 ? `<div style="color:var(--warning);">Sin organizar — <strong>${sinOrg} uds</strong></div>` : ''}
+                 </div>`
+              : '';
             return `
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:7px 12px; border-bottom:1px solid var(--border);">
-              <span style="font-size:13px;">${v.tipo}: <strong>${v.valor}</strong>${minTxt}</span>
-              <span class="badge badge-${vBadge}">${v.stock_total || 0} uds${vAviso}</span>
+            <div style="padding:7px 12px; border-bottom:1px solid var(--border);">
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                <span style="font-size:13px;">${etiquetaVariante(v)}${minTxt}</span>
+                <span class="badge badge-${vBadge}">${v.stock_total || 0} uds${vAviso}</span>
+              </div>
+              ${dondeTxt}
             </div>`;
           }).join('');
 
@@ -2821,7 +2892,7 @@
             <tr id="desglose-${p.id}" style="display:none;">
               <td colspan="5" style="background: var(--card); padding: 0;">
                 <div style="padding: 10px 16px 10px 40px;">
-                  <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color: var(--muted); margin-bottom:6px;">Desglose por variante</div>
+                  <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color: var(--muted); margin-bottom:6px;">Desglose y dónde está guardado</div>
                   ${filasVar}
                 </div>
               </td>
@@ -3469,6 +3540,45 @@
       renderPales();
     }
 
+    let selPales = new Set();
+    let palesVisibles = [];
+
+    function toggleSelPale(id, marcada) {
+      if (marcada) selPales.add(id); else selPales.delete(id);
+      renderPales();
+    }
+
+    function toggleSelTodosPales(marcar) {
+      palesVisibles.forEach(p => marcar ? selPales.add(p.id) : selPales.delete(p.id));
+      renderPales();
+    }
+
+    function limpiarSelPales() { selPales.clear(); renderPales(); }
+
+    async function borrarPalesSeleccionados() { if (!exigeCap('inv')) return;
+      const ids = [...selPales];
+      if (!ids.length) return;
+      const { data: cajasEn } = await sb.from('cajas').select('id').in('pale_id', ids);
+      const { data: stockEn } = await sb.from('stock').select('cantidad').in('pale_id', ids);
+      const nCajas = cajasEn?.length || 0;
+      const udsSuelto = (stockEn || []).reduce((a, s) => a + (s.cantidad || 0), 0);
+
+      let msg = `Vas a borrar ${ids.length} palé(s).\n\n`;
+      if (nCajas) msg += `• Sus ${nCajas} caja(s) NO se borran: quedarán sin ubicación (con su contenido).\n`;
+      if (udsSuelto) msg += `• Su material suelto (${udsSuelto} uds) volverá a quedar sin organizar.\n`;
+      msg += '\n¿Continuar?';
+      if (!confirmar(msg)) return;
+
+      await sb.from('cajas').update({ pale_id: null, ubicacion_id: null }).in('pale_id', ids);
+      await sb.from('stock').delete().in('pale_id', ids);
+      const { error } = await sb.from('pales').delete().in('id', ids);
+      if (error) { toast('❌ Error al eliminar: ' + error.message); return; }
+      registrarActividad('borrar', 'palé', `Eliminó ${ids.length} palé(s) (contenido liberado)`);
+      selPales.clear();
+      toast(`✓ ${ids.length} palé(s) eliminados`);
+      await cargarPalesTabla();
+    }
+
     function renderPales() {
       const cont = document.getElementById('pales-tabla');
       if (!pales.length) {
@@ -3509,10 +3619,23 @@
         return (a.codigo || '').localeCompare(b.codigo || '', 'es', { numeric: true });  // codigo-asc
       });
 
-      let html = `<p style="font-size:13px; color:var(--muted); margin-bottom:10px;">${palesFiltrados.length} palé${palesFiltrados.length === 1 ? '' : 's'}</p>
+      palesVisibles = palesFiltrados;
+      selPales = new Set([...selPales].filter(id => palesFiltrados.some(p => p.id === id)));
+
+      const todosMarcados = palesFiltrados.length > 0 && palesFiltrados.every(p => selPales.has(p.id));
+      const barra = selPales.size ? `
+        <div class="sel-barra">
+          <strong>${selPales.size} palé${selPales.size === 1 ? '' : 's'} seleccionado${selPales.size === 1 ? '' : 's'}</strong>
+          <button class="btn btn-secondary btn-sm acc-inv" onclick="mostrarModalMoverCont('pale', [...selPales])">↔️ Mover</button>
+          <button class="btn btn-danger btn-sm acc-inv" onclick="borrarPalesSeleccionados()">🗑️ Borrar</button>
+          <button class="btn btn-ghost btn-sm" onclick="limpiarSelPales()">Cancelar</button>
+        </div>` : '';
+
+      let html = barra + `<p style="font-size:13px; color:var(--muted); margin-bottom:10px;">${palesFiltrados.length} palé${palesFiltrados.length === 1 ? '' : 's'}</p>
         <table>
           <thead>
             <tr>
+              <th class="sel-col"><input type="checkbox" class="sel-check" ${todosMarcados ? 'checked' : ''} onclick="toggleSelTodosPales(this.checked)" title="Seleccionar todo lo que se ve"></th>
               <th>Código</th>
               <th>Ubicación</th>
               <th>Cajas</th>
@@ -3528,6 +3651,7 @@
         const nCajas = detalle.length;
         html += `
           <tr>
+            <td class="sel-col"><input type="checkbox" class="sel-check" ${selPales.has(p.id) ? 'checked' : ''} onclick="toggleSelPale(${p.id}, this.checked)"></td>
             <td><strong>${p.codigo || '—'}</strong></td>
             <td style="font-size: 13px;">${ubi ? ubi.nombre : '<span style="color: var(--muted);">Sin ubicación</span>'}</td>
             <td>${nCajas > 0 ? `<button class="btn btn-ghost btn-sm" onclick="togglePaleDetalle(${p.id})">${nCajas} 📦 ▾</button>` : '0'}</td>
@@ -3548,7 +3672,7 @@
           </div>`).join('') : '<span style="color:var(--muted);">Este palé no tiene cajas.</span>';
         html += `
           <tr id="pale-detalle-${p.id}" style="display:none;">
-            <td colspan="5" style="background: var(--card);">
+            <td colspan="6" style="background: var(--card);">
               <div style="padding:10px 16px 10px 40px;">
                 <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted); margin-bottom:8px;">Contenido del palé</div>
                 ${detalleHtml}
@@ -3745,6 +3869,75 @@
       return (stockItems || []).filter(s => s.caja_id === id).reduce((a, s) => a + (s.cantidad || 0), 0);
     }
 
+    let selArt = new Set();
+
+    function toggleSelArt(id, marcada) {
+      if (marcada) selArt.add(id); else selArt.delete(id);
+      renderCajas();
+    }
+
+    function selArtDeCaja(cajaId) {
+      return (stockItems || []).filter(s => s.caja_id === cajaId && selArt.has(s.id)).map(s => s.id);
+    }
+
+    function toggleSelTodosArt(cajaId, marcar) {
+      (stockItems || []).filter(s => s.caja_id === cajaId)
+        .forEach(s => marcar ? selArt.add(s.id) : selArt.delete(s.id));
+      renderCajas();
+    }
+
+    function limpiarSelArt(cajaId) {
+      selArtDeCaja(cajaId).forEach(id => selArt.delete(id));
+      renderCajas();
+    }
+
+    async function sacarArtSeleccionados(cajaId) { if (!exigeCap('inv')) return;
+      const ids = selArtDeCaja(cajaId);
+      if (!ids.length) return;
+      const uds = stockItems.filter(s => ids.includes(s.id)).reduce((a, s) => a + (s.cantidad || 0), 0);
+      if (!confirmar(`Vas a sacar ${ids.length} artículo(s) (${uds} uds) de la caja.\n\nNO se pierden del inventario: volverán a quedar "sin organizar".\n\n¿Continuar?`)) return;
+      const { error } = await sb.from('stock').delete().in('id', ids);
+      if (error) { toast('❌ Error: ' + error.message); return; }
+      ids.forEach(id => selArt.delete(id));
+      registrarActividad('mover', 'stock', `Sacó ${ids.length} artículo(s) de una caja a sin organizar`);
+      toast(`✓ ${ids.length} artículo(s) a sin organizar`);
+      await cargarCajasTabla();
+    }
+
+    let selCajas = new Set();
+    let cajasVisibles = [];
+
+    function toggleSelCaja(id, marcada) {
+      if (marcada) selCajas.add(id); else selCajas.delete(id);
+      renderCajas();
+    }
+
+    // "Seleccionar todo" marca SOLO lo que se está viendo (lo filtrado),
+    // no las cajas de todo el almacén.
+    function toggleSelTodasCajas(marcar) {
+      cajasVisibles.forEach(c => marcar ? selCajas.add(c.id) : selCajas.delete(c.id));
+      renderCajas();
+    }
+
+    function limpiarSelCajas() { selCajas.clear(); renderCajas(); }
+
+    async function borrarCajasSeleccionadas() { if (!exigeCap('inv')) return;
+      const ids = [...selCajas];
+      if (!ids.length) return;
+      const uds = ids.reduce((a, id) => a + udsDeCaja(id), 0);
+      let msg = `Vas a borrar ${ids.length} caja(s).\n\n`;
+      if (uds > 0) msg += `Su contenido (${uds} uds) NO se pierde del inventario: volverá a quedar "sin organizar".\n\n`;
+      msg += '¿Continuar?';
+      if (!confirmar(msg)) return;
+      await sb.from('stock').delete().in('caja_id', ids);
+      const { error } = await sb.from('cajas').delete().in('id', ids);
+      if (error) { toast('❌ Error al eliminar: ' + error.message); return; }
+      registrarActividad('borrar', 'caja', `Eliminó ${ids.length} caja(s) (contenido a sin organizar)`);
+      selCajas.clear();
+      toast(`✓ ${ids.length} caja(s) eliminadas`);
+      await cargarCajasTabla();
+    }
+
     function renderCajas() {
       const cont = document.getElementById('cajas-tabla');
       const texto = (document.getElementById('buscadorCajas').value || '').toLowerCase();
@@ -3785,10 +3978,25 @@
         return (a.codigo || '').localeCompare(b.codigo || '', 'es', { numeric: true });  // codigo-asc
       });
 
-      let html = `<p style="font-size:13px; color:var(--muted); margin-bottom:10px;">${lista.length} caja${lista.length === 1 ? '' : 's'}</p>
+      cajasVisibles = lista;
+      // La selección solo puede contener cajas visibles: si cambias el filtro,
+      // se descartan las que ya no se ven (así nunca borras algo que no ves).
+      selCajas = new Set([...selCajas].filter(id => lista.some(c => c.id === id)));
+
+      const todasMarcadas = lista.length > 0 && lista.every(c => selCajas.has(c.id));
+      const barra = selCajas.size ? `
+        <div class="sel-barra">
+          <strong>${selCajas.size} caja${selCajas.size === 1 ? '' : 's'} seleccionada${selCajas.size === 1 ? '' : 's'}</strong>
+          <button class="btn btn-secondary btn-sm acc-inv" onclick="mostrarModalMoverCont('caja', [...selCajas])">↔️ Mover</button>
+          <button class="btn btn-danger btn-sm acc-inv" onclick="borrarCajasSeleccionadas()">🗑️ Borrar</button>
+          <button class="btn btn-ghost btn-sm" onclick="limpiarSelCajas()">Cancelar</button>
+        </div>` : '';
+
+      let html = barra + `<p style="font-size:13px; color:var(--muted); margin-bottom:10px;">${lista.length} caja${lista.length === 1 ? '' : 's'}</p>
         <table>
           <thead>
             <tr>
+              <th class="sel-col"><input type="checkbox" class="sel-check" ${todasMarcadas ? 'checked' : ''} onclick="toggleSelTodasCajas(this.checked)" title="Seleccionar todo lo que se ve"></th>
               <th>Código</th>
               <th>Ubicación física</th>
               <th>Artículos</th>
@@ -3801,10 +4009,11 @@
       for (const c of lista) {
         const lineas = stockItems.filter(s => s.caja_id === c.id);
         const totalUds = lineas.reduce((s, l) => s + (l.cantidad || 0), 0);
-        const flecha = `<span id="flecha-caja-${c.id}" style="display:inline-block; width:14px; color: var(--accent);">▶</span>`;
+        const flecha = `<span id="flecha-caja-${c.id}" style="display:inline-block; width:14px; color: var(--accent);">${cajasAbiertas.has(c.id) ? '▼' : '▶'}</span>`;
 
         html += `
           <tr onclick="toggleContenidoCaja(${c.id})" style="cursor:pointer;">
+            <td class="sel-col" onclick="event.stopPropagation();"><input type="checkbox" class="sel-check" ${selCajas.has(c.id) ? 'checked' : ''} onclick="event.stopPropagation(); toggleSelCaja(${c.id}, this.checked)"></td>
             <td>${flecha} <strong>${c.codigo || '—'}</strong></td>
             <td style="font-size: 13px;">${ubicacionFisicaCaja(c)}</td>
             <td>${lineas.length}</td>
@@ -3818,10 +4027,23 @@
           </tr>`;
 
         // Fila de contenido (desplegable)
+        const idsSelCaja = selArtDeCaja(c.id);
+        const todosArtMarcados = lineas.length > 0 && lineas.every(l => selArt.has(l.id));
+        const barraArt = idsSelCaja.length ? `
+          <div class="sel-barra" style="margin:8px 0;">
+            <strong>${idsSelCaja.length} artículo${idsSelCaja.length === 1 ? '' : 's'}</strong>
+            <button class="btn btn-secondary btn-small acc-inv" onclick="mostrarModalMover(selArtDeCaja(${c.id}))">↔️ Mover</button>
+            <button class="btn btn-danger btn-small acc-inv" onclick="sacarArtSeleccionados(${c.id})">↩️ Sacar a sin organizar</button>
+            <button class="btn btn-ghost btn-small" onclick="limpiarSelArt(${c.id})">Cancelar</button>
+          </div>` : '';
+
         const filasContenido = lineas.length
           ? lineas.map(l => `
-              <div style="display:flex; justify-content:space-between; align-items:center; padding:7px 12px; border-bottom:1px solid var(--border);">
-                <span style="font-size:13px;">${nombreVarianteCompleto(l.variante_id)} — <strong>${l.cantidad} uds</strong></span>
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:7px 12px; border-bottom:1px solid var(--border);">
+                <span style="display:flex; align-items:center; gap:8px; font-size:13px;">
+                  <input type="checkbox" class="sel-check acc-inv" ${selArt.has(l.id) ? 'checked' : ''} onclick="toggleSelArt(${l.id}, this.checked)">
+                  <span>${nombreVarianteCompleto(l.variante_id)} — <strong>${l.cantidad} uds</strong></span>
+                </span>
                 <span style="display:flex; gap:4px;">
                   <button class="btn btn-secondary btn-small acc-inv" onclick="mostrarModalMover(${l.id})" title="Mover a otra caja, palé o a sin organizar">↔️ Mover</button>
                   <button class="btn btn-ghost btn-small" onclick="mostrarModalLinea(${c.id}, ${l.id})">✏️</button>
@@ -3831,13 +4053,17 @@
           : '<p style="color: var(--muted); font-size: 13px; padding: 8px 12px;">Caja vacía</p>';
 
         html += `
-          <tr id="contenido-caja-${c.id}" style="display:none;">
-            <td colspan="5" style="background: var(--card); padding: 0;">
+          <tr id="contenido-caja-${c.id}" style="display:${cajasAbiertas.has(c.id) ? 'table-row' : 'none'};">
+            <td colspan="6" style="background: var(--card); padding: 0;">
               <div style="padding: 10px 16px 12px 40px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; gap:8px; flex-wrap:wrap;">
                   <span style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color: var(--muted);">Contenido de la caja</span>
-                  <button class="btn btn-success btn-small" onclick="mostrarModalLinea(${c.id})">+ Añadir artículo</button>
+                  <span style="display:flex; gap:8px; align-items:center;">
+                    ${lineas.length ? `<label class="acc-inv" style="font-size:11px; color:var(--muted); display:flex; align-items:center; gap:4px; cursor:pointer;"><input type="checkbox" class="sel-check" ${todosArtMarcados ? 'checked' : ''} onclick="toggleSelTodosArt(${c.id}, this.checked)"> Todos</label>` : ''}
+                    <button class="btn btn-success btn-small acc-inv" onclick="mostrarModalLinea(${c.id})">+ Añadir artículo</button>
+                  </span>
                 </div>
+                ${barraArt}
                 ${filasContenido}
               </div>
             </td>
@@ -3847,13 +4073,16 @@
       cont.innerHTML = html;
     }
 
+    let cajasAbiertas = new Set();
+
     function toggleContenidoCaja(id) {
+      if (cajasAbiertas.has(id)) cajasAbiertas.delete(id); else cajasAbiertas.add(id);
       const fila = document.getElementById('contenido-caja-' + id);
       const flecha = document.getElementById('flecha-caja-' + id);
       if (!fila) return;
-      const abierto = fila.style.display !== 'none';
-      fila.style.display = abierto ? 'none' : 'table-row';
-      if (flecha) flecha.textContent = abierto ? '▶' : '▼';
+      const abierto = cajasAbiertas.has(id);
+      fila.style.display = abierto ? 'table-row' : 'none';
+      if (flecha) flecha.textContent = abierto ? '▼' : '▶';
     }
 
     // ── CÓDIGOS QR DE CAJAS ─────────────────
@@ -4796,7 +5025,9 @@
     // ════════════════════════════════════════
     //  MÓDULO MOVER / REORGANIZAR STOCK
     // ════════════════════════════════════════
-    async function mostrarModalMover(stockId) {
+    async function mostrarModalMover(stockIds) {
+      const lista = Array.isArray(stockIds) ? stockIds : [stockIds];
+      if (!lista.length) return;
       // Cargar datos frescos
       stockItems = (await sb.from('stock').select('*')).data || [];
       if (!variantes.length) variantes = await obtenerVariantes();
@@ -4805,20 +5036,30 @@
       pales = await obtenerPales();
       ubicaciones = await obtenerUbicaciones();
 
-      const origen = stockItems.find(s => s.id === stockId);
+      const origen = stockItems.find(s => s.id === lista[0]);
       if (!origen) { toast('No se encontró ese stock'); return; }
+      const varios = lista.length > 1;
 
-      document.getElementById('moverStockId').value = stockId;
+      document.getElementById('moverStockId').value = lista.join(',');
 
       let dondeOrigen = 'sin organizar';
       if (origen.caja_id) { const c = cajas.find(x => x.id === origen.caja_id); dondeOrigen = `caja ${c ? c.codigo : ''}`; }
       else if (origen.pale_id) { const p = pales.find(x => x.id === origen.pale_id); dondeOrigen = `palé ${p ? p.codigo : ''} (suelto)`; }
       else if (origen.ubicacion_id) { const u = ubicaciones.find(x => x.id === origen.ubicacion_id); dondeOrigen = `${u ? u.nombre : ''} (suelto)`; }
 
-      document.getElementById('moverOrigenInfo').innerHTML =
-        `<strong>${nombreVarianteCompleto(origen.variante_id)}</strong><br>` +
-        `<span style="color:var(--muted);">Desde: ${dondeOrigen} — hay ${origen.cantidad} uds aquí</span>`;
+      if (varios) {
+        const uds = stockItems.filter(s => lista.includes(s.id)).reduce((a, s) => a + (s.cantidad || 0), 0);
+        document.getElementById('moverOrigenInfo').innerHTML =
+          `<strong>${lista.length} artículos seleccionados</strong><br>` +
+          `<span style="color:var(--muted);">Desde: ${dondeOrigen} — se moverán completos (${uds} uds en total)</span>`;
+      } else {
+        document.getElementById('moverOrigenInfo').innerHTML =
+          `<strong>${nombreVarianteCompleto(origen.variante_id)}</strong><br>` +
+          `<span style="color:var(--muted);">Desde: ${dondeOrigen} — hay ${origen.cantidad} uds aquí</span>`;
+      }
 
+      // En bloque se mueve todo: pedir cantidad de cada uno sería un infierno
+      document.getElementById('grupoMoverCantidad').style.display = varios ? 'none' : 'block';
       document.getElementById('moverCantidad').value = '';
       document.getElementById('moverCantidad').setAttribute('data-max', origen.cantidad);
 
@@ -4846,37 +5087,14 @@
       if (!isNaN(max)) document.getElementById('moverCantidad').value = max;
     }
 
-    async function ejecutarMover() {
-      const stockId = parseInt(document.getElementById('moverStockId').value);
-      const origen = stockItems.find(s => s.id === stockId);
-      if (!origen) { toast('❌ Error'); return; }
-
-      const n = parseInt(document.getElementById('moverCantidad').value);
-      const tipo = document.getElementById('moverDestinoTipo').value;
-
-      if (!n || n <= 0) { alert('❌ Indica cuántas unidades mover'); return; }
-      if (n > origen.cantidad) { alert(`❌ Solo hay ${origen.cantidad} uds en el origen`); return; }
-
-      let destCaja = null, destPale = null, destUbi = null;
-      if (tipo === 'caja') {
-        destCaja = parseInt(document.getElementById('moverCaja').value) || null;
-        if (!destCaja) { alert('❌ Selecciona la caja destino'); return; }
-        if (destCaja === origen.caja_id) { alert('❌ El stock ya está en esa caja'); return; }
-      } else if (tipo === 'pale') {
-        destPale = parseInt(document.getElementById('moverPale').value) || null;
-        if (!destPale) { alert('❌ Selecciona el palé destino'); return; }
-      } else if (tipo === 'ubicacion') {
-        destUbi = parseInt(document.getElementById('moverUbicacion').value) || null;
-        if (!destUbi) { alert('❌ Selecciona la ubicación destino'); return; }
-      }
-
+    // Núcleo del movimiento de una línea de stock (reutilizado en individual y en bloque)
+    async function moverStockLinea(origen, n, tipo, destCaja, destPale, destUbi) {
       // 1. Reducir o borrar el origen
       if (n >= origen.cantidad) {
         await sb.from('stock').delete().eq('id', origen.id);
       } else {
         await sb.from('stock').update({ cantidad: origen.cantidad - n }).eq('id', origen.id);
       }
-
       // 2. Sumar en el destino (salvo que sea "sin organizar")
       if (tipo !== 'sin-organizar') {
         const existente = stockItems.find(s =>
@@ -4895,30 +5113,73 @@
           });
         }
       }
+    }
+
+    async function ejecutarMover() { if (!exigeCap('inv')) return;
+      const ids = document.getElementById('moverStockId').value.split(',').map(x => parseInt(x)).filter(Boolean);
+      if (!ids.length) { toast('❌ Error'); return; }
+      const varios = ids.length > 1;
+      const primero = stockItems.find(s => s.id === ids[0]);
+      if (!primero) { toast('❌ Error'); return; }
+
+      const tipo = document.getElementById('moverDestinoTipo').value;
+
+      let destCaja = null, destPale = null, destUbi = null;
+      if (tipo === 'caja') {
+        destCaja = parseInt(document.getElementById('moverCaja').value) || null;
+        if (!destCaja) { alert('❌ Selecciona la caja destino'); return; }
+        if (destCaja === primero.caja_id) { alert('❌ El stock ya está en esa caja'); return; }
+      } else if (tipo === 'pale') {
+        destPale = parseInt(document.getElementById('moverPale').value) || null;
+        if (!destPale) { alert('❌ Selecciona el palé destino'); return; }
+      } else if (tipo === 'ubicacion') {
+        destUbi = parseInt(document.getElementById('moverUbicacion').value) || null;
+        if (!destUbi) { alert('❌ Selecciona la ubicación destino'); return; }
+      }
+
+      if (varios) {
+        // En bloque: cada artículo se mueve completo
+        for (const id of ids) {
+          const origen = stockItems.find(s => s.id === id);
+          if (origen) await moverStockLinea(origen, origen.cantidad, tipo, destCaja, destPale, destUbi);
+          selArt.delete(id);
+        }
+        registrarActividad('mover', 'stock', `Movió ${ids.length} artículo(s)`);
+        toast(`✅ ${ids.length} artículos movidos`);
+      } else {
+        const n = parseInt(document.getElementById('moverCantidad').value);
+        if (!n || n <= 0) { alert('❌ Indica cuántas unidades mover'); return; }
+        if (n > primero.cantidad) { alert(`❌ Solo hay ${primero.cantidad} uds en el origen`); return; }
+        await moverStockLinea(primero, n, tipo, destCaja, destPale, destUbi);
+        registrarActividad('mover', 'stock', `Movió ${n} ud(s) de "${nombreVarianteCompleto(primero.variante_id)}"`);
+        toast('✅ Stock movido');
+      }
 
       cerrarModalAdmin('modalMover');
-      toast('✅ Stock movido');
-      registrarActividad('mover', 'stock', `Movió ${n} ud(s) de "${nombreVarianteCompleto(origen.variante_id)}"`);
       recargarVistaActual();
     }
 
-    // ── Mover una CAJA o un PALÉ de sitio (sin tener que editarlo todo) ──
-    async function mostrarModalMoverCont(tipo, id) {
+    // ── Mover una CAJA o un PALÉ de sitio (uno o varios a la vez) ──
+    async function mostrarModalMoverCont(tipo, ids) {
+      const lista = Array.isArray(ids) ? ids : [ids];
+      if (!lista.length) return;
       pales = await obtenerPales();
       ubicaciones = await obtenerUbicaciones();
       if (!cajas.length) cajas = (await sb.from('cajas').select('*')).data || [];
 
       const esCaja = (tipo === 'caja');
       document.getElementById('moverContTipo').value = tipo;
-      document.getElementById('moverContId').value = id;
+      document.getElementById('moverContId').value = lista.join(',');
       document.getElementById('moverContTitulo').textContent = esCaja ? '↔️ Mover caja' : '↔️ Mover palé';
 
       let info = '';
-      if (esCaja) {
-        const c = cajas.find(x => x.id === id);
+      if (lista.length > 1) {
+        info = `<strong>${lista.length} ${esCaja ? 'cajas' : 'palés'} seleccionad${esCaja ? 'as' : 'os'}</strong><br><span style="color:var(--muted);">Se moverán todos al mismo sitio.</span>`;
+      } else if (esCaja) {
+        const c = cajas.find(x => x.id === lista[0]);
         info = `<strong>📦 ${c?.codigo || 'Caja'}</strong><br><span style="color:var(--muted);">Ahora: ${ubicacionFisicaCaja(c).replace(/<[^>]*>/g, '')}</span>`;
       } else {
-        const p = pales.find(x => x.id === id);
+        const p = pales.find(x => x.id === lista[0]);
         info = `<strong>🏛️ ${p?.codigo || 'Palé'}</strong><br><span style="color:var(--muted);">Ahora: ${ubicacionFisicaPale(p)}</span>`;
       }
       document.getElementById('moverContInfo').innerHTML = info;
@@ -4945,7 +5206,8 @@
 
     async function ejecutarMoverCont() { if (!exigeCap('inv')) return;
       const tipo = document.getElementById('moverContTipo').value;
-      const id = parseInt(document.getElementById('moverContId').value);
+      const ids = document.getElementById('moverContId').value.split(',').map(x => parseInt(x)).filter(Boolean);
+      if (!ids.length) return;
       const esCaja = (tipo === 'caja');
       const t = esCaja ? document.getElementById('moverContDestinoTipo').value : 'ubicacion';
 
@@ -4958,19 +5220,21 @@
           ubicacion_id = parseInt(document.getElementById('moverContUbicacion').value) || null;
           if (!ubicacion_id) { alert('❌ Selecciona la ubicación destino'); return; }
         }
-        const { error } = await sb.from('cajas').update({ pale_id, ubicacion_id }).eq('id', id);
+        const { error } = await sb.from('cajas').update({ pale_id, ubicacion_id }).in('id', ids);
         if (error) { alert('❌ Error: ' + error.message); return; }
-        registrarActividad('mover', 'caja', `Movió la caja "${cajas.find(x => x.id === id)?.codigo}"`);
+        registrarActividad('mover', 'caja', ids.length > 1 ? `Movió ${ids.length} cajas` : `Movió la caja "${cajas.find(x => x.id === ids[0])?.codigo}"`);
+        selCajas.clear();
       } else {
         const ubicacion_id = parseInt(document.getElementById('moverContUbicacion').value) || null;
         if (!ubicacion_id) { alert('❌ Selecciona la ubicación destino'); return; }
-        const { error } = await sb.from('pales').update({ ubicacion_id }).eq('id', id);
+        const { error } = await sb.from('pales').update({ ubicacion_id }).in('id', ids);
         if (error) { alert('❌ Error: ' + error.message); return; }
-        registrarActividad('mover', 'palé', `Movió el palé "${pales.find(x => x.id === id)?.codigo}"`);
+        registrarActividad('mover', 'palé', ids.length > 1 ? `Movió ${ids.length} palés` : `Movió el palé "${pales.find(x => x.id === ids[0])?.codigo}"`);
+        selPales.clear();
       }
 
       cerrarModalAdmin('modalMoverCont');
-      toast('✅ Movido');
+      toast(ids.length > 1 ? `✅ ${ids.length} movidos` : '✅ Movido');
       recargarVistaActual();
     }
 
