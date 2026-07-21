@@ -417,6 +417,8 @@
       .gr-pista { flex: 1 1 100%; }
       .gr-valor { flex: 1 1 100%; min-width: 0; }
     }
+    .th-orden { cursor: pointer; user-select: none; white-space: nowrap; }
+    .th-orden:hover { color: var(--accent); }
     .apunte {
       display: flex; justify-content: space-between; align-items: center; gap: 8px;
       font-size: 12px; padding: 6px 0; border-top: 1px solid var(--border);
@@ -1500,6 +1502,59 @@
       renderTablaCarpetas('aprobados-tabla', lista, true);
     }
 
+    // Cómo está ordenada cada tabla ahora mismo. Se recuerda por tabla.
+    const ordenTabla = {
+      'presupuestos-tabla': { col: 'fecha', asc: false },
+      'aprobados-tabla': { col: 'fecha', asc: false },
+      'ficha-aprobados-tabla': { col: 'fecha', asc: false },
+      'ficha-presupuestos-tabla': { col: 'fecha', asc: false }
+    };
+
+    // El "producto principal" de una carpeta es el de mayor importe: es lo que
+    // se usa para ordenar alfabéticamente por producto (punto 3 de Fátima).
+    function productoPrincipal(presupuestoId) {
+      const ls = lineas.filter(l => l.presupuesto_id === presupuestoId);
+      if (!ls.length) return '';
+      const mejor = ls.slice().sort((a, b) =>
+        (b.cantidad * b.precio_cliente_unitario) - (a.cantidad * a.precio_cliente_unitario))[0];
+      const p = productos.find(x => x.id === mejor.producto_id);
+      return p ? p.nombre : '';
+    }
+
+    // Cambia la ordenación al pulsar una cabecera (misma columna = invierte)
+    function ordenarTabla(contenedorId, col) {
+      const o = ordenTabla[contenedorId];
+      if (o.col === col) o.asc = !o.asc;
+      else { o.col = col; o.asc = true; }
+      // Cada tabla se vuelve a pintar desde su propia función de origen
+      if (contenedorId === 'presupuestos-tabla') renderPresupuestosTabla();
+      else if (contenedorId === 'aprobados-tabla') renderAprobadosTabla();
+      else aplicarFiltroFicha();
+    }
+
+    function ordenarLista(lista, contenedorId) {
+      const o = ordenTabla[contenedorId] || { col: 'fecha', asc: false };
+      const dir = o.asc ? 1 : -1;
+      const val = (p) => {
+        switch (o.col) {
+          case 'nombre': return (p.nombre || '').toLowerCase();
+          case 'cliente': return (clientes.find(c => c.id === p.cliente_id)?.nombre_empresa || '').toLowerCase();
+          case 'producto': return productoPrincipal(p.id).toLowerCase();
+          case 'total': return totalesCarpeta(p.id).totalCliente;
+          case 'beneficio': return totalesCarpeta(p.id).beneficio;
+          case 'margen': return totalesCarpeta(p.id).margen;
+          case 'pendiente': return totalesPagos(p.id).pendientePago;
+          default: return p.fecha || '';
+        }
+      };
+      return lista.slice().sort((a, b) => {
+        const va = val(a), vb = val(b);
+        if (va < vb) return -1 * dir;
+        if (va > vb) return 1 * dir;
+        return (b.fecha || '').localeCompare(a.fecha || ''); // desempate por fecha
+      });
+    }
+
     // conPagos: en las vistas de pedidos aprobados se añade la columna del
     // dinero pendiente, para verlo sin tener que abrir cada pedido.
     function renderTablaCarpetas(contenedorId, lista, conPagos = false) {
@@ -1508,10 +1563,14 @@
         cont.innerHTML = `<div class="empty"><div class="empty-icon">📝</div><p>No hay presupuestos para mostrar.</p></div>`;
         return;
       }
-      const ordenada = lista.slice().sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+      const o = ordenTabla[contenedorId] || { col: 'fecha', asc: false };
+      const flecha = (col) => o.col === col ? (o.asc ? ' ▲' : ' ▼') : '';
+      const th = (col, txt) => `<th class="th-orden" onclick="ordenarTabla('${contenedorId}','${col}')" title="Ordenar por ${txt}">${txt}${flecha(col)}</th>`;
+
+      const ordenada = ordenarLista(lista, contenedorId);
       let html = `<table><thead><tr>
-        <th>Fecha</th><th>Presupuesto</th><th>Cliente</th><th>Productos</th>
-        <th>Total cliente</th><th>Coste interno</th><th>Beneficio</th><th>Margen</th>${conPagos ? '<th>Pendiente pago</th>' : ''}<th>Estado</th><th></th>
+        ${th('fecha', 'Fecha')}${th('nombre', 'Presupuesto')}${th('cliente', 'Cliente')}${th('producto', 'Productos (cantidad · unitario)')}
+        ${th('total', 'Total cliente')}${th('beneficio', 'Beneficio')}${th('margen', 'Margen')}${conPagos ? th('pendiente', 'Pendiente pago') : ''}<th>Estado</th><th></th>
       </tr></thead><tbody>`;
       let sumaCliente = 0, sumaBeneficio = 0, sumaPendientePago = 0;
       for (const p of ordenada) {
@@ -1521,7 +1580,12 @@
         sumaCliente += t.totalCliente; sumaBeneficio += t.beneficio;
         const col = colorMargen(t.margen);
         const ls = lineas.filter(l => l.presupuesto_id === p.id);
-        const resumenProd = ls.map(l => etiquetaProducto(l.producto_id, l.variante)).join(', ');
+        // Desglose por producto: nombre, cantidad y precio unitario del cliente.
+        // Cubre los puntos 1 (cantidad) y 2 (unitario) de Fátima.
+        const desglose = ls.map(l =>
+          `<div style="padding:1px 0;"><strong style="color:var(--text);">${esc(etiquetaProducto(l.producto_id, l.variante))}</strong>` +
+          ` <span style="color:var(--muted);">· ${l.cantidad} uds · ${formatoEuro(l.precio_cliente_unitario)}/ud</span></div>`
+        ).join('');
         const aprobado = p.estado === 'aprobado';
         let celdaPagos = '';
         if (conPagos) {
@@ -1534,9 +1598,8 @@
           <td style="white-space:nowrap;">${formatoFecha(p.fecha)}</td>
           <td><strong>${esc(p.nombre)}</strong>${ln ? `<br><span style="color:var(--muted); font-size:11px;">🗂️ ${esc(ln.nombre)}</span>` : ''}</td>
           <td>${cliente ? esc(cliente.nombre_empresa) : '—'}</td>
-          <td style="max-width:200px; font-size:12px; color:var(--muted);" title="${esc(resumenProd)}">${t.nLineas} · ${esc(resumenProd.slice(0, 60))}${resumenProd.length > 60 ? '…' : ''}</td>
+          <td style="font-size:12px; min-width:220px;">${desglose || '—'}</td>
           <td>${formatoEuro(t.totalCliente)}</td>
-          <td>${formatoEuro(t.costeInterno)}</td>
           <td style="color:${col}">${formatoEuro(t.beneficio)}</td>
           <td><span style="font-weight:700; color:${col}">${t.margen.toFixed(1)}%</span></td>
           ${celdaPagos}
@@ -1551,7 +1614,6 @@
       html += `<tr class="totales">
         <td colspan="4">TOTAL — ${ordenada.length} presupuesto(s)</td>
         <td>${formatoEuro(sumaCliente)}</td>
-        <td></td>
         <td>${formatoEuro(sumaBeneficio)}</td>
         <td></td>
         ${conPagos ? `<td>${formatoEuro(sumaPendientePago)}</td>` : ''}
