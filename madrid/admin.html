@@ -211,6 +211,106 @@
       line-height: 1.6;
     }
 
+    /* FICHAJE */
+    .fichaje-aviso {
+      background: rgba(255, 152, 0, 0.12);
+      border: 1px solid var(--warning);
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      line-height: 1.5;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .fichaje-estado-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .fichaje-estado-texto {
+      font-size: 13px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+    .fichaje-hora-actual {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 40px;
+      letter-spacing: 1px;
+      color: var(--accent);
+      margin-bottom: 18px;
+    }
+    .fichaje-modalidad {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+    .fichaje-modalidad label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      background: var(--dark);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 14px;
+    }
+    .fichaje-modalidad input[type="radio"] { width: auto; }
+    .fichaje-botones {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .btn-fichaje {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      letter-spacing: 1px;
+      padding: 18px 36px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      color: #fff;
+    }
+    .btn-fichaje-entrada { background: var(--success); }
+    .btn-fichaje-salida { background: var(--danger); }
+    .btn-fichaje-pausa { background: var(--warning); color: #1a1a1a; }
+    .fichaje-historial-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+    .fichaje-historial-item:last-child { border-bottom: none; }
+    .fichaje-tag-correccion {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--warning);
+      border: 1px solid var(--warning);
+      border-radius: 4px;
+      padding: 1px 6px;
+      margin-left: 6px;
+    }
+    @media (max-width: 480px) {
+      .fichaje-hora-actual { font-size: 30px; }
+      .btn-fichaje { width: 100%; }
+      .fichaje-botones { flex-direction: column; }
+    }
+
     /* TABLA */
     table {
       width: 100%;
@@ -627,6 +727,10 @@
         <span class="icon">📊</span>
         <span>Dashboard</span>
       </div>
+      <div class="nav-item" onclick="mostrarPagina('fichar')">
+        <span class="icon">🕐</span>
+        <span>Fichar</span>
+      </div>
       <div class="nav-item" onclick="mostrarPagina('calendario')">
         <span class="icon">📅</span>
         <span>Calendario</span>
@@ -783,6 +887,49 @@
         <p>✓ Conexión a Supabase activa</p>
         <p>✓ Equipo 47 · Madrid funcionando</p>
         <p id="db-status" style="color: var(--success);">Comprobando BD...</p>
+      </div>
+    </section>
+
+    <!-- FICHAJE -->
+    <section class="page" id="fichar-page">
+      <div class="page-header">
+        <div>
+          <h1>FICHAR</h1>
+          <p>Tu registro de jornada. Cada fichaje queda guardado con la hora del servidor y no se puede editar ni borrar.</p>
+        </div>
+      </div>
+
+      <div id="fichaje-aviso-olvido" class="fichaje-aviso" style="display:none;">
+        <span id="fichaje-aviso-texto"></span>
+        <button class="btn btn-sm" style="background:var(--warning); color:#1a1a1a; border:none;" onclick="abrirModalOlvide(true)">Corregirlo</button>
+      </div>
+
+      <div class="fichaje-estado-card">
+        <div class="fichaje-estado-texto" id="fichaje-estado-texto">Cargando tu estado...</div>
+        <div class="fichaje-hora-actual" id="fichaje-reloj">--:--</div>
+
+        <div class="fichaje-modalidad" id="fichaje-modalidad-selector">
+          <label><input type="radio" name="fichajeModalidad" value="presencial" checked> 🏢 Presencial</label>
+          <label><input type="radio" name="fichajeModalidad" value="remoto"> 🏠 Remoto</label>
+        </div>
+
+        <div class="fichaje-botones" id="fichaje-botones">
+          <!-- se rellena en render según el estado -->
+        </div>
+      </div>
+
+      <div style="text-align:center; margin-bottom:24px;">
+        <button class="btn btn-ghost btn-sm" onclick="abrirModalOlvide(false)">✏️ Olvidé fichar</button>
+      </div>
+
+      <div class="card" id="fichaje-solicitudes-card" style="display:none; margin-bottom:20px;">
+        <h3>📋 Solicitudes de corrección pendientes</h3>
+        <div id="fichaje-solicitudes-lista" class="loading">Cargando...</div>
+      </div>
+
+      <h3 style="margin:24px 0 12px; font-family:'Bebas Neue',sans-serif; letter-spacing:1px;">Tu jornada de hoy</h3>
+      <div class="card">
+        <div id="fichaje-historial-hoy" class="loading">Cargando...</div>
       </div>
     </section>
 
@@ -1840,6 +1987,46 @@
     </div>
   </div>
 
+  <!-- MODAL OLVIDÉ FICHAR -->
+  <div id="modalOlvideFichar" class="modal">
+    <div class="modal-content" style="max-width: 440px;">
+      <div class="modal-header">
+        <h2>✏️ Olvidé fichar</h2>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:13px; color:var(--muted); margin-bottom:16px;">Esto no se guarda directamente: queda como solicitud pendiente hasta que alguien con permiso la revise.</p>
+        <div class="form-group">
+          <label>¿Qué se te olvidó fichar? *</label>
+          <select id="olvideTipo">
+            <option value="entrada">Entrada</option>
+            <option value="salida">Salida</option>
+            <option value="pausa_inicio">Inicio de pausa</option>
+            <option value="pausa_fin">Fin de pausa</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Fecha y hora aproximada *</label>
+          <input type="datetime-local" id="olvideHora">
+        </div>
+        <div class="form-group">
+          <label>Modalidad *</label>
+          <select id="olvideModalidad">
+            <option value="presencial">🏢 Presencial</option>
+            <option value="remoto">🏠 Remoto</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Motivo *</label>
+          <textarea id="olvideMotivo" rows="3" placeholder="Ej: se me olvidó fichar la salida ayer al irme"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModalAdmin('modalOlvideFichar')">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="enviarSolicitudCorreccion()">📨 Enviar solicitud</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL CONVOCAR PERSONA A UNA SALIDA -->
   <div id="modalConvocar" class="modal">
     <div class="modal-content" style="max-width: 440px;">
@@ -2218,6 +2405,7 @@
       cerrarMenuMovil();
       
       if (pagina === 'dashboard') cargarDashboard();
+      if (pagina === 'fichar') cargarFichar();
       if (pagina === 'productos') cargarProductosTabla();
       if (pagina === 'zapatillas') cargarZapatillasVista();
       if (pagina === 'ubicaciones') cargarUbicacionesTabla();
@@ -6599,7 +6787,7 @@
     const NIVEL_ROL = { consulta: 1, operario: 2, responsable: 3, gestor: 4, admin: 5 };
     // Nivel mínimo para ver cada pestaña
     const NIVEL_PAGINA = {
-      dashboard: 1, calendario: 1, productos: 1, zapatillas: 1,
+      dashboard: 1, fichar: 1, calendario: 1, productos: 1, zapatillas: 1,
       ubicaciones: 1, pales: 1, cajas: 1, sueltos: 1,
       salidas: 2, recepciones: 2, solicitudes: 2,
       actividad: 4, clientes: 4,
@@ -7672,6 +7860,211 @@
       }
       await arrancarApp();
     });
+
+    // ══════════════════════════════════════════════════════════
+    // FICHAJE
+    // ══════════════════════════════════════════════════════════
+    const FICHAJE_ETIQUETAS = {
+      entrada: '🟢 Entrada', salida: '🔴 Salida',
+      pausa_inicio: '⏸️ Inicio de pausa', pausa_fin: '▶️ Fin de pausa'
+    };
+
+    let fichajePersonaActual = null;   // fila de personas_equipo del usuario logueado
+    let fichajeAvisoPendiente = null;  // { tipo, fecha } del fichaje abierto de un día anterior
+    let fichajeRelojInterval = null;
+
+    function fichajeEsMismoDiaLocal(fechaISO, ref) {
+      const f = new Date(fechaISO);
+      return f.getFullYear() === ref.getFullYear() && f.getMonth() === ref.getMonth() && f.getDate() === ref.getDate();
+    }
+
+    function fichajeFormatoHora(fechaISO) {
+      return new Date(fechaISO).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function fichajeFormatoFechaHora(fechaISO) {
+      return new Date(fechaISO).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    }
+
+    async function cargarFichar() {
+      if (fichajeRelojInterval) clearInterval(fichajeRelojInterval);
+      fichajeRelojInterval = setInterval(() => {
+        const el = document.getElementById('fichaje-reloj');
+        if (el) el.textContent = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      }, 1000);
+
+      const estadoTexto = document.getElementById('fichaje-estado-texto');
+      if (!usuarioActual) { estadoTexto.textContent = 'No se ha detectado tu sesión.'; return; }
+
+      const { data: personas } = await sb.from('personas_equipo').select('*').eq('email', usuarioActual.toLowerCase()).limit(1);
+      fichajePersonaActual = (personas && personas[0]) || null;
+
+      if (!fichajePersonaActual) {
+        estadoTexto.textContent = 'No se encuentra tu usuario en el equipo. Avisa a un admin.';
+        document.getElementById('fichaje-botones').innerHTML = '';
+        return;
+      }
+
+      const { data: fichajes } = await sb.from('fichajes')
+        .select('*')
+        .eq('persona_id', fichajePersonaActual.id)
+        .order('hora', { ascending: false })
+        .limit(30);
+
+      fichajeRenderEstado(fichajes || []);
+      fichajeRenderHistorialHoy(fichajes || []);
+
+      const puedeCorregir = fichajePersonaActual.puede_corregir_fichajes || esAdminBlindado(usuarioActual);
+      document.getElementById('fichaje-solicitudes-card').style.display = puedeCorregir ? '' : 'none';
+      if (puedeCorregir) fichajeRenderSolicitudesPendientes();
+    }
+
+    function fichajeRenderEstado(fichajes) {
+      const hoy = new Date();
+      const avisoDiv = document.getElementById('fichaje-aviso-olvido');
+      const estadoTexto = document.getElementById('fichaje-estado-texto');
+      const botonesDiv = document.getElementById('fichaje-botones');
+      fichajeAvisoPendiente = null;
+      avisoDiv.style.display = 'none';
+
+      const ultimo = fichajes[0];
+      let estado = 'fuera';   // fuera | dentro | en_pausa
+      let horaReferencia = null;
+
+      if (ultimo) {
+        const esHoy = fichajeEsMismoDiaLocal(ultimo.hora, hoy);
+        if (ultimo.tipo === 'entrada' || ultimo.tipo === 'pausa_fin') {
+          if (esHoy) { estado = 'dentro'; horaReferencia = ultimo.hora; }
+          else {
+            fichajeAvisoPendiente = { tipo: 'salida', fecha: ultimo.hora };
+          }
+        } else if (ultimo.tipo === 'pausa_inicio') {
+          if (esHoy) { estado = 'en_pausa'; horaReferencia = ultimo.hora; }
+          else {
+            fichajeAvisoPendiente = { tipo: 'salida', fecha: ultimo.hora };
+          }
+        } else if (ultimo.tipo === 'salida' && esHoy) {
+          horaReferencia = ultimo.hora;
+        }
+      }
+
+      if (fichajeAvisoPendiente) {
+        avisoDiv.style.display = 'flex';
+        document.getElementById('fichaje-aviso-texto').textContent =
+          `⚠️ Parece que el ${fichajeFormatoFechaHora(fichajeAvisoPendiente.fecha)} no fichaste la salida. Puedes seguir fichando con normalidad; cuando puedas, corrígelo.`;
+      }
+
+      if (estado === 'dentro') {
+        estadoTexto.textContent = `Dentro desde las ${fichajeFormatoHora(horaReferencia)}`;
+        botonesDiv.innerHTML = `
+          <button class="btn-fichaje btn-fichaje-salida" onclick="hacerFichar('salida')">🔴 Fichar salida</button>
+          <button class="btn-fichaje btn-fichaje-pausa" onclick="hacerFichar('pausa_inicio')">⏸️ Iniciar pausa</button>`;
+      } else if (estado === 'en_pausa') {
+        estadoTexto.textContent = `En pausa desde las ${fichajeFormatoHora(horaReferencia)}`;
+        botonesDiv.innerHTML = `
+          <button class="btn-fichaje btn-fichaje-entrada" onclick="hacerFichar('pausa_fin')">▶️ Volver de pausa</button>
+          <button class="btn btn-ghost" onclick="hacerFichar('salida')">🔴 Fichar salida directamente</button>`;
+      } else {
+        estadoTexto.textContent = horaReferencia
+          ? `Ya fichaste salida hoy a las ${fichajeFormatoHora(horaReferencia)}`
+          : 'Aún no has fichado hoy';
+        botonesDiv.innerHTML = `<button class="btn-fichaje btn-fichaje-entrada" onclick="hacerFichar('entrada')">🟢 Fichar entrada</button>`;
+      }
+    }
+
+    function fichajeRenderHistorialHoy(fichajes) {
+      const hoy = new Date();
+      const cont = document.getElementById('fichaje-historial-hoy');
+      const deHoy = fichajes.filter(f => fichajeEsMismoDiaLocal(f.hora, hoy)).sort((a, b) => new Date(a.hora) - new Date(b.hora));
+      if (!deHoy.length) { cont.innerHTML = '<p style="color:var(--muted); font-size:14px;">Todavía no hay fichajes hoy.</p>'; return; }
+      cont.innerHTML = deHoy.map(f => `
+        <div class="fichaje-historial-item">
+          <span>${FICHAJE_ETIQUETAS[f.tipo] || f.tipo} ${f.es_correccion ? '<span class="fichaje-tag-correccion">corrección</span>' : ''}</span>
+          <span style="color:var(--muted);">${fichajeFormatoHora(f.hora)} · ${f.modalidad === 'remoto' ? '🏠 remoto' : '🏢 presencial'}</span>
+        </div>`).join('');
+    }
+
+    async function hacerFichar(tipo) {
+      const modalidad = document.querySelector('input[name="fichajeModalidad"]:checked').value;
+      const { error } = await sb.rpc('fichar', { p_tipo: tipo, p_modalidad: modalidad });
+      if (error) { toast('❌ ' + error.message); return; }
+      toast(`✅ ${FICHAJE_ETIQUETAS[tipo] || tipo} registrada`);
+      cargarFichar();
+    }
+
+    function abrirModalOlvide(desdeAviso) {
+      const ahora = new Date();
+      ahora.setMinutes(ahora.getMinutes() - ahora.getTimezoneOffset());
+      document.getElementById('olvideMotivo').value = '';
+      if (desdeAviso && fichajeAvisoPendiente) {
+        document.getElementById('olvideTipo').value = fichajeAvisoPendiente.tipo;
+        const f = new Date(fichajeAvisoPendiente.fecha);
+        f.setMinutes(f.getMinutes() - f.getTimezoneOffset());
+        document.getElementById('olvideHora').value = f.toISOString().slice(0, 16);
+      } else {
+        document.getElementById('olvideTipo').value = 'entrada';
+        document.getElementById('olvideHora').value = ahora.toISOString().slice(0, 16);
+      }
+      abrirModalAdmin('modalOlvideFichar');
+    }
+
+    async function enviarSolicitudCorreccion() {
+      const tipo = document.getElementById('olvideTipo').value;
+      const horaValor = document.getElementById('olvideHora').value;
+      const modalidad = document.getElementById('olvideModalidad').value;
+      const motivo = document.getElementById('olvideMotivo').value.trim();
+      if (!horaValor) { toast('Indica la fecha y hora aproximada'); return; }
+      if (!motivo) { toast('Indica el motivo'); return; }
+
+      const { error } = await sb.rpc('solicitar_correccion_fichaje', {
+        p_tipo: tipo, p_modalidad: modalidad,
+        p_hora_solicitada: new Date(horaValor).toISOString(), p_motivo: motivo
+      });
+      if (error) { toast('❌ ' + error.message); return; }
+      toast('📨 Solicitud enviada, quedará pendiente de aprobación');
+      cerrarModalAdmin('modalOlvideFichar');
+      cargarFichar();
+    }
+
+    async function fichajeRenderSolicitudesPendientes() {
+      const cont = document.getElementById('fichaje-solicitudes-lista');
+      cont.innerHTML = '<div class="loading">Cargando...</div>';
+      const { data: pendientes } = await sb.from('solicitudes_correccion').select('*').eq('estado', 'pendiente').order('creado_en', { ascending: true });
+      if (!pendientes || !pendientes.length) { cont.innerHTML = '<p style="color:var(--muted); font-size:14px;">No hay solicitudes pendientes.</p>'; return; }
+
+      const { data: personas } = await sb.from('personas_equipo').select('id,nombre');
+      const nombrePorId = {};
+      (personas || []).forEach(p => nombrePorId[p.id] = p.nombre);
+
+      cont.innerHTML = pendientes.map(s => `
+        <div class="fichaje-historial-item" style="flex-direction:column; align-items:stretch; gap:6px; padding:14px;">
+          <div><strong>${nombrePorId[s.persona_id] || 'Persona ' + s.persona_id}</strong> · ${FICHAJE_ETIQUETAS[s.tipo] || s.tipo} · ${fichajeFormatoFechaHora(s.hora_solicitada)} · ${s.modalidad === 'remoto' ? '🏠 remoto' : '🏢 presencial'}</div>
+          <div style="color:var(--muted); font-size:13px;">${s.motivo}</div>
+          <div style="display:flex; gap:8px; margin-top:4px;">
+            <button class="btn btn-primary btn-sm" onclick="aprobarSolicitudFichaje(${s.id})">✅ Aprobar</button>
+            <button class="btn btn-danger btn-sm" onclick="rechazarSolicitudFichaje(${s.id})">❌ Rechazar</button>
+          </div>
+        </div>`).join('');
+    }
+
+    async function aprobarSolicitudFichaje(id) {
+      if (!confirmar('¿Aprobar esta corrección? Se creará el fichaje definitivo.')) return;
+      const { error } = await sb.rpc('aprobar_correccion_fichaje', { p_solicitud_id: id });
+      if (error) { toast('❌ ' + error.message); return; }
+      toast('✅ Corrección aprobada');
+      fichajeRenderSolicitudesPendientes();
+      cargarFichar();
+    }
+
+    async function rechazarSolicitudFichaje(id) {
+      const motivo = prompt('Motivo del rechazo:');
+      if (motivo === null) return;
+      if (!motivo.trim()) { toast('Hace falta un motivo'); return; }
+      const { error } = await sb.rpc('rechazar_correccion_fichaje', { p_solicitud_id: id, p_motivo_rechazo: motivo.trim() });
+      if (error) { toast('❌ ' + error.message); return; }
+      toast('Solicitud rechazada');
+      fichajeRenderSolicitudesPendientes();
+    }
   </script>
 </body>
 </html>
