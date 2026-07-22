@@ -7914,7 +7914,7 @@
       fichajeRenderEstado(fichajes || []);
       fichajeRenderHistorialHoy(fichajes || []);
 
-      const puedeCorregir = fichajePersonaActual.puede_corregir_fichajes || esAdminBlindado(usuarioActual);
+      const puedeCorregir = !!fichajePersonaActual.puede_corregir_fichajes;
       document.getElementById('fichaje-solicitudes-card').style.display = puedeCorregir ? '' : 'none';
       if (puedeCorregir) fichajeRenderSolicitudesPendientes();
     }
