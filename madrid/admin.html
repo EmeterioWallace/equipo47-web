@@ -1979,6 +1979,11 @@
           <input type="checkbox" id="personaActivo" checked style="width:auto;">
           Persona activa
         </label>
+        <label style="display:flex; align-items:center; gap:8px; font-size:14px; cursor:pointer; margin-top:12px;">
+          <input type="checkbox" id="personaPuedeCorregirFichajes" style="width:auto;">
+          🕐 Puede aprobar/rechazar correcciones de fichaje
+        </label>
+        <p style="font-size:11px; color:var(--muted); margin-top:4px;">Permiso suelto, independiente del rol: quien lo tenga puede revisar los "olvidé fichar" del equipo.</p>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" onclick="cerrarModalAdmin('modalPersona')">Cancelar</button>
@@ -6863,7 +6868,7 @@
           rolCelda = `<select onchange="cambiarRolPersona(${p.id}, this.value)" style="padding:5px 8px; font-size:13px;">${opciones}</select>`;
         }
         html += `<tr>
-          <td><strong>${p.nombre}</strong></td>
+          <td><strong>${p.nombre}</strong> ${p.puede_corregir_fichajes ? '<span title="Puede aprobar correcciones de fichaje" style="font-size:12px;">🕐</span>' : ''}</td>
           <td style="font-size:13px; color:var(--muted);">${p.email || '<em>sin email</em>'}</td>
           <td>${rolCelda}</td>
           <td>${p.activo ? '<span class="badge badge-success">Activa</span>' : '<span class="badge">Inactiva</span>'}</td>
@@ -6896,12 +6901,14 @@
         document.getElementById('personaNombre').value = p?.nombre || '';
         document.getElementById('personaEmail').value = p?.email || '';
         document.getElementById('personaActivo').checked = p?.activo !== false;
+        document.getElementById('personaPuedeCorregirFichajes').checked = !!p?.puede_corregir_fichajes;
       } else {
         document.getElementById('tituloModalPersona').textContent = 'Nueva persona';
         document.getElementById('personaId').value = '';
         document.getElementById('personaNombre').value = '';
         document.getElementById('personaEmail').value = '';
         document.getElementById('personaActivo').checked = true;
+        document.getElementById('personaPuedeCorregirFichajes').checked = false;
       }
       abrirModalAdmin('modalPersona');
     }
@@ -6911,13 +6918,14 @@
       if (!nombre) { alert('Indica el nombre'); return; }
       const email = document.getElementById('personaEmail').value.trim().toLowerCase() || null;
       const activo = document.getElementById('personaActivo').checked;
+      const puede_corregir_fichajes = document.getElementById('personaPuedeCorregirFichajes').checked;
       const idStr = document.getElementById('personaId').value;
       if (idStr) {
-        const { error } = await sb.from('personas_equipo').update({ nombre, email, activo }).eq('id', parseInt(idStr));
+        const { error } = await sb.from('personas_equipo').update({ nombre, email, activo, puede_corregir_fichajes }).eq('id', parseInt(idStr));
         if (error) { alert('❌ ' + error.message); return; }
         toast('✓ Persona actualizada');
       } else {
-        const { error } = await sb.from('personas_equipo').insert({ id: Date.now(), nombre, email, activo });
+        const { error } = await sb.from('personas_equipo').insert({ id: Date.now(), nombre, email, activo, puede_corregir_fichajes });
         if (error) { alert('❌ ' + error.message); return; }
         toast('✓ Persona añadida');
       }
