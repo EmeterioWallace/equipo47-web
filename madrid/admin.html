@@ -901,7 +901,7 @@
 
       <div id="fichaje-aviso-olvido" class="fichaje-aviso" style="display:none;">
         <span id="fichaje-aviso-texto"></span>
-        <button class="btn btn-sm" style="background:var(--warning); color:#1a1a1a; border:none;" onclick="abrirModalOlvide(true)">Corregirlo</button>
+        <button class="btn btn-sm" style="background:var(--warning); color:#1a1a1a; border:none;" onclick="abrirModalOlvide('faltante', true)">Corregirlo</button>
       </div>
 
       <div class="fichaje-estado-card">
@@ -918,8 +918,9 @@
         </div>
       </div>
 
-      <div style="text-align:center; margin-bottom:24px;">
-        <button class="btn btn-ghost btn-sm" onclick="abrirModalOlvide(false)">✏️ Olvidé fichar</button>
+      <div style="text-align:center; margin-bottom:24px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+        <button class="btn btn-ghost btn-sm" onclick="abrirModalOlvide('faltante', false)">✏️ Olvidé fichar</button>
+        <button class="btn btn-ghost btn-sm" onclick="abrirModalOlvide('dato_incorrecto', false)">🛠️ Fiché algo mal</button>
       </div>
 
       <div class="card" id="fichaje-solicitudes-card" style="display:none; margin-bottom:20px;">
@@ -2006,25 +2007,42 @@
     </div>
   </div>
 
-  <!-- MODAL OLVIDÉ FICHAR -->
+  <!-- MODAL OLVIDÉ FICHAR / FICHÉ ALGO MAL -->
   <div id="modalOlvideFichar" class="modal">
     <div class="modal-content" style="max-width: 440px;">
       <div class="modal-header">
-        <h2>✏️ Olvidé fichar</h2>
+        <h2 id="olvideTitulo">✏️ Olvidé fichar</h2>
       </div>
       <div class="modal-body">
-        <p style="font-size:13px; color:var(--muted); margin-bottom:16px;">Esto no se guarda directamente: queda como solicitud pendiente hasta que alguien con permiso la revise.</p>
-        <div class="form-group">
-          <label>¿Qué se te olvidó fichar? *</label>
-          <select id="olvideTipo">
-            <option value="entrada">Entrada</option>
-            <option value="salida">Salida</option>
-            <option value="pausa_inicio">Inicio de pausa</option>
-            <option value="pausa_fin">Fin de pausa</option>
-          </select>
+        <p style="font-size:13px; color:var(--muted); margin-bottom:16px;">Esto no se guarda directamente: queda como solicitud pendiente hasta que alguien con permiso la revise. El fichaje original nunca se borra ni se toca.</p>
+
+        <input type="hidden" id="olvideSolicitudTipo" value="faltante">
+
+        <!-- Caso: se me olvidó fichar del todo -->
+        <div id="olvide-grupo-faltante">
+          <div class="form-group">
+            <label>¿Qué se te olvidó fichar? *</label>
+            <select id="olvideTipo">
+              <option value="entrada">Entrada</option>
+              <option value="salida">Salida</option>
+              <option value="pausa_inicio">Inicio de pausa</option>
+              <option value="pausa_fin">Fin de pausa</option>
+            </select>
+          </div>
         </div>
+
+        <!-- Caso: fiché algo pero está mal -->
+        <div id="olvide-grupo-dato-incorrecto" style="display:none;">
+          <div class="form-group">
+            <label>¿Cuál de tus fichajes está mal? *</label>
+            <select id="olvideFichajeOriginal" onchange="fichajeAlSeleccionarOriginal()">
+              <option value="">Cargando...</option>
+            </select>
+          </div>
+        </div>
+
         <div class="form-group">
-          <label>Fecha y hora aproximada *</label>
+          <label id="olvideHoraLabel">Fecha y hora aproximada *</label>
           <input type="datetime-local" id="olvideHora">
         </div>
         <div class="form-group">
@@ -7894,6 +7912,7 @@
     let fichajePersonaActual = null;   // fila de personas_equipo del usuario logueado
     let fichajeAvisoPendiente = null;  // { tipo, fecha } del fichaje abierto de un día anterior
     let fichajeRelojInterval = null;
+    let fichajeMisUltimos = [];        // últimos fichajes propios, para el selector de "fiché algo mal"
 
     function fichajeEsMismoDiaLocal(fechaISO, ref) {
       const f = new Date(fechaISO);
@@ -7933,6 +7952,7 @@
         .order('hora', { ascending: false })
         .limit(30);
 
+      fichajeMisUltimos = fichajes || [];
       fichajeRenderEstado(fichajes || []);
       fichajeRenderHistorialHoy(fichajes || []);
 
@@ -8001,13 +8021,19 @@
     function fichajeRenderHistorialHoy(fichajes) {
       const hoy = new Date();
       const cont = document.getElementById('fichaje-historial-hoy');
+      const idsSustituidos = new Set(fichajes.filter(f => f.fichaje_original_id).map(f => f.fichaje_original_id));
       const deHoy = fichajes.filter(f => fichajeEsMismoDiaLocal(f.hora, hoy)).sort((a, b) => new Date(a.hora) - new Date(b.hora));
       if (!deHoy.length) { cont.innerHTML = '<p style="color:var(--muted); font-size:14px;">Todavía no hay fichajes hoy.</p>'; return; }
-      cont.innerHTML = deHoy.map(f => `
+      cont.innerHTML = deHoy.map(f => {
+        let etiquetaExtra = '';
+        if (f.es_correccion) etiquetaExtra = `<span class="fichaje-tag-correccion">${f.fichaje_original_id ? 'corrección de dato' : 'corrección (olvido)'}</span>`;
+        else if (idsSustituidos.has(f.id)) etiquetaExtra = `<span class="fichaje-tag-correccion" style="color:var(--muted); border-color:var(--muted);">dato incorrecto, ver corrección</span>`;
+        return `
         <div class="fichaje-historial-item">
-          <span>${FICHAJE_ETIQUETAS[f.tipo] || f.tipo} ${f.es_correccion ? '<span class="fichaje-tag-correccion">corrección</span>' : ''}</span>
+          <span>${FICHAJE_ETIQUETAS[f.tipo] || f.tipo} ${etiquetaExtra}</span>
           <span style="color:var(--muted);">${fichajeFormatoHora(f.hora)} · ${f.modalidad === 'remoto' ? '🏠 remoto' : '🏢 presencial'}</span>
-        </div>`).join('');
+        </div>`;
+      }).join('');
     }
 
     async function hacerFichar(tipo) {
@@ -8018,34 +8044,82 @@
       cargarFichar();
     }
 
-    function abrirModalOlvide(desdeAviso) {
+    function abrirModalOlvide(solicitudTipo, desdeAviso) {
       const ahora = new Date();
       ahora.setMinutes(ahora.getMinutes() - ahora.getTimezoneOffset());
       document.getElementById('olvideMotivo').value = '';
-      if (desdeAviso && fichajeAvisoPendiente) {
-        document.getElementById('olvideTipo').value = fichajeAvisoPendiente.tipo;
-        const f = new Date(fichajeAvisoPendiente.fecha);
-        f.setMinutes(f.getMinutes() - f.getTimezoneOffset());
-        document.getElementById('olvideHora').value = f.toISOString().slice(0, 16);
+      document.getElementById('olvideSolicitudTipo').value = solicitudTipo;
+
+      const esFaltante = solicitudTipo === 'faltante';
+      document.getElementById('olvide-grupo-faltante').style.display = esFaltante ? '' : 'none';
+      document.getElementById('olvide-grupo-dato-incorrecto').style.display = esFaltante ? 'none' : '';
+      document.getElementById('olvideTitulo').textContent = esFaltante ? '✏️ Olvidé fichar' : '🛠️ Fiché algo mal';
+      document.getElementById('olvideHoraLabel').textContent = esFaltante ? 'Fecha y hora aproximada *' : 'Fecha y hora correcta *';
+
+      if (esFaltante) {
+        if (desdeAviso && fichajeAvisoPendiente) {
+          document.getElementById('olvideTipo').value = fichajeAvisoPendiente.tipo;
+          const f = new Date(fichajeAvisoPendiente.fecha);
+          f.setMinutes(f.getMinutes() - f.getTimezoneOffset());
+          document.getElementById('olvideHora').value = f.toISOString().slice(0, 16);
+        } else {
+          document.getElementById('olvideTipo').value = 'entrada';
+          document.getElementById('olvideHora').value = ahora.toISOString().slice(0, 16);
+        }
+        document.getElementById('olvideModalidad').value = 'presencial';
       } else {
-        document.getElementById('olvideTipo').value = 'entrada';
-        document.getElementById('olvideHora').value = ahora.toISOString().slice(0, 16);
+        fichajePoblarSelectorOriginal();
       }
+
       abrirModalAdmin('modalOlvideFichar');
     }
 
+    function fichajePoblarSelectorOriginal() {
+      const select = document.getElementById('olvideFichajeOriginal');
+      if (!fichajeMisUltimos.length) {
+        select.innerHTML = '<option value="">No tienes fichajes recientes</option>';
+        return;
+      }
+      select.innerHTML = fichajeMisUltimos.slice(0, 15).map(f =>
+        `<option value="${f.id}">${FICHAJE_ETIQUETAS[f.tipo] || f.tipo} · ${fichajeFormatoFechaHora(f.hora)} · ${f.modalidad === 'remoto' ? 'remoto' : 'presencial'}</option>`
+      ).join('');
+      fichajeAlSeleccionarOriginal();
+    }
+
+    function fichajeAlSeleccionarOriginal() {
+      const id = document.getElementById('olvideFichajeOriginal').value;
+      const f = fichajeMisUltimos.find(x => String(x.id) === String(id));
+      if (!f) return;
+      const h = new Date(f.hora);
+      h.setMinutes(h.getMinutes() - h.getTimezoneOffset());
+      document.getElementById('olvideHora').value = h.toISOString().slice(0, 16);
+      document.getElementById('olvideModalidad').value = f.modalidad;
+    }
+
     async function enviarSolicitudCorreccion() {
-      const tipo = document.getElementById('olvideTipo').value;
+      const solicitudTipo = document.getElementById('olvideSolicitudTipo').value;
       const horaValor = document.getElementById('olvideHora').value;
       const modalidad = document.getElementById('olvideModalidad').value;
       const motivo = document.getElementById('olvideMotivo').value.trim();
-      if (!horaValor) { toast('Indica la fecha y hora aproximada'); return; }
+      if (!horaValor) { toast('Indica la fecha y hora'); return; }
       if (!motivo) { toast('Indica el motivo'); return; }
 
-      const { error } = await sb.rpc('solicitar_correccion_fichaje', {
-        p_tipo: tipo, p_modalidad: modalidad,
-        p_hora_solicitada: new Date(horaValor).toISOString(), p_motivo: motivo
-      });
+      const params = {
+        p_modalidad: modalidad,
+        p_hora_solicitada: new Date(horaValor).toISOString(),
+        p_motivo: motivo,
+        p_solicitud_tipo: solicitudTipo
+      };
+
+      if (solicitudTipo === 'faltante') {
+        params.p_tipo = document.getElementById('olvideTipo').value;
+      } else {
+        const fichajeOriginalId = document.getElementById('olvideFichajeOriginal').value;
+        if (!fichajeOriginalId) { toast('Elige qué fichaje quieres corregir'); return; }
+        params.p_fichaje_original_id = parseInt(fichajeOriginalId);
+      }
+
+      const { error } = await sb.rpc('solicitar_correccion_fichaje', params);
       if (error) { toast('❌ ' + error.message); return; }
       toast('📨 Solicitud enviada, quedará pendiente de aprobación');
       cerrarModalAdmin('modalOlvideFichar');
@@ -8062,15 +8136,33 @@
       const nombrePorId = {};
       (personas || []).forEach(p => nombrePorId[p.id] = p.nombre);
 
-      cont.innerHTML = pendientes.map(s => `
+      const idsOriginales = pendientes.filter(s => s.fichaje_original_id).map(s => s.fichaje_original_id);
+      let originalesPorId = {};
+      if (idsOriginales.length) {
+        const { data: originales } = await sb.from('fichajes').select('*').in('id', idsOriginales);
+        (originales || []).forEach(f => originalesPorId[f.id] = f);
+      }
+
+      cont.innerHTML = pendientes.map(s => {
+        const esDatoIncorrecto = !!s.fichaje_original_id;
+        const original = originalesPorId[s.fichaje_original_id];
+        const cabecera = esDatoIncorrecto
+          ? `🛠️ Dato incorrecto · ${FICHAJE_ETIQUETAS[s.tipo] || s.tipo}`
+          : `✏️ Olvidó fichar · ${FICHAJE_ETIQUETAS[s.tipo] || s.tipo}`;
+        const detalleCambio = esDatoIncorrecto && original
+          ? `<div style="font-size:12px; color:var(--muted);">Fichaje original: ${fichajeFormatoFechaHora(original.hora)} · ${original.modalidad === 'remoto' ? 'remoto' : 'presencial'} &nbsp;→&nbsp; Propone: ${fichajeFormatoFechaHora(s.hora_solicitada)} · ${s.modalidad === 'remoto' ? 'remoto' : 'presencial'}</div>`
+          : '';
+        return `
         <div class="fichaje-historial-item" style="flex-direction:column; align-items:stretch; gap:6px; padding:14px;">
-          <div><strong>${nombrePorId[s.persona_id] || 'Persona ' + s.persona_id}</strong> · ${FICHAJE_ETIQUETAS[s.tipo] || s.tipo} · ${fichajeFormatoFechaHora(s.hora_solicitada)} · ${s.modalidad === 'remoto' ? '🏠 remoto' : '🏢 presencial'}</div>
+          <div><strong>${nombrePorId[s.persona_id] || 'Persona ' + s.persona_id}</strong> · ${cabecera}</div>
+          ${!esDatoIncorrecto ? `<div style="font-size:13px;">${fichajeFormatoFechaHora(s.hora_solicitada)} · ${s.modalidad === 'remoto' ? '🏠 remoto' : '🏢 presencial'}</div>` : detalleCambio}
           <div style="color:var(--muted); font-size:13px;">${s.motivo}</div>
           <div style="display:flex; gap:8px; margin-top:4px;">
             <button class="btn btn-primary btn-sm" onclick="aprobarSolicitudFichaje(${s.id})">✅ Aprobar</button>
             <button class="btn btn-danger btn-sm" onclick="rechazarSolicitudFichaje(${s.id})">❌ Rechazar</button>
           </div>
-        </div>`).join('');
+        </div>`;
+      }).join('');
     }
 
     async function aprobarSolicitudFichaje(id) {
