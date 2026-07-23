@@ -321,38 +321,11 @@
       .btn-fichaje { width: 100%; }
       .fichaje-botones { flex-direction: column; }
     }
-    .fichaje-cal-grid {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 4px;
+    .cal-dia .punto {
+      display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); align-self: flex-start;
     }
-    .fichaje-cal-diasemana {
-      text-align: center;
-      font-size: 10px;
-      color: var(--muted);
-      text-transform: uppercase;
-      padding-bottom: 4px;
-    }
-    .fichaje-cal-dia {
-      aspect-ratio: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      border-radius: 6px;
-      font-size: 12px;
-      background: var(--dark);
-      border: 1px solid var(--border);
-      gap: 3px;
-      position: relative;
-    }
-    .fichaje-cal-dia.vacio { visibility: hidden; }
-    .fichaje-cal-dia.futuro { opacity: 0.35; }
-    .fichaje-cal-dia.hoy { border-color: var(--accent); }
-    .fichaje-cal-dia.clicable { cursor: pointer; }
-    .fichaje-cal-dia.clicable:hover { background: rgba(255,255,255,0.06); }
-    .fichaje-cal-dot, .fichaje-cal-dia .punto {
-      display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+    @media (max-width: 768px) {
+      .cal-dia .punto { width: 5px; height: 5px; }
     }
 
     /* TABLA */
@@ -977,18 +950,18 @@
       </div>
 
       <div class="card" id="fichaje-calendario-card" style="margin-bottom:20px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
-          <h3 style="margin:0;">📅 Calendario de fichajes</h3>
-          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-            <select id="fichajeCalPersonaSelect" style="display:none; min-width:140px;" onchange="fichajeCalCambiarPersona()"></select>
-            <button class="btn btn-ghost btn-sm" onclick="fichajeCalCambiarMes(-1)">←</button>
-            <span id="fichajeCalMesTexto" style="font-size:13px; min-width:110px; text-align:center; display:inline-block;">-</span>
-            <button class="btn btn-ghost btn-sm" onclick="fichajeCalCambiarMes(1)">→</button>
+        <div class="cal-header">
+          <div class="cal-nav">
+            <button class="btn btn-ghost btn-sm" onclick="fichajeCalCambiarMes(-1)">◀</button>
+            <span class="cal-titulo" id="fichajeCalMesTexto">-</span>
+            <button class="btn btn-ghost btn-sm" onclick="fichajeCalCambiarMes(1)">▶</button>
           </div>
+          <select id="fichajeCalPersonaSelect" style="display:none; min-width:140px;" onchange="fichajeCalCambiarPersona()"></select>
         </div>
         <div id="fichaje-calendario-grid" class="loading">Cargando...</div>
-        <p style="font-size:11px; color:var(--muted); margin-top:12px;">
-          <span class="fichaje-cal-dot"></span> Día con fichaje registrado. Un día sin marca no significa que falte algo — puede ser fin de semana, vacaciones o descanso. Toca un día pasado sin marca para pedir su corrección.
+        <p style="font-size:11px; color:var(--muted); margin-top:10px;">
+          <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--accent); margin-right:4px;"></span>
+          Día con fichaje registrado. Sin marca no significa que falte algo — puede ser fin de semana, vacaciones o descanso. Toca un día pasado sin marca para pedir su corrección.
         </p>
       </div>
 
@@ -8404,9 +8377,10 @@
 
       const primerDiaSemana = (new Date(anio, mes, 1).getDay() + 6) % 7; // 0 = lunes
       const totalDias = new Date(anio, mes + 1, 0).getDate();
+      const diasSemana = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
-      let celdas = '';
-      for (let i = 0; i < primerDiaSemana; i++) celdas += `<div class="fichaje-cal-dia vacio"></div>`;
+      let celdas = diasSemana.map(d => `<div class="cal-dow">${d}</div>`).join('');
+      for (let i = 0; i < primerDiaSemana; i++) celdas += `<div class="cal-dia otro-mes"></div>`;
 
       for (let dia = 1; dia <= totalDias; dia++) {
         const fecha = new Date(anio, mes, dia);
@@ -8414,18 +8388,17 @@
         const esHoy = fecha.toDateString() === hoy.toDateString();
         const tieneFichaje = fichajeCalDiasConFichaje.has(`${anio}-${mes}-${dia}`);
         const clicable = esPropio && !esFuturo && !tieneFichaje;
-        const clases = ['fichaje-cal-dia'];
-        if (esFuturo) clases.push('futuro');
+        const clases = ['cal-dia'];
+        if (esFuturo) clases.push('otro-mes');
         if (esHoy) clases.push('hoy');
-        if (clicable) clases.push('clicable');
         const onclick = clicable ? `onclick="fichajeCalClicDia(${anio},${mes},${dia})"` : '';
-        celdas += `<div class="${clases.join(' ')}" ${onclick}>
-          <span>${dia}</span>
+        celdas += `<div class="${clases.join(' ')}" ${onclick} style="min-height:auto; align-items:center; justify-content:center; ${clicable ? 'cursor:pointer;' : 'cursor:default;'}">
+          <span class="cal-dia-num">${dia}</span>
           ${tieneFichaje ? '<span class="punto"></span>' : ''}
         </div>`;
       }
 
-      grid.innerHTML = `<div class="fichaje-cal-grid">${['L', 'M', 'X', 'J', 'V', 'S', 'D'].map(d => `<div class="fichaje-cal-diasemana">${d}</div>`).join('')}${celdas}</div>`;
+      grid.innerHTML = `<div class="cal-grid">${celdas}</div>`;
     }
 
     function fichajeCalClicDia(anio, mes, dia) {
