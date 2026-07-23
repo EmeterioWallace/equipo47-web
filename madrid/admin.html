@@ -927,6 +927,20 @@
         <div id="fichaje-solicitudes-lista" class="loading">Cargando...</div>
       </div>
 
+      <div class="card" id="fichaje-equipo-card" style="display:none; margin-bottom:20px;">
+        <h3>👥 Fichajes del equipo</h3>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
+          <select id="fichajeEquipoPersona" style="flex:1; min-width:160px;">
+            <option value="">Todas las personas</option>
+          </select>
+          <input type="date" id="fichajeEquipoDesde" style="flex:1; min-width:140px;">
+          <input type="date" id="fichajeEquipoHasta" style="flex:1; min-width:140px;">
+          <button class="btn btn-primary btn-sm" onclick="fichajeCargarEquipo()">🔍 Filtrar</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportarFichajesCSV()">⬇️ Exportar CSV</button>
+        </div>
+        <div id="fichaje-equipo-lista" class="loading">Elige un filtro y pulsa "Filtrar".</div>
+      </div>
+
       <h3 style="margin:24px 0 12px; font-family:'Bebas Neue',sans-serif; letter-spacing:1px;">Tu jornada de hoy</h3>
       <div class="card">
         <div id="fichaje-historial-hoy" class="loading">Cargando...</div>
@@ -7924,7 +7938,11 @@
 
       const puedeCorregir = !!fichajePersonaActual.puede_corregir_fichajes;
       document.getElementById('fichaje-solicitudes-card').style.display = puedeCorregir ? '' : 'none';
-      if (puedeCorregir) fichajeRenderSolicitudesPendientes();
+      document.getElementById('fichaje-equipo-card').style.display = puedeCorregir ? '' : 'none';
+      if (puedeCorregir) {
+        fichajeRenderSolicitudesPendientes();
+        fichajeInicializarFiltroEquipo();
+      }
     }
 
     function fichajeRenderEstado(fichajes) {
@@ -8072,6 +8090,80 @@
       if (error) { toast('❌ ' + error.message); return; }
       toast('Solicitud rechazada');
       fichajeRenderSolicitudesPendientes();
+    }
+
+    let fichajeEquipoUltimoResultado = [];
+    let fichajeEquipoFiltroInicializado = false;
+
+    async function fichajeInicializarFiltroEquipo() {
+      if (fichajeEquipoFiltroInicializado) return;
+      fichajeEquipoFiltroInicializado = true;
+
+      const { data: personas } = await sb.from('personas_equipo').select('id,nombre').eq('activo', true).order('nombre');
+      const select = document.getElementById('fichajeEquipoPersona');
+      (personas || []).forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id; opt.textContent = p.nombre;
+        select.appendChild(opt);
+      });
+
+      const hoy = new Date();
+      const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+      document.getElementById('fichajeEquipoDesde').value = inicioMes.toISOString().slice(0, 10);
+      document.getElementById('fichajeEquipoHasta').value = hoy.toISOString().slice(0, 10);
+
+      fichajeCargarEquipo();
+    }
+
+    async function fichajeCargarEquipo() {
+      const cont = document.getElementById('fichaje-equipo-lista');
+      cont.innerHTML = '<div class="loading">Cargando...</div>';
+
+      const personaId = document.getElementById('fichajeEquipoPersona').value;
+      const desde = document.getElementById('fichajeEquipoDesde').value;
+      const hasta = document.getElementById('fichajeEquipoHasta').value;
+
+      let query = sb.from('fichajes').select('*').order('hora', { ascending: false }).limit(500);
+      if (personaId) query = query.eq('persona_id', parseInt(personaId));
+      if (desde) query = query.gte('hora', new Date(desde + 'T00:00:00').toISOString());
+      if (hasta) query = query.lte('hora', new Date(hasta + 'T23:59:59').toISOString());
+
+      const { data: fichajesEquipo, error } = await query;
+      if (error) { cont.innerHTML = `<p style="color:var(--danger);">${error.message}</p>`; return; }
+
+      const { data: personas } = await sb.from('personas_equipo').select('id,nombre');
+      const nombrePorId = {};
+      (personas || []).forEach(p => nombrePorId[p.id] = p.nombre);
+
+      fichajeEquipoUltimoResultado = (fichajesEquipo || []).map(f => ({ ...f, nombre: nombrePorId[f.persona_id] || ('Persona ' + f.persona_id) }));
+
+      if (!fichajeEquipoUltimoResultado.length) { cont.innerHTML = '<p style="color:var(--muted); font-size:14px;">Sin fichajes en ese filtro.</p>'; return; }
+
+      cont.innerHTML = `<div style="max-height:400px; overflow-y:auto;">` + fichajeEquipoUltimoResultado.map(f => `
+        <div class="fichaje-historial-item">
+          <span><strong>${f.nombre}</strong> · ${FICHAJE_ETIQUETAS[f.tipo] || f.tipo} ${f.es_correccion ? '<span class="fichaje-tag-correccion">corrección</span>' : ''}</span>
+          <span style="color:var(--muted);">${fichajeFormatoFechaHora(f.hora)} · ${f.modalidad === 'remoto' ? '🏠' : '🏢'}</span>
+        </div>`).join('') + `</div>
+        <p style="font-size:12px; color:var(--muted); margin-top:10px;">${fichajeEquipoUltimoResultado.length} fichajes (máximo 500 por consulta).</p>`;
+    }
+
+    function exportarFichajesCSV() {
+      if (!fichajeEquipoUltimoResultado.length) { toast('No hay datos para exportar. Filtra primero.'); return; }
+      const filas = [['Persona', 'Tipo', 'Fecha y hora', 'Modalidad', 'Es corrección', 'Motivo']];
+      fichajeEquipoUltimoResultado.forEach(f => {
+        filas.push([
+          f.nombre, FICHAJE_ETIQUETAS[f.tipo] || f.tipo,
+          new Date(f.hora).toLocaleString('es-ES'),
+          f.modalidad, f.es_correccion ? 'Sí' : 'No', f.motivo || ''
+        ]);
+      });
+      const csv = filas.map(fila => fila.map(v => `"${String(v).replace(/"/g, '""')}"`).join(';')).join('\n');
+      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `fichajes_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
     }
   </script>
 </body>
