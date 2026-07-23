@@ -110,6 +110,17 @@
       flex: 1;
     }
 
+    .nav-group-title {
+      padding: 16px 24px 6px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+      opacity: 0.7;
+    }
+    .nav-group-title:first-child { padding-top: 4px; }
+
     .nav-item {
       display: flex;
       align-items: center;
@@ -723,75 +734,84 @@
       <span class="badge-admin">ADMIN</span>
     </div>
     <nav class="nav">
-      <div class="nav-item active" onclick="mostrarPagina('dashboard')">
+      <div class="nav-group-title" data-grupo="dia">Tu día a día</div>
+      <div class="nav-item active" data-grupo="dia" onclick="mostrarPagina('dashboard')">
         <span class="icon">📊</span>
         <span>Dashboard</span>
       </div>
-      <div class="nav-item" onclick="mostrarPagina('fichar')">
+      <div class="nav-item" data-grupo="dia" onclick="mostrarPagina('fichar')">
         <span class="icon">🕐</span>
         <span>Fichar</span>
       </div>
-      <div class="nav-item" onclick="mostrarPagina('calendario')">
+      <div class="nav-item" data-grupo="dia" onclick="mostrarPagina('calendario')">
         <span class="icon">📅</span>
         <span>Calendario</span>
       </div>
-      <div class="nav-item" onclick="mostrarPagina('productos')">
+
+      <div class="nav-group-title" data-grupo="inventario">Inventario</div>
+      <div class="nav-item" data-grupo="inventario" onclick="mostrarPagina('productos')">
         <span class="icon">📦</span>
         <span>Productos</span>
       </div>
-      <div class="nav-item" onclick="mostrarPagina('zapatillas')">
+      <div class="nav-item" data-grupo="inventario" onclick="mostrarPagina('zapatillas')">
         <span class="icon">👟</span>
         <span>Zapatillas</span>
       </div>
-      <div class="nav-item" onclick="mostrarPagina('ubicaciones')">
+      <div class="nav-item" data-grupo="inventario" onclick="mostrarPagina('ubicaciones')">
         <span class="icon">📍</span>
         <span>Ubicaciones</span>
       </div>
-      <div class="nav-item" onclick="mostrarPagina('pales')">
+      <div class="nav-item" data-grupo="inventario" onclick="mostrarPagina('pales')">
         <span class="icon">🏛️</span>
         <span>Palés</span>
       </div>
-      <div class="nav-item" onclick="mostrarPagina('cajas')">
+      <div class="nav-item" data-grupo="inventario" onclick="mostrarPagina('cajas')">
         <span class="icon">🗃️</span>
         <span>Cajas</span>
       </div>
-      <div class="nav-item" onclick="mostrarPagina('sueltos')">
+      <div class="nav-item" data-grupo="inventario" onclick="mostrarPagina('sueltos')">
         <span class="icon">🧺</span>
         <span>Sueltos</span>
       </div>
-      <div class="nav-item" onclick="mostrarPagina('salidas')">
+
+      <div class="nav-group-title" data-grupo="movimientos">Movimientos</div>
+      <div class="nav-item" data-grupo="movimientos" onclick="mostrarPagina('salidas')">
         <span class="icon">📤</span>
         <span>Salidas</span>
       </div>
-      <div class="nav-item" onclick="mostrarPagina('recepciones')">
+      <div class="nav-item" data-grupo="movimientos" onclick="mostrarPagina('recepciones')">
         <span class="icon">📥</span>
         <span>Recepciones</span>
       </div>
-      <div class="nav-item" onclick="mostrarPagina('actividad')">
+      <div class="nav-item" data-grupo="movimientos" onclick="mostrarPagina('actividad')">
         <span class="icon">📋</span>
         <span>Actividad</span>
       </div>
-      <div class="nav-item" onclick="mostrarPagina('clientes')">
+
+      <div class="nav-group-title" data-grupo="personas">Personas</div>
+      <div class="nav-item" data-grupo="personas" onclick="mostrarPagina('clientes')">
         <span class="icon">👥</span>
         <span>Clientes</span>
       </div>
-      <div class="nav-item" onclick="mostrarPagina('solicitudes')">
+      <div class="nav-item" data-grupo="personas" onclick="mostrarPagina('solicitudes')">
         <span class="icon">📨</span>
         <span>Solicitudes</span>
       </div>
-      <div class="nav-item" onclick="mostrarPagina('equipo')">
+      <div class="nav-item" data-grupo="personas" onclick="mostrarPagina('equipo')">
         <span class="icon">👷</span>
         <span>Equipo</span>
       </div>
-      <div class="nav-item" onclick="mostrarPagina('importar')">
+
+      <div class="nav-group-title" data-grupo="sistema">Sistema</div>
+      <div class="nav-item" data-grupo="sistema" onclick="mostrarPagina('importar')">
         <span class="icon">📥</span>
         <span>Importar datos</span>
       </div>
-      <div class="nav-item" onclick="mostrarPagina('exportar')">
+      <div class="nav-item" data-grupo="sistema" onclick="mostrarPagina('exportar')">
         <span class="icon">📤</span>
         <span>Exportar datos</span>
       </div>
-      <div class="nav-item" onclick="mostrarPagina('configuracion')">
+      <div class="nav-item" data-grupo="sistema" onclick="mostrarPagina('configuracion')">
         <span class="icon">⚙️</span>
         <span>Configuración</span>
       </div>
@@ -6868,6 +6888,12 @@
         if (!m) return;
         const min = NIVEL_PAGINA[m[1]] ?? 1;
         item.style.display = (nivel >= min) ? '' : 'none';
+      });
+      // Los títulos de grupo solo se ven si al menos una pestaña de ese grupo es visible
+      document.querySelectorAll('.nav-group-title').forEach(titulo => {
+        const grupo = titulo.getAttribute('data-grupo');
+        const algunaVisible = Array.from(document.querySelectorAll(`.nav-item[data-grupo="${grupo}"]`)).some(item => item.style.display !== 'none');
+        titulo.style.display = algunaVisible ? '' : 'none';
       });
       // Capacidades de edición (Fase 2B)
       document.body.classList.toggle('cap-inv', nivel >= 2);  // editar inventario: operario+
