@@ -321,6 +321,39 @@
       .btn-fichaje { width: 100%; }
       .fichaje-botones { flex-direction: column; }
     }
+    .fichaje-cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+    }
+    .fichaje-cal-diasemana {
+      text-align: center;
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      padding-bottom: 4px;
+    }
+    .fichaje-cal-dia {
+      aspect-ratio: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      font-size: 12px;
+      background: var(--dark);
+      border: 1px solid var(--border);
+      gap: 3px;
+      position: relative;
+    }
+    .fichaje-cal-dia.vacio { visibility: hidden; }
+    .fichaje-cal-dia.futuro { opacity: 0.35; }
+    .fichaje-cal-dia.hoy { border-color: var(--accent); }
+    .fichaje-cal-dia.clicable { cursor: pointer; }
+    .fichaje-cal-dia.clicable:hover { background: rgba(255,255,255,0.06); }
+    .fichaje-cal-dot, .fichaje-cal-dia .punto {
+      display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+    }
 
     /* TABLA */
     table {
@@ -941,6 +974,22 @@
       <div style="text-align:center; margin-bottom:24px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
         <button class="btn btn-ghost btn-sm" onclick="abrirModalOlvide('faltante', false)">✏️ Olvidé fichar</button>
         <button class="btn btn-ghost btn-sm" onclick="abrirModalOlvide('dato_incorrecto', false)">🛠️ Fiché algo mal</button>
+      </div>
+
+      <div class="card" id="fichaje-calendario-card" style="margin-bottom:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+          <h3 style="margin:0;">📅 Calendario de fichajes</h3>
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <select id="fichajeCalPersonaSelect" style="display:none; min-width:140px;" onchange="fichajeCalCambiarPersona()"></select>
+            <button class="btn btn-ghost btn-sm" onclick="fichajeCalCambiarMes(-1)">←</button>
+            <span id="fichajeCalMesTexto" style="font-size:13px; min-width:110px; text-align:center; display:inline-block;">-</span>
+            <button class="btn btn-ghost btn-sm" onclick="fichajeCalCambiarMes(1)">→</button>
+          </div>
+        </div>
+        <div id="fichaje-calendario-grid" class="loading">Cargando...</div>
+        <p style="font-size:11px; color:var(--muted); margin-top:12px;">
+          <span class="fichaje-cal-dot"></span> Día con fichaje registrado. Un día sin marca no significa que falte algo — puede ser fin de semana, vacaciones o descanso. Toca un día pasado sin marca para pedir su corrección.
+        </p>
       </div>
 
       <div class="card" id="fichaje-solicitudes-card" style="display:none; margin-bottom:20px;">
@@ -7989,6 +8038,8 @@
         fichajeRenderSolicitudesPendientes();
         fichajeInicializarFiltroEquipo();
       }
+
+      fichajeCalInicializar(puedeCorregir);
     }
 
     function fichajeRenderEstado(fichajes) {
@@ -8282,6 +8333,105 @@
       a.href = url; a.download = `fichajes_${new Date().toISOString().slice(0, 10)}.csv`;
       a.click();
       URL.revokeObjectURL(url);
+    }
+
+    // ── Calendario de fichajes ──
+    let fichajeCalMes = new Date();          // día 1 del mes que se está viendo
+    let fichajeCalPersonaId = null;          // de quién se está viendo el calendario
+    let fichajeCalDiasConFichaje = new Set(); // 'YYYY-MM-DD' con al menos un fichaje
+    let fichajeCalInicializado = false;
+
+    function fichajeCalInicializar(puedeCorregir) {
+      if (fichajeCalInicializado) { fichajeCalCargarYRenderizar(); return; }
+      fichajeCalInicializado = true;
+      fichajeCalMes = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+      fichajeCalPersonaId = fichajePersonaActual.id;
+
+      const select = document.getElementById('fichajeCalPersonaSelect');
+      if (puedeCorregir) {
+        select.style.display = '';
+        sb.from('personas_equipo').select('id,nombre').eq('activo', true).order('nombre').then(({ data: personas }) => {
+          select.innerHTML = (personas || []).map(p =>
+            `<option value="${p.id}" ${p.id === fichajePersonaActual.id ? 'selected' : ''}>${p.id === fichajePersonaActual.id ? 'Yo (' + p.nombre + ')' : p.nombre}</option>`
+          ).join('');
+          fichajeCalCargarYRenderizar();
+        });
+      } else {
+        select.style.display = 'none';
+        fichajeCalCargarYRenderizar();
+      }
+    }
+
+    function fichajeCalCambiarPersona() {
+      fichajeCalPersonaId = parseInt(document.getElementById('fichajeCalPersonaSelect').value);
+      fichajeCalCargarYRenderizar();
+    }
+
+    function fichajeCalCambiarMes(delta) {
+      fichajeCalMes = new Date(fichajeCalMes.getFullYear(), fichajeCalMes.getMonth() + delta, 1);
+      fichajeCalCargarYRenderizar();
+    }
+
+    async function fichajeCalCargarYRenderizar() {
+      const grid = document.getElementById('fichaje-calendario-grid');
+      grid.innerHTML = '<div class="loading">Cargando...</div>';
+
+      const anio = fichajeCalMes.getFullYear(), mes = fichajeCalMes.getMonth();
+      document.getElementById('fichajeCalMesTexto').textContent =
+        fichajeCalMes.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+
+      const inicioMes = new Date(anio, mes, 1);
+      const finMes = new Date(anio, mes + 1, 0, 23, 59, 59);
+
+      const { data: fichajesMes } = await sb.from('fichajes')
+        .select('hora')
+        .eq('persona_id', fichajeCalPersonaId)
+        .gte('hora', inicioMes.toISOString())
+        .lte('hora', finMes.toISOString());
+
+      fichajeCalDiasConFichaje = new Set((fichajesMes || []).map(f => {
+        const d = new Date(f.hora);
+        return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      }));
+
+      fichajeCalRenderGrid(anio, mes);
+    }
+
+    function fichajeCalRenderGrid(anio, mes) {
+      const grid = document.getElementById('fichaje-calendario-grid');
+      const hoy = new Date();
+      const esPropio = fichajeCalPersonaId === fichajePersonaActual.id;
+
+      const primerDiaSemana = (new Date(anio, mes, 1).getDay() + 6) % 7; // 0 = lunes
+      const totalDias = new Date(anio, mes + 1, 0).getDate();
+
+      let celdas = '';
+      for (let i = 0; i < primerDiaSemana; i++) celdas += `<div class="fichaje-cal-dia vacio"></div>`;
+
+      for (let dia = 1; dia <= totalDias; dia++) {
+        const fecha = new Date(anio, mes, dia);
+        const esFuturo = fecha > hoy;
+        const esHoy = fecha.toDateString() === hoy.toDateString();
+        const tieneFichaje = fichajeCalDiasConFichaje.has(`${anio}-${mes}-${dia}`);
+        const clicable = esPropio && !esFuturo && !tieneFichaje;
+        const clases = ['fichaje-cal-dia'];
+        if (esFuturo) clases.push('futuro');
+        if (esHoy) clases.push('hoy');
+        if (clicable) clases.push('clicable');
+        const onclick = clicable ? `onclick="fichajeCalClicDia(${anio},${mes},${dia})"` : '';
+        celdas += `<div class="${clases.join(' ')}" ${onclick}>
+          <span>${dia}</span>
+          ${tieneFichaje ? '<span class="punto"></span>' : ''}
+        </div>`;
+      }
+
+      grid.innerHTML = `<div class="fichaje-cal-grid">${['L', 'M', 'X', 'J', 'V', 'S', 'D'].map(d => `<div class="fichaje-cal-diasemana">${d}</div>`).join('')}${celdas}</div>`;
+    }
+
+    function fichajeCalClicDia(anio, mes, dia) {
+      const fecha = new Date(anio, mes, dia, 9, 0);
+      abrirModalOlvide('faltante', false);
+      document.getElementById('olvideHora').value = `${anio}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}T09:00`;
     }
   </script>
 </body>
