@@ -455,6 +455,9 @@
       <div class="nav-item" data-pagina="productos" onclick="mostrarPagina('productos')">
         <span class="icon">🏷️</span><span>Productos</span>
       </div>
+      <div class="nav-item" data-pagina="configuracion" onclick="mostrarPagina('configuracion')">
+        <span class="icon">⚙️</span><span>Configuración</span>
+      </div>
     </nav>
     <div class="sidebar-bottom">
       <button class="btn btn-ghost btn-sm" onclick="toggleTema()" id="btnTema" style="width: 100%; justify-content: center; margin-bottom: 8px;">☀️ Tema claro</button>
@@ -525,7 +528,7 @@
         <div class="card">
           <h3>📈 Beneficio generado</h3>
           <p id="fichaKpiBeneficio" style="font-size: 32px; color: var(--success); margin: 12px 0;">—</p>
-          <p>Precio del cliente menos coste de los productos</p>
+          <p id="fichaKpiBeneficioNeto">Precio del cliente menos coste de los productos</p>
         </div>
         <div class="card">
           <h3>🏷️ Productos solicitados</h3>
@@ -621,6 +624,73 @@
         </div>
       </div>
       <div id="productos-tabla" class="loading">Cargando...</div>
+    </section>
+
+    <!-- CONFIGURACIÓN -->
+    <section class="page" id="configuracion-page">
+      <div class="page-header">
+        <div>
+          <h1>CONFIGURACIÓN</h1>
+          <p>Valores que pueden cambiar con el tiempo</p>
+        </div>
+        <button class="btn btn-primary" onclick="guardarConfiguracion()">💾 Guardar cambios</button>
+      </div>
+
+      <div class="card" style="margin-bottom:20px;">
+        <h3>📊 Impuesto sobre beneficios</h3>
+        <p style="margin:10px 0 16px;">
+          Se usa para calcular el <strong>beneficio neto</strong>, que aparece junto al bruto.
+          El nombre es editable porque depende de la forma jurídica de la empresa
+          (IRPF para autónomos, Impuesto de Sociedades para una S.L...).
+          Consultad con vuestra gestoría cuál corresponde y qué porcentaje.
+        </p>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nombre del impuesto</label>
+            <input type="text" id="cfgImpuestoNombre" placeholder="Ej: IRPF">
+          </div>
+          <div class="form-group">
+            <label>Porcentaje (%)</label>
+            <input type="number" id="cfgImpuestoPct" min="0" max="100" step="0.01">
+          </div>
+        </div>
+        <p style="font-size:12px; color:var(--muted); margin-top:4px;">
+          Si pones 0, el beneficio neto deja de mostrarse y todo queda como estaba.
+        </p>
+      </div>
+
+      <div class="card">
+        <h3>🏢 Datos que salen en el PDF</h3>
+        <p style="margin:10px 0 16px;">Aparecen en la cabecera y el pie de los presupuestos que se envían al cliente.</p>
+        <div class="form-group">
+          <label>Nombre fiscal de la empresa</label>
+          <input type="text" id="cfgEmpresaNombre">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>CIF</label>
+            <input type="text" id="cfgEmpresaCif">
+          </div>
+          <div class="form-group">
+            <label>Días de validez del presupuesto</label>
+            <input type="number" id="cfgValidezDias" min="1" step="1">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Dirección</label>
+          <input type="text" id="cfgEmpresaDireccion">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Email de contacto</label>
+            <input type="text" id="cfgEmpresaEmail">
+          </div>
+          <div class="form-group">
+            <label>Web</label>
+            <input type="text" id="cfgEmpresaWeb">
+          </div>
+        </div>
+      </div>
     </section>
 
   </main>
@@ -864,7 +934,7 @@
         <div class="form-group">
           <label style="display:flex; align-items:center; gap:8px; text-transform:none; letter-spacing:0; font-size:13px; color:var(--text); cursor:pointer;">
             <input type="checkbox" id="pdfValidez15" checked style="width:auto;">
-            Incluir cláusula "válido 15 días"
+            <span id="pdfValidezLabel">Incluir cláusula de validez</span>
           </label>
         </div>
         <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:8px; flex-wrap:wrap;">
@@ -923,6 +993,15 @@
     let productos = [];
     let presupuestos = [];   // cabeceras (las "carpetas")
     let lineas = [];         // productos dentro de cada carpeta
+    // Configuración de la app. Estos valores son solo el punto de partida
+    // por si la tabla no cargase: los de verdad vienen de la base de datos.
+    let config = {
+      impuesto_nombre: 'IRPF', impuesto_pct: 0,
+      empresa_nombre: 'GRUPO ESTUDIO E INVERSIÓN 47 S.L.', empresa_cif: 'B56538309',
+      empresa_direccion: 'C/ Torquemada Nº18 Bajo 4. 28043, Madrid',
+      empresa_email: 'PRODUCCIONES@EQUIPO47.COM', empresa_web: 'EQUIPO47.COM',
+      validez_dias: 15
+    };
     let variantesCatalogo = []; // variantes definidas dentro de cada producto
     let variantesEditor = [];   // variantes que se están editando en el modal
     let lineasNegocio = [];  // agrupaciones de pedidos dentro de un cliente
@@ -976,6 +1055,7 @@
       if (pagina === 'presupuestos') { poblarFiltrosPresupuestos(); renderPresupuestosTabla(); }
       if (pagina === 'aprobados') { poblarFiltrosAprobados(); renderAprobadosTabla(); }
       if (pagina === 'productos') renderProductosTabla();
+      if (pagina === 'configuracion') cargarFormularioConfig();
     }
 
     // ── TEMA ────────────────────────────────
@@ -1019,7 +1099,7 @@
 
     // ── CARGA INICIAL ───────────────────────
     async function cargarTodo() {
-      const [rc, rp, rpr, rl, rco, rpa, rln, rvc] = await Promise.all([
+      const [rc, rp, rpr, rl, rco, rpa, rln, rvc, rcfg] = await Promise.all([
         sb.from('clientes').select('*').order('nombre_empresa'),
         sb.from('productos').select('*').order('nombre'),
         sb.from('presupuestos').select('*').order('fecha', { ascending: false }),
@@ -1027,8 +1107,10 @@
         sb.from('cobros').select('*').order('fecha'),
         sb.from('pagos').select('*').order('fecha'),
         sb.from('lineas_negocio').select('*').order('nombre'),
-        sb.from('producto_variantes').select('*').order('nombre')
+        sb.from('producto_variantes').select('*').order('nombre'),
+        sb.from('configuracion').select('*').eq('id', 1).single()
       ]);
+      if (rcfg.data) config = rcfg.data;
       variantesCatalogo = rvc.data || [];
       lineasNegocio = rln.data || [];
       clientes = rc.data || [];
@@ -1099,6 +1181,23 @@
       const margen = totalCliente > 0 ? (beneficio / totalCliente * 100) : 0;
       return { totalCliente, costeInterno, beneficio, margen, nLineas: ls.length };
     }
+    // ── IMPUESTO SOBRE BENEFICIOS ───────────
+    // El neto se calcula solo sobre beneficios positivos: si un pedido
+    // da pérdidas no se paga impuesto por él, así que neto = bruto.
+    function hayImpuesto() {
+      return Number(config.impuesto_pct) > 0;
+    }
+    function beneficioNeto(bruto) {
+      const b = Number(bruto) || 0;
+      if (!hayImpuesto() || b <= 0) return b;
+      return b * (1 - Number(config.impuesto_pct) / 100);
+    }
+    // Texto corto para poner debajo del bruto, p.ej. "neto 2.808 € (IRPF 22%)"
+    function textoNeto(bruto) {
+      if (!hayImpuesto() || Number(bruto) <= 0) return '';
+      return `neto ${formatoEuro(beneficioNeto(bruto))} (${esc(config.impuesto_nombre)} ${Number(config.impuesto_pct)}%)`;
+    }
+
     function colorMargen(pct) {
       const n = Number(pct);
       if (n >= 30) return 'var(--success)';
@@ -1251,6 +1350,10 @@
       const elBen = document.getElementById('fichaKpiBeneficio');
       elBen.textContent = formatoEuro(beneficio);
       elBen.style.color = beneficio >= 0 ? 'var(--success)' : 'var(--danger)';
+      const elBenNeto = document.getElementById('fichaKpiBeneficioNeto');
+      elBenNeto.innerHTML = textoNeto(beneficio)
+        ? `Beneficio ${textoNeto(beneficio)}`
+        : 'Precio del cliente menos coste de los productos';
       document.getElementById('fichaKpiProductos').textContent = nombresProd.length
         ? nombresProd.join(', ')
         : (anio ? 'Sin pedidos aprobados en ' + anio : 'Todavía no tiene pedidos aprobados');
@@ -1600,7 +1703,7 @@
           <td>${cliente ? esc(cliente.nombre_empresa) : '—'}</td>
           <td style="font-size:12px; min-width:220px;">${desglose || '—'}</td>
           <td>${formatoEuro(t.totalCliente)}</td>
-          <td style="color:${col}">${formatoEuro(t.beneficio)}</td>
+          <td style="color:${col}">${formatoEuro(t.beneficio)}${textoNeto(t.beneficio) ? `<br><span style="color:var(--muted); font-size:11px; font-weight:400;">${textoNeto(t.beneficio)}</span>` : ''}</td>
           <td><span style="font-weight:700; color:${col}">${t.margen.toFixed(1)}%</span></td>
           ${celdaPagos}
           <td><span class="badge badge-${aprobado ? 'success' : 'warning'}">${aprobado ? 'Aprobado' : 'Sin aprobar'}</span></td>
@@ -1614,7 +1717,7 @@
       html += `<tr class="totales">
         <td colspan="4">TOTAL — ${ordenada.length} presupuesto(s)</td>
         <td>${formatoEuro(sumaCliente)}</td>
-        <td>${formatoEuro(sumaBeneficio)}</td>
+        <td>${formatoEuro(sumaBeneficio)}${textoNeto(sumaBeneficio) ? `<br><span style="font-size:11px; font-weight:400;">${textoNeto(sumaBeneficio)}</span>` : ''}</td>
         <td></td>
         ${conPagos ? `<td>${formatoEuro(sumaPendientePago)}</td>` : ''}
         <td colspan="2"></td>
@@ -1691,7 +1794,8 @@
       document.getElementById('resumenCarpeta').innerHTML = `
         <div>Total cliente (sin IVA)<strong>${formatoEuro(totalCliente)}</strong></div>
         <div>Coste interno<strong>${formatoEuro(costeInterno)}</strong></div>
-        <div>Beneficio<strong style="color:${col}">${formatoEuro(beneficio)}</strong></div>
+        <div>Beneficio bruto<strong style="color:${col}">${formatoEuro(beneficio)}</strong></div>
+        ${textoNeto(beneficio) ? `<div>Beneficio neto<strong style="color:${col}">${formatoEuro(beneficioNeto(beneficio))}</strong><span style="font-size:11px;">${esc(config.impuesto_nombre)} ${Number(config.impuesto_pct)}%</span></div>` : ''}
         <div>Margen<strong style="color:${col}">${margen.toFixed(1)}%</strong></div>`;
     }
 
@@ -1840,6 +1944,48 @@
     }
 
 
+
+    // ════════════════════════════════════════
+    //  CONFIGURACIÓN
+    // ════════════════════════════════════════
+    function cargarFormularioConfig() {
+      document.getElementById('cfgImpuestoNombre').value = config.impuesto_nombre || '';
+      document.getElementById('cfgImpuestoPct').value = Number(config.impuesto_pct) || 0;
+      document.getElementById('cfgEmpresaNombre').value = config.empresa_nombre || '';
+      document.getElementById('cfgEmpresaCif').value = config.empresa_cif || '';
+      document.getElementById('cfgEmpresaDireccion').value = config.empresa_direccion || '';
+      document.getElementById('cfgEmpresaEmail').value = config.empresa_email || '';
+      document.getElementById('cfgEmpresaWeb').value = config.empresa_web || '';
+      document.getElementById('cfgValidezDias').value = config.validez_dias || 15;
+    }
+
+    async function guardarConfiguracion() {
+      const pct = parseFloat(document.getElementById('cfgImpuestoPct').value);
+      const dias = parseInt(document.getElementById('cfgValidezDias').value);
+      const nombreImp = document.getElementById('cfgImpuestoNombre').value.trim();
+      const nombreEmp = document.getElementById('cfgEmpresaNombre').value.trim();
+
+      if (isNaN(pct) || pct < 0 || pct > 100) { alert('❌ El porcentaje del impuesto debe estar entre 0 y 100'); return; }
+      if (!nombreImp) { alert('❌ Ponle un nombre al impuesto (ej: IRPF)'); return; }
+      if (!nombreEmp) { alert('❌ El nombre fiscal de la empresa no puede quedar vacío'); return; }
+      if (!dias || dias < 1) { alert('❌ Los días de validez deben ser 1 o más'); return; }
+
+      const payload = {
+        impuesto_nombre: nombreImp,
+        impuesto_pct: pct,
+        empresa_nombre: nombreEmp,
+        empresa_cif: document.getElementById('cfgEmpresaCif').value.trim(),
+        empresa_direccion: document.getElementById('cfgEmpresaDireccion').value.trim(),
+        empresa_email: document.getElementById('cfgEmpresaEmail').value.trim(),
+        empresa_web: document.getElementById('cfgEmpresaWeb').value.trim(),
+        validez_dias: dias,
+        updated_at: new Date().toISOString()
+      };
+      const { error } = await sb.from('configuracion').update(payload).eq('id', 1);
+      if (error) { alert('❌ Error al guardar: ' + error.message); return; }
+      config = { ...config, ...payload };
+      toast('✓ Configuración guardada');
+    }
 
     // ════════════════════════════════════════
     //  LÍNEAS DE NEGOCIO
@@ -2273,13 +2419,17 @@
 // IMPORTANTE (privacidad): este documento SOLO usa el precio del cliente.
 // Nunca recibe ni imprime coste interno, beneficio ni margen.
 
-const EMPRESA_PDF = {
-  legal: 'GRUPO ESTUDIO E INVERSIÓN 47 S.L.',
-  cif: 'B56538309',
-  direccion: 'C/ Torquemada Nº18 Bajo 4. 28043, Madrid',
-  emailProducciones: 'PRODUCCIONES@EQUIPO47.COM',
-  web: 'EQUIPO47.COM'
-};
+// Los datos de la empresa salen de la pantalla de Configuración,
+// para poder cambiarlos sin tocar el código.
+function empresaPDF() {
+  return {
+    legal: config.empresa_nombre,
+    cif: config.empresa_cif,
+    direccion: config.empresa_direccion,
+    emailProducciones: config.empresa_email,
+    web: config.empresa_web
+  };
+}
 
 const COL_PDF = {
   navy: '#2E3D54',
@@ -2306,6 +2456,8 @@ function pdfFecha(iso) {
 // logoDataUrl = dataURL de la imagen del logo, o null (se dibuja "E47" en texto)
 
     function construirDocDefinition(datos, logoDataUrl) {
+  const EMPRESA_PDF = empresaPDF();
+  const diasValidez = datos.validezDias || 15;
   const lineas = datos.lineas || [];
   let total = 0;
 
@@ -2391,7 +2543,7 @@ function pdfFecha(iso) {
     celdasInfo.push({
       stack: [
         { text: 'VALIDEZ', color: COL_PDF.orange, bold: true, fontSize: 9 },
-        { text: '15 días naturales', color: COL_PDF.dark, fontSize: 13, margin: [0, 3, 0, 0] }
+        { text: diasValidez + ' días naturales', color: COL_PDF.dark, fontSize: 13, margin: [0, 3, 0, 0] }
       ],
       margin: [14, 12, 14, 12]
     });
@@ -2450,7 +2602,7 @@ function pdfFecha(iso) {
       const stack = [];
       if (datos.validez15) {
         stack.push({
-          text: 'Validez del presupuesto: 15 días naturales. El precio final podría variar en función de las modificaciones de diseño o ajustes definitivos solicitados por el cliente.',
+          text: 'Validez del presupuesto: ' + diasValidez + ' días naturales. El precio final podría variar en función de las modificaciones de diseño o ajustes definitivos solicitados por el cliente.',
           alignment: 'center', italics: true, fontSize: 8, color: COL_PDF.gray, margin: [70, 0, 70, 10]
         });
       }
@@ -2479,6 +2631,7 @@ function pdfFecha(iso) {
       document.getElementById('pdfFecha').value = new Date().toISOString().slice(0, 10);
       document.getElementById('pdfReferencia').value = '';
       document.getElementById('pdfValidez15').checked = true;
+      document.getElementById('pdfValidezLabel').textContent = `Incluir cláusula "válido ${config.validez_dias} días"`;
       renderCarpetasPDF();
       abrirModal('modalPDF');
     }
@@ -2546,6 +2699,7 @@ function pdfFecha(iso) {
         fecha: document.getElementById('pdfFecha').value,
         referencia: document.getElementById('pdfReferencia').value.trim() || null,
         validez15: document.getElementById('pdfValidez15').checked,
+        validezDias: config.validez_dias,
         lineas: lineasPDF
       };
 
