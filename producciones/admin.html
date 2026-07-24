@@ -203,7 +203,7 @@
       white-space: nowrap;
     }
 
-    td { padding: 14px 16px; border-bottom: 1px solid var(--border); font-size: 13px; }
+    td { padding: 14px 16px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: top; }
 
     tr:hover { background: rgba(79,195,247,0.05); }
 
@@ -1668,11 +1668,11 @@
       }
       const o = ordenTabla[contenedorId] || { col: 'fecha', asc: false };
       const flecha = (col) => o.col === col ? (o.asc ? ' ▲' : ' ▼') : '';
-      const th = (col, txt) => `<th class="th-orden" onclick="ordenarTabla('${contenedorId}','${col}')" title="Ordenar por ${txt}">${txt}${flecha(col)}</th>`;
+      const th = (col, txt, tip) => `<th class="th-orden" onclick="ordenarTabla('${contenedorId}','${col}')" title="${tip || 'Ordenar por ' + txt}">${txt}${flecha(col)}</th>`;
 
       const ordenada = ordenarLista(lista, contenedorId);
       let html = `<table><thead><tr>
-        ${th('fecha', 'Fecha')}${th('nombre', 'Presupuesto')}${th('cliente', 'Cliente')}${th('producto', 'Productos (cantidad · unitario)')}
+        ${th('fecha', 'Fecha')}${th('nombre', 'Presupuesto')}${th('cliente', 'Cliente')}${th('producto', 'Productos', 'Ordenar por producto · muestra cantidad y precio unitario')}
         ${th('total', 'Total cliente')}${th('beneficio', 'Beneficio')}${th('margen', 'Margen')}${conPagos ? th('pendiente', 'Pendiente pago') : ''}<th>Estado</th><th></th>
       </tr></thead><tbody>`;
       let sumaCliente = 0, sumaBeneficio = 0, sumaPendientePago = 0;
