@@ -419,6 +419,10 @@
     }
     .th-orden { cursor: pointer; user-select: none; white-space: nowrap; }
     .th-orden:hover { color: var(--accent); }
+    .barra-progreso-wrap { display: flex; align-items: center; gap: 12px; }
+    .barra-progreso { flex: 1; height: 22px; background: var(--border); border-radius: 6px; overflow: hidden; position: relative; }
+    .barra-progreso-relleno { height: 100%; border-radius: 6px; transition: width .3s; }
+    .barra-progreso-texto { flex: 0 0 auto; font-size: 13px; font-weight: 600; white-space: nowrap; }
     .apunte {
       display: flex; justify-content: space-between; align-items: center; gap: 8px;
       font-size: 12px; padding: 6px 0; border-top: 1px solid var(--border);
@@ -568,10 +572,20 @@
           <button class="btn btn-primary" onclick="mostrarModalPresupuesto()">➕ Nuevo presupuesto</button>
         </div>
       </div>
+      <div class="form-row" style="margin-bottom:12px;">
+        <div class="form-group">
+          <label>Buscar</label>
+          <input type="text" id="buscadorPresupuestos" placeholder="Ej: camiseta — busca por producto, presupuesto o cliente" oninput="renderPresupuestosTabla()">
+        </div>
+      </div>
       <div class="form-row" style="margin-bottom:20px;">
         <div class="form-group">
           <label>Cliente</label>
           <select id="filtroPresCliente" onchange="renderPresupuestosTabla()"><option value="">Todos los clientes</option></select>
+        </div>
+        <div class="form-group">
+          <label>Línea de negocio</label>
+          <select id="filtroPresLinea" onchange="renderPresupuestosTabla()"><option value="">Todas</option></select>
         </div>
         <div class="form-group">
           <label>Estado</label>
@@ -598,10 +612,20 @@
         </div>
         <button class="btn btn-ghost" onclick="abrirModalPDF()">📄 Generar PDF</button>
       </div>
+      <div class="form-row" style="margin-bottom:12px;">
+        <div class="form-group">
+          <label>Buscar</label>
+          <input type="text" id="buscadorAprobados" placeholder="Ej: camiseta — busca por producto, presupuesto o cliente" oninput="renderAprobadosTabla()">
+        </div>
+      </div>
       <div class="form-row" style="margin-bottom:20px;">
         <div class="form-group">
           <label>Cliente</label>
           <select id="filtroAprCliente" onchange="renderAprobadosTabla()"><option value="">Todos los clientes</option></select>
+        </div>
+        <div class="form-group">
+          <label>Línea de negocio</label>
+          <select id="filtroAprLinea" onchange="renderAprobadosTabla()"><option value="">Todas</option></select>
         </div>
         <div class="form-group">
           <label>Año</label>
@@ -867,16 +891,26 @@
         <div class="grid" id="pagosResumen" style="margin-bottom:8px;"></div>
 
         <h3 class="seccion-pagos">💶 Cobros del cliente</h3>
+        <div id="cobrosBarra" style="margin-bottom:12px;"></div>
         <div id="pagosCobros"></div>
         <div class="form-row" style="margin-top:10px; align-items:flex-end;">
           <div class="form-group"><label>Fecha</label><input type="date" id="cobroFecha"></div>
           <div class="form-group"><label>Importe €</label><input type="number" id="cobroImporte" min="0" step="0.01"></div>
           <div class="form-group"><label>Concepto</label><input type="text" id="cobroConcepto" placeholder="Ej: Anticipo 30%"></div>
+          <div class="form-group" style="flex:0 0 auto;"><button type="button" class="btn btn-ghost" onclick="rellenarRestoCobro()" title="Poner lo que queda por cobrar">Resto</button></div>
           <div class="form-group" style="flex:0 0 auto;"><button type="button" class="btn btn-primary" onclick="anadirCobro()">➕ Añadir cobro</button></div>
         </div>
 
-        <h3 class="seccion-pagos">🏭 Pagos a proveedores, producto a producto</h3>
-        <div id="pagosLineas"></div>
+        <h3 class="seccion-pagos">🏭 Pagos a proveedor</h3>
+        <div id="pagosProveedorBarra" style="margin-bottom:12px;"></div>
+        <div id="pagosProveedor"></div>
+        <div class="form-row" style="margin-top:10px; align-items:flex-end;">
+          <div class="form-group"><label>Fecha</label><input type="date" id="provFecha"></div>
+          <div class="form-group"><label>Importe €</label><input type="number" id="provImporte" min="0" step="0.01"></div>
+          <div class="form-group"><label>Concepto</label><input type="text" id="provConcepto" placeholder="Ej: 30% anticipo"></div>
+          <div class="form-group" style="flex:0 0 auto;"><button type="button" class="btn btn-ghost" onclick="rellenarRestoProveedor()" title="Poner lo que queda por pagar">Resto</button></div>
+          <div class="form-group" style="flex:0 0 auto;"><button type="button" class="btn btn-primary" onclick="anadirPagoProveedor()">➕ Añadir pago</button></div>
+        </div>
 
         <h3 class="seccion-pagos">🚚 Transporte y otros gastos</h3>
         <div id="pagosGastos"></div>
@@ -1198,11 +1232,23 @@
       return `neto ${formatoEuro(beneficioNeto(bruto))} (${esc(config.impuesto_nombre)} ${Number(config.impuesto_pct)}%)`;
     }
 
+    // Colores del margen, sobre el beneficio NETO (después de impuestos), tal
+    // y como pidió Fátima: rojo si hay pérdidas, naranja 0-15%, verde 15-30%,
+    // azul 30% o más.
     function colorMargen(pct) {
       const n = Number(pct);
-      if (n >= 30) return 'var(--success)';
-      if (n >= 15) return 'var(--warning)';
-      return 'var(--danger)';
+      if (n < 0) return 'var(--danger)';
+      if (n < 15) return 'var(--warning)';
+      if (n < 30) return 'var(--success)';
+      return '#4FA6FF';
+    }
+
+    // Margen calculado sobre el beneficio NETO en vez del bruto. Si no hay
+    // impuesto configurado, beneficioNeto() devuelve el mismo bruto, así que
+    // esto se reduce solo al comportamiento de siempre.
+    function margenNeto(beneficioBruto, totalCliente) {
+      if (!(totalCliente > 0)) return 0;
+      return beneficioNeto(beneficioBruto) / totalCliente * 100;
     }
 
     // ════════════════════════════════════════
@@ -1570,38 +1616,76 @@
     // ════════════════════════════════════════
     function poblarFiltrosPresupuestos() {
       const selC = document.getElementById('filtroPresCliente');
+      const selL = document.getElementById('filtroPresLinea');
       const selA = document.getElementById('filtroPresAnio');
-      const vC = selC.value, vA = selA.value;
+      const vC = selC.value, vL = selL.value, vA = selA.value;
       selC.innerHTML = '<option value="">Todos los clientes</option>' + clientes.map(c => `<option value="${c.id}">${esc(c.nombre_empresa)}</option>`).join('');
+      selL.innerHTML = opcionesLineaGlobal();
       selA.innerHTML = opcionesAnio(aniosDe(presupuestos));
-      selC.value = vC; selA.value = vA;
+      selC.value = vC; selL.value = vL; selA.value = vA;
     }
     function poblarFiltrosAprobados() {
       const selC = document.getElementById('filtroAprCliente');
+      const selL = document.getElementById('filtroAprLinea');
       const selA = document.getElementById('filtroAprAnio');
-      const vC = selC.value, vA = selA.value;
+      const vC = selC.value, vL = selL.value, vA = selA.value;
       const apr = presupuestos.filter(p => p.estado === 'aprobado');
       selC.innerHTML = '<option value="">Todos los clientes</option>' + clientes.map(c => `<option value="${c.id}">${esc(c.nombre_empresa)}</option>`).join('');
+      selL.innerHTML = opcionesLineaGlobal();
       selA.innerHTML = opcionesAnio(aniosDe(apr));
-      selC.value = vC; selA.value = vA;
+      selC.value = vC; selL.value = vL; selA.value = vA;
+    }
+
+    // El desplegable de línea de negocio, en las páginas globales, muestra
+    // todas las líneas de todos los clientes, etiquetadas con el cliente
+    // para que no se confundan dos líneas con el mismo nombre.
+    function opcionesLineaGlobal() {
+      const ordenadas = lineasNegocio.slice().sort((a, b) => a.nombre.localeCompare(b.nombre));
+      return '<option value="">Todas</option>' + ordenadas.map(l => {
+        const c = clientes.find(x => x.id === l.cliente_id);
+        return `<option value="${l.id}">${esc(l.nombre)}${c ? ' · ' + esc(c.nombre_empresa) : ''}</option>`;
+      }).join('');
+    }
+
+    // Busca "camiseta" en el nombre del presupuesto, el cliente, o cualquiera
+    // de sus productos/variantes/descripciones. Así se pueden comparar
+    // presupuestos de fechas o clientes distintos que llevaran ese producto.
+    function coincideBusqueda(p, texto) {
+      if (!texto) return true;
+      const t = texto.toLowerCase();
+      if ((p.nombre || '').toLowerCase().includes(t)) return true;
+      const cliente = clientes.find(c => c.id === p.cliente_id);
+      if (cliente && cliente.nombre_empresa.toLowerCase().includes(t)) return true;
+      return lineas.some(l => l.presupuesto_id === p.id && (
+        etiquetaProducto(l.producto_id, l.variante).toLowerCase().includes(t) ||
+        (l.descripcion || '').toLowerCase().includes(t)
+      ));
     }
 
     function renderPresupuestosTabla() {
       const fc = document.getElementById('filtroPresCliente').value;
+      const fl = document.getElementById('filtroPresLinea').value;
       const fe = document.getElementById('filtroPresEstado').value;
       const fa = document.getElementById('filtroPresAnio').value;
+      const busqueda = document.getElementById('buscadorPresupuestos').value.trim();
       let lista = presupuestos.slice();
       if (fc) lista = lista.filter(p => p.cliente_id === fc);
+      if (fl) lista = lista.filter(p => p.linea_negocio_id === fl);
       if (fe) lista = lista.filter(p => p.estado === fe);
       if (fa) lista = lista.filter(p => (p.fecha || '').slice(0, 4) === fa);
+      if (busqueda) lista = lista.filter(p => coincideBusqueda(p, busqueda));
       renderTablaCarpetas('presupuestos-tabla', lista);
     }
     function renderAprobadosTabla() {
       const fc = document.getElementById('filtroAprCliente').value;
+      const fl = document.getElementById('filtroAprLinea').value;
       const fa = document.getElementById('filtroAprAnio').value;
+      const busqueda = document.getElementById('buscadorAprobados').value.trim();
       let lista = presupuestos.filter(p => p.estado === 'aprobado');
       if (fc) lista = lista.filter(p => p.cliente_id === fc);
+      if (fl) lista = lista.filter(p => p.linea_negocio_id === fl);
       if (fa) lista = lista.filter(p => (p.fecha || '').slice(0, 4) === fa);
+      if (busqueda) lista = lista.filter(p => coincideBusqueda(p, busqueda));
       renderTablaCarpetas('aprobados-tabla', lista, true);
     }
 
@@ -1639,13 +1723,14 @@
       const o = ordenTabla[contenedorId] || { col: 'fecha', asc: false };
       const dir = o.asc ? 1 : -1;
       const val = (p) => {
+        const t = totalesCarpeta(p.id);
         switch (o.col) {
           case 'nombre': return (p.nombre || '').toLowerCase();
           case 'cliente': return (clientes.find(c => c.id === p.cliente_id)?.nombre_empresa || '').toLowerCase();
           case 'producto': return productoPrincipal(p.id).toLowerCase();
-          case 'total': return totalesCarpeta(p.id).totalCliente;
-          case 'beneficio': return totalesCarpeta(p.id).beneficio;
-          case 'margen': return totalesCarpeta(p.id).margen;
+          case 'cantidad': return lineas.filter(l => l.presupuesto_id === p.id).reduce((a, l) => a + (Number(l.cantidad) || 0), 0);
+          case 'beneficio': return t.beneficio;
+          case 'margen': return margenNeto(t.beneficio, t.totalCliente);
           case 'pendiente': return totalesPagos(p.id).pendientePago;
           default: return p.fecha || '';
         }
@@ -1672,23 +1757,26 @@
 
       const ordenada = ordenarLista(lista, contenedorId);
       let html = `<table><thead><tr>
-        ${th('fecha', 'Fecha')}${th('nombre', 'Presupuesto')}${th('cliente', 'Cliente')}${th('producto', 'Productos', 'Ordenar por producto · muestra cantidad y precio unitario')}
-        ${th('total', 'Total cliente')}${th('beneficio', 'Beneficio')}${th('margen', 'Margen')}${conPagos ? th('pendiente', 'Pendiente pago') : ''}<th>Estado</th><th></th>
+        ${th('fecha', 'Fecha')}${th('nombre', 'Presupuesto')}${th('cliente', 'Cliente')}${th('producto', 'Producto')}${th('cantidad', 'Cantidad')}
+        ${th('beneficio', 'Beneficio')}${th('margen', 'Margen')}${conPagos ? th('pendiente', 'Pendiente pago') : ''}<th>Estado</th><th></th>
       </tr></thead><tbody>`;
-      let sumaCliente = 0, sumaBeneficio = 0, sumaPendientePago = 0;
+      let sumaBeneficio = 0, sumaPendientePago = 0;
       for (const p of ordenada) {
         const cliente = clientes.find(c => c.id === p.cliente_id);
         const ln = lineasNegocio.find(x => x.id === p.linea_negocio_id);
         const t = totalesCarpeta(p.id);
-        sumaCliente += t.totalCliente; sumaBeneficio += t.beneficio;
-        const col = colorMargen(t.margen);
+        const margen = margenNeto(t.beneficio, t.totalCliente);
+        sumaBeneficio += t.beneficio;
+        const col = colorMargen(margen);
         const ls = lineas.filter(l => l.presupuesto_id === p.id);
-        // Desglose por producto: nombre, cantidad y precio unitario del cliente.
-        // Cubre los puntos 1 (cantidad) y 2 (unitario) de Fátima.
-        const desglose = ls.map(l =>
+        // Producto y cantidad van en columnas separadas pero en líneas que se
+        // corresponden 1 a 1 (punto 1 y 2 de las mejoras: cantidad visible y
+        // ordenable por su cuenta).
+        const filasProducto = ls.map(l =>
           `<div style="padding:1px 0;"><strong style="color:var(--text);">${esc(etiquetaProducto(l.producto_id, l.variante))}</strong>` +
-          ` <span style="color:var(--muted);">· ${l.cantidad} uds · ${formatoEuro(l.precio_cliente_unitario)}/ud</span></div>`
+          ` <span style="color:var(--muted);">· ${formatoEuro(l.precio_cliente_unitario)}/ud</span></div>`
         ).join('');
+        const filasCantidad = ls.map(l => `<div style="padding:1px 0;">${l.cantidad} uds</div>`).join('');
         const aprobado = p.estado === 'aprobado';
         let celdaPagos = '';
         if (conPagos) {
@@ -1701,10 +1789,10 @@
           <td style="white-space:nowrap;">${formatoFecha(p.fecha)}</td>
           <td><strong>${esc(p.nombre)}</strong>${ln ? `<br><span style="color:var(--muted); font-size:11px;">🗂️ ${esc(ln.nombre)}</span>` : ''}</td>
           <td>${cliente ? esc(cliente.nombre_empresa) : '—'}</td>
-          <td style="font-size:12px; min-width:220px;">${desglose || '—'}</td>
-          <td>${formatoEuro(t.totalCliente)}</td>
+          <td style="font-size:12px; min-width:180px;">${filasProducto || '—'}</td>
+          <td style="font-size:12px; white-space:nowrap;">${filasCantidad || '—'}</td>
           <td style="color:${col}">${formatoEuro(t.beneficio)}${textoNeto(t.beneficio) ? `<br><span style="color:var(--muted); font-size:11px; font-weight:400;">${textoNeto(t.beneficio)}</span>` : ''}</td>
-          <td><span style="font-weight:700; color:${col}">${t.margen.toFixed(1)}%</span></td>
+          <td><span style="font-weight:700; color:${col}">${margen.toFixed(1)}%</span></td>
           ${celdaPagos}
           <td><span class="badge badge-${aprobado ? 'success' : 'warning'}">${aprobado ? 'Aprobado' : 'Sin aprobar'}</span></td>
           <td style="white-space:nowrap; text-align:right;">
@@ -1715,8 +1803,8 @@
           </td></tr>`;
       }
       html += `<tr class="totales">
-        <td colspan="4">TOTAL — ${ordenada.length} presupuesto(s)</td>
-        <td>${formatoEuro(sumaCliente)}</td>
+        <td colspan="5">TOTAL — ${ordenada.length} presupuesto(s)</td>
+
         <td>${formatoEuro(sumaBeneficio)}${textoNeto(sumaBeneficio) ? `<br><span style="font-size:11px; font-weight:400;">${textoNeto(sumaBeneficio)}</span>` : ''}</td>
         <td></td>
         ${conPagos ? `<td>${formatoEuro(sumaPendientePago)}</td>` : ''}
@@ -1789,14 +1877,14 @@
         costeInterno += c * (parseFloat(l.coste_interno_unitario) || 0);
       });
       const beneficio = totalCliente - costeInterno;
-      const margen = totalCliente > 0 ? (beneficio / totalCliente * 100) : 0;
+      const margen = margenNeto(beneficio, totalCliente);
       const col = colorMargen(margen);
       document.getElementById('resumenCarpeta').innerHTML = `
         <div>Total cliente (sin IVA)<strong>${formatoEuro(totalCliente)}</strong></div>
         <div>Coste interno<strong>${formatoEuro(costeInterno)}</strong></div>
         <div>Beneficio bruto<strong style="color:${col}">${formatoEuro(beneficio)}</strong></div>
         ${textoNeto(beneficio) ? `<div>Beneficio neto<strong style="color:${col}">${formatoEuro(beneficioNeto(beneficio))}</strong><span style="font-size:11px;">${esc(config.impuesto_nombre)} ${Number(config.impuesto_pct)}%</span></div>` : ''}
-        <div>Margen<strong style="color:${col}">${margen.toFixed(1)}%</strong></div>`;
+        <div>Margen${hayImpuesto() ? ' neto' : ''}<strong style="color:${col}">${margen.toFixed(1)}%</strong></div>`;
     }
 
     function mostrarModalPresupuesto(id = null, clientePrefillId = null) {
@@ -2183,7 +2271,10 @@
       const cobrado = cobros.filter(c => c.presupuesto_id === presupuestoId)
         .reduce((a, c) => a + (Number(c.importe) || 0), 0);
       const delPedido = pagos.filter(p => p.presupuesto_id === presupuestoId);
-      const pagadoProveedores = delPedido.filter(p => p.tipo === 'producto')
+      // Los pagos a proveedor son AHORA del pedido entero, no de cada producto:
+      // cuando se paga un 30% a fábrica, es el 30% del coste interno total del
+      // pedido, no repartido línea a línea.
+      const pagadoProveedores = delPedido.filter(p => p.tipo === 'proveedor')
         .reduce((a, p) => a + (Number(p.importe) || 0), 0);
       const gastoTransporte = delPedido.filter(p => p.tipo === 'transporte')
         .reduce((a, p) => a + (Number(p.importe) || 0), 0);
@@ -2209,6 +2300,19 @@
       return { icono: '🟢', texto: 'Liquidado', color: 'var(--success)' };
     }
 
+    // Barra de progreso visual: "muy muy visual" tal y como pidió Fátima.
+    function barraProgreso(pagado, total, etiqueta) {
+      const pct = total > 0 ? Math.min(100, Math.max(0, pagado / total * 100)) : 0;
+      const s = semaforo(pagado, total);
+      return `<div class="barra-progreso-wrap">
+        <div class="barra-progreso">
+          <div class="barra-progreso-relleno" style="width:${pct}%; background:${s.color};"></div>
+        </div>
+        <span class="barra-progreso-texto" style="color:${s.color};">${s.icono} ${pct.toFixed(0)}%</span>
+      </div>
+      <p style="font-size:12px; color:var(--muted); margin-top:6px;">${etiqueta}: ${formatoEuro(pagado)} de ${formatoEuro(total)} · quedan ${formatoEuro(Math.max(0, total - pagado))}</p>`;
+    }
+
     function etiquetaModalidad(m) {
       return ({ aereo: '✈️ Aéreo', maritimo: '🚢 Marítimo', terrestre: '🚚 Terrestre' })[m] || m;
     }
@@ -2221,9 +2325,12 @@
         `${p.nombre} · ${c ? c.nombre_empresa : '—'} · ${formatoFecha(p.fecha)}`;
       const hoy = new Date().toISOString().slice(0, 10);
       document.getElementById('cobroFecha').value = hoy;
+      document.getElementById('provFecha').value = hoy;
       document.getElementById('gastoFecha').value = hoy;
       document.getElementById('cobroImporte').value = '';
       document.getElementById('cobroConcepto').value = '';
+      document.getElementById('provImporte').value = '';
+      document.getElementById('provConcepto').value = '';
       document.getElementById('gastoImporte').value = '';
       document.getElementById('gastoConcepto').value = '';
       document.getElementById('gastoTipo').value = 'transporte';
@@ -2260,8 +2367,11 @@
           <p>${t.gastoOtros > 0 ? 'Más ' + formatoEuro(t.gastoOtros) + ' en otros gastos' : 'Sin otros gastos registrados'}</p>
         </div>`;
 
+      document.getElementById('cobrosBarra').innerHTML = barraProgreso(t.cobrado, t.totalCliente, 'Cobrado del cliente');
+      document.getElementById('pagosProveedorBarra').innerHTML = barraProgreso(t.pagadoProveedores, t.costeInterno, 'Pagado a proveedor');
+
       renderPagosCobros();
-      renderPagosLineas();
+      renderPagosProveedor();
       renderPagosGastos();
     }
 
@@ -2280,51 +2390,34 @@
         </div>`).join('');
     }
 
-    function renderPagosLineas() {
-      const ls = lineas.filter(l => l.presupuesto_id === pagosPresupuestoId);
-      const cont = document.getElementById('pagosLineas');
-      if (!ls.length) {
-        cont.innerHTML = '<p style="font-size:13px; color:var(--muted);">Este pedido no tiene productos.</p>';
+    // Pagos a proveedor: AHORA es un pago único contra el TOTAL del pedido,
+    // igual que los cobros del cliente. Ya no se reparte producto a producto.
+    function renderPagosProveedor() {
+      const ps = pagos.filter(p => p.presupuesto_id === pagosPresupuestoId && p.tipo === 'proveedor')
+        .sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+      const cont = document.getElementById('pagosProveedor');
+      if (!ps.length) {
+        cont.innerHTML = '<p style="font-size:13px; color:var(--muted);">Todavía no se ha pagado nada al proveedor.</p>';
         return;
       }
-      cont.innerHTML = ls.map(l => {
-        const coste = (Number(l.cantidad) || 0) * (Number(l.coste_interno_unitario) || 0);
-        const ps = pagos.filter(p => p.linea_id === l.id && p.tipo === 'producto')
-          .sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
-        const pagado = ps.reduce((a, p) => a + (Number(p.importe) || 0), 0);
-        const pendiente = coste - pagado;
-        const s = semaforo(pagado, coste);
-        const pct = coste > 0 ? (pagado / coste * 100) : 0;
-        return `<div class="bloque-linea">
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
-            <strong>${esc(etiquetaProducto(l.producto_id, l.variante))}</strong>
-            <span style="font-size:12px; color:var(--muted);">
-              Coste ${formatoEuro(coste)} · Pagado ${formatoEuro(pagado)} (${pct.toFixed(0)}%) ·
-              <strong style="color:${s.color}">${s.icono} Quedan ${formatoEuro(pendiente)}</strong>
-            </span>
-          </div>
-          ${ps.map(p => `
-            <div class="apunte">
-              <span>${formatoFecha(p.fecha)} · <strong>${formatoEuro(p.importe)}</strong>${p.concepto ? ' · ' + esc(p.concepto) : ''}</span>
-              <button type="button" class="btn btn-danger btn-sm" onclick="eliminarPago('${p.id}')">🗑️</button>
-            </div>`).join('')}
-          <div style="display:flex; gap:6px; margin-top:10px; flex-wrap:wrap;">
-            <input type="date" class="mini-input" id="pf_${l.id}" value="${new Date().toISOString().slice(0,10)}" style="flex:0 0 140px;">
-            <input type="number" class="mini-input" id="pi_${l.id}" min="0" step="0.01" placeholder="Importe €" style="flex:1; min-width:110px;">
-            <input type="text" class="mini-input" id="pc_${l.id}" placeholder="Concepto (ej: 30% anticipo)" style="flex:2; min-width:150px;">
-            <button type="button" class="btn btn-ghost btn-sm" onclick="rellenarResto('${l.id}', ${pendiente})" title="Poner lo que queda por pagar">Resto</button>
-            <button type="button" class="btn btn-primary btn-sm" onclick="anadirPagoLinea('${l.id}')">➕ Pago</button>
-          </div>
-        </div>`;
-      }).join('');
+      cont.innerHTML = ps.map(p => `
+        <div class="apunte">
+          <span>${formatoFecha(p.fecha)} · <strong>${formatoEuro(p.importe)}</strong>${p.concepto ? ' · ' + esc(p.concepto) : ''}</span>
+          <button type="button" class="btn btn-danger btn-sm" onclick="eliminarPago('${p.id}')">🗑️</button>
+        </div>`).join('');
     }
 
-    function rellenarResto(lineaId, pendiente) {
-      document.getElementById('pi_' + lineaId).value = Math.max(0, Number(pendiente)).toFixed(2);
+    function rellenarRestoCobro() {
+      const t = totalesPagos(pagosPresupuestoId);
+      document.getElementById('cobroImporte').value = Math.max(0, t.pendienteCobro).toFixed(2);
+    }
+    function rellenarRestoProveedor() {
+      const t = totalesPagos(pagosPresupuestoId);
+      document.getElementById('provImporte').value = Math.max(0, t.pendientePago).toFixed(2);
     }
 
     function renderPagosGastos() {
-      const gs = pagos.filter(p => p.presupuesto_id === pagosPresupuestoId && p.tipo !== 'producto')
+      const gs = pagos.filter(p => p.presupuesto_id === pagosPresupuestoId && p.tipo !== 'proveedor')
         .sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
       const cont = document.getElementById('pagosGastos');
       if (!gs.length) {
@@ -2366,16 +2459,18 @@
       refrescarVistaActual();
     }
 
-    async function anadirPagoLinea(lineaId) {
-      const fecha = document.getElementById('pf_' + lineaId).value;
-      const importe = parseFloat(document.getElementById('pi_' + lineaId).value);
+    async function anadirPagoProveedor() {
+      const fecha = document.getElementById('provFecha').value;
+      const importe = parseFloat(document.getElementById('provImporte').value);
       if (!fecha) { alert('❌ Indica la fecha del pago'); return; }
       if (isNaN(importe) || importe <= 0) { alert('❌ Indica un importe mayor que 0'); return; }
       const { error } = await sb.from('pagos').insert({
-        presupuesto_id: pagosPresupuestoId, linea_id: lineaId, tipo: 'producto', fecha, importe,
-        concepto: document.getElementById('pc_' + lineaId).value.trim() || null
+        presupuesto_id: pagosPresupuestoId, tipo: 'proveedor', fecha, importe,
+        concepto: document.getElementById('provConcepto').value.trim() || null
       });
       if (error) { alert('❌ Error al guardar el pago: ' + error.message); return; }
+      document.getElementById('provImporte').value = '';
+      document.getElementById('provConcepto').value = '';
       toast('✓ Pago registrado');
       await recargarDinero();
       renderPagos();
