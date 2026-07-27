@@ -715,6 +715,18 @@
           </div>
         </div>
       </div>
+
+      <div class="card" style="margin-top:20px; border-color: var(--e47-blue);">
+        <h3>🛟 Copia de seguridad</h3>
+        <p style="margin:10px 0 16px;">
+          El plan gratuito de Supabase <strong>no hace copias automáticas</strong>. Descarga un archivo con
+          todos los datos de la app (clientes, presupuestos, pagos, catálogo...) y guárdalo en algún sitio
+          seguro (Google Drive, un email a vosotros mismos...). Se recomienda hacerlo cada semana, o antes
+          de cualquier cambio importante.
+        </p>
+        <button class="btn btn-primary" onclick="descargarCopiaSeguridad()">📥 Descargar copia de seguridad</button>
+        <p id="backupEstado" style="font-size:12px; color:var(--muted); margin-top:10px;"></p>
+      </div>
     </section>
 
   </main>
@@ -1012,6 +1024,50 @@
   <script src="https://cdn.jsdelivr.net/npm/pdfmake@0.2.20/build/pdfmake.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/pdfmake@0.2.20/build/vfs_fonts.js"></script>
   <script>
+    // ════════════════════════════════════════
+    //  COPIA DE SEGURIDAD
+    // ════════════════════════════════════════
+    // El plan gratuito de Supabase no hace copias automáticas, así que
+    // ofrecemos una manual desde la propia app: descarga TODO lo que hay
+    // en la base de datos ahora mismo, en un único archivo. Se pide fresco
+    // a Supabase en el momento del clic, no lo que hay ya cargado en
+    // pantalla, para que sea siempre lo más reciente posible.
+    async function descargarCopiaSeguridad() {
+      const estado = document.getElementById('backupEstado');
+      estado.textContent = 'Preparando la copia...';
+      try {
+        const tablas = ['clientes', 'productos', 'producto_variantes', 'presupuestos',
+          'presupuesto_lineas', 'lineas_negocio', 'cobros', 'pagos', 'configuracion'];
+        const resultados = await Promise.all(tablas.map(t => sb.from(t).select('*')));
+
+        const errorTabla = resultados.findIndex(r => r.error);
+        if (errorTabla !== -1) {
+          throw new Error(`${tablas[errorTabla]}: ${resultados[errorTabla].error.message}`);
+        }
+
+        const copia = { generado: new Date().toISOString(), version_app: 'producciones-equipo47' };
+        tablas.forEach((t, i) => { copia[t] = resultados[i].data || []; });
+
+        const blob = new Blob([JSON.stringify(copia, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const fecha = new Date().toISOString().slice(0, 10);
+        a.href = url;
+        a.download = `copia_seguridad_producciones_${fecha}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+
+        const nFilas = tablas.reduce((acc, t) => acc + copia[t].length, 0);
+        estado.textContent = `✓ Descargada correctamente (${nFilas} registros en total). Guárdala en un sitio seguro.`;
+        toast('✓ Copia de seguridad descargada');
+      } catch (e) {
+        estado.textContent = '❌ No se pudo generar la copia: ' + e.message;
+        alert('❌ No se pudo generar la copia de seguridad: ' + e.message);
+      }
+    }
+
     // ════════════════════════════════════════
     //  CONFIGURACIÓN DE SUPABASE
     //  Sustituye estos dos valores por los de tu proyecto e47-producciones
