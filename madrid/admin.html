@@ -5073,26 +5073,55 @@
       const cont = document.getElementById(contId);
       if (!cont) return;
       cont.innerHTML = `
-        <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px; font-size:12px;">
-          <span style="color:var(--muted);">Poner</span>
-          <input type="number" min="1" id="${contId}-todas" style="width:70px;" placeholder="ej. 2">
-          <button type="button" class="btn btn-ghost btn-small" onclick="multiVarAplicarATodas('${contId}')">a todas las tallas/variantes</button>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:10px; flex-wrap:wrap;">
+          <label style="display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer;">
+            <input type="checkbox" id="${contId}-todas-check" onchange="multiVarToggleTodas('${contId}')" style="width:auto;">
+            Seleccionar todas (con su máximo)
+          </label>
+          <div style="display:flex; gap:6px; align-items:center; font-size:12px;">
+            <span style="color:var(--muted);">o poner</span>
+            <input type="number" min="1" id="${contId}-todas" style="width:60px;" placeholder="ej. 2">
+            <button type="button" class="btn btn-ghost btn-small" onclick="multiVarAplicarATodas('${contId}')">a todas</button>
+          </div>
         </div>
         <div style="max-height:280px; overflow-y:auto; border:1px solid var(--border); border-radius:8px;">
           ${vars.map(v => {
             const disp = dispFn ? dispFn(v.id) : null;
-            return `<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:6px 10px; border-bottom:1px solid var(--border); font-size:13px;">
-              <span>${etiquetaVariante(v)} ${disp !== null ? `<span style="color:var(--muted); font-size:11px;">(disp. ${disp})</span>` : ''}</span>
+            return `<div style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-bottom:1px solid var(--border); font-size:13px;">
+              <input type="checkbox" class="${contId}-check" data-var="${v.id}" data-disp="${disp ?? ''}" onchange="multiVarToggleFila(this,'${contId}')" style="width:auto;">
+              <span style="flex:1;">${etiquetaVariante(v)} ${disp !== null ? `<span style="color:var(--muted); font-size:11px;">(disp. ${disp})</span>` : ''}</span>
               <input type="number" min="0" class="${contId}-qty" data-var="${v.id}" style="width:70px;" placeholder="0">
             </div>`;
           }).join('')}
         </div>`;
     }
 
+    function multiVarToggleFila(cb, contId) {
+      const qtyInput = document.querySelector(`.${contId}-qty[data-var="${cb.getAttribute('data-var')}"]`);
+      if (!qtyInput) return;
+      if (cb.checked) {
+        const disp = cb.getAttribute('data-disp');
+        qtyInput.value = (disp !== '' && disp !== null) ? disp : (qtyInput.value || 1);
+      } else {
+        qtyInput.value = '';
+      }
+    }
+
+    function multiVarToggleTodas(contId) {
+      const master = document.getElementById(`${contId}-todas-check`);
+      document.querySelectorAll(`.${contId}-check`).forEach(cb => {
+        cb.checked = master.checked;
+        multiVarToggleFila(cb, contId);
+      });
+    }
+
     function multiVarAplicarATodas(contId) {
       const valor = document.getElementById(`${contId}-todas`).value;
       if (!valor) return;
       document.querySelectorAll(`.${contId}-qty`).forEach(inp => inp.value = valor);
+      document.querySelectorAll(`.${contId}-check`).forEach(cb => cb.checked = true);
+      const master = document.getElementById(`${contId}-todas-check`);
+      if (master) master.checked = true;
     }
 
     function leerCantidadesMulti(contId) {
