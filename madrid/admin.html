@@ -2244,6 +2244,45 @@
     </div>
   </div>
 
+  <!-- MODAL LÍNEA DE RECEPCIÓN (producto esperado) -->
+  <div id="modalLineaRecepcion" class="modal">
+    <div class="modal-content" style="max-width: 520px;">
+      <div class="modal-header">
+        <h2>➕ Añadir producto esperado</h2>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="lineaRecepcionRecepcionId">
+        <div class="form-group">
+          <label>Producto *</label>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <select id="lineaRecepcionProducto" onchange="cargarVariantesLineaRecepcion()" style="flex:1;">
+              <option value="">Seleccionar producto...</option>
+            </select>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="abrirNuevoProductoDesdeRecepcion()" title="Crear un producto que aún no existe">➕ Nuevo</button>
+          </div>
+        </div>
+        <div class="form-group" id="lineaRecepcionVarianteGrupo">
+          <label>Variante *</label>
+          <select id="lineaRecepcionVariante">
+            <option value="">Seleccionar variante...</option>
+          </select>
+        </div>
+        <div class="form-group" id="lineaRecepcionCantidadGrupo">
+          <label>Cantidad esperada *</label>
+          <input type="number" id="lineaRecepcionCantidad" min="1" placeholder="Cantidad">
+        </div>
+        <div class="form-group" id="lineaRecepcionMultiGrupo" style="display:none;">
+          <label>Cantidad esperada por variante *</label>
+          <div id="lineaRecepcionMultiCont"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModalAdmin('modalLineaRecepcion')">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="guardarLineaRecepcion()">💾 Añadir</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL CLIENTE -->
   <div id="modalCliente" class="modal">
     <div class="modal-content" style="max-width: 520px;">
@@ -3349,6 +3388,8 @@
       }
     }
 
+    let productoRecienCreadoCallback = null;
+
     async function guardarProducto() { if (!exigeCap('inv')) return;
       const nombre = document.getElementById('productoNombre').value.trim();
       if (!nombre) { alert('❌ El nombre del producto es obligatorio'); return; }
@@ -3453,6 +3494,12 @@
       toast('✅ Producto guardado');
       registrarActividad(idStr ? 'editar' : 'crear', 'producto', `${idStr ? 'Editó' : 'Creó'} el producto "${nombre}"`);
       await cargarProductosTabla();
+
+      if (typeof productoRecienCreadoCallback === 'function') {
+        const cb = productoRecienCreadoCallback;
+        productoRecienCreadoCallback = null;
+        cb(productoId);
+      }
     }
 
     // Limpia todo lo que cuelga de unas variantes (stock, líneas de salida,
@@ -6550,12 +6597,16 @@
     // ════════════════════════════════════════
     let recepciones = [];
     let recepcionIncidencias = [];
+    let recepcionLineas = [];
 
     async function cargarRecepcionesTabla() {
       const cont = document.getElementById('recepciones-tabla');
       cont.innerHTML = '<div class="loading">Cargando...</div>';
       recepciones = (await sb.from('recepciones').select('*').order('fecha_estimada', { ascending: true })).data || [];
       recepcionIncidencias = (await sb.from('recepcion_incidencias').select('*').order('created_at', { ascending: true })).data || [];
+      recepcionLineas = (await sb.from('recepcion_lineas').select('*')).data || [];
+      if (!productos.length) productos = await obtenerProductos();
+      if (!variantes.length) variantes = await obtenerVariantes();
       renderRecepciones();
     }
 
@@ -6611,18 +6662,62 @@
             </div>`).join('')
           : '<p style="color:var(--muted); font-size:12px;">Sin incidencias registradas</p>';
 
+        // Líneas de producto esperado (desglose nuevo, opcional)
+        const lineasR = recepcionLineas.filter(l => l.recepcion_id === r.id);
+        const hayLineas = lineasR.length > 0;
+        const vistaLecturaLineas = r.estado === 'correcto' || r.estado === 'parcial' || cerrada;
+        const lineasItemsHtml = lineasR.map(l => {
+          const nombreV = variantes.find(x => x.id === l.variante_id) ? nombreVarianteCompleto(l.variante_id) : 'Variante eliminada';
+          if (vistaLecturaLineas) {
+            const recibida = l.cantidad_recibida ?? '—';
+            const sumadoTxt = l.sumado ? '✅ sumado al inventario' : (l.sumar_inventario ? '— sin sumar' : '🚫 no sumado (a propósito)');
+            return `<div style="display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px solid var(--border); font-size:13px; gap:8px; flex-wrap:wrap;">
+              <span>${nombreV} — esperado ${l.cantidad_esperada}, recibido ${recibida}</span>
+              <span style="color:var(--muted); font-size:11px;">${sumadoTxt}</span>
+            </div>`;
+          }
+          return `<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--border); font-size:13px; flex-wrap:wrap;">
+            <span style="flex:1; min-width:140px;">${nombreV} <span style="color:var(--muted); font-size:11px;">(esperado ${l.cantidad_esperada})</span></span>
+            <label style="font-size:12px; display:flex; align-items:center; gap:4px;">Recibido:
+              <input type="number" min="0" class="rec-linea-recibida" data-linea="${l.id}" value="${l.cantidad_recibida ?? l.cantidad_esperada}" style="width:60px; padding:3px; border:1px solid var(--border); border-radius:4px; background:var(--card); color:var(--text);">
+            </label>
+            <label style="font-size:12px; display:flex; align-items:center; gap:4px; cursor:pointer;">
+              <input type="checkbox" class="rec-linea-sumar" data-linea="${l.id}" ${l.sumar_inventario ? 'checked' : ''} style="width:auto;"> Sumar al inventario
+            </label>
+            <button class="btn btn-danger btn-small" onclick="eliminarLineaRecepcion(${l.id})">🗑️</button>
+          </div>`;
+        }).join('');
+        const lineasHtml = `<div style="margin-bottom:12px;">
+          <div style="font-size:11px; text-transform:uppercase; color:var(--muted); margin-bottom:6px;">Productos esperados</div>
+          ${hayLineas ? lineasItemsHtml : '<p style="color:var(--muted); font-size:12px;">Sin desglosar por producto todavía.</p>'}
+          ${!cerrada ? `<button class="btn btn-success btn-small" style="margin-top:8px;" onclick="mostrarModalLineaRecepcion(${r.id})">➕ Añadir producto esperado</button>` : ''}
+        </div>`;
+
         let botonesEstado = '';
-        if (r.estado === 'pendiente' || r.estado === 'parcial') {
-          botonesEstado = `
-            <button class="btn btn-primary btn-small" onclick="cambiarEstadoRecepcion(${r.id}, 'correcto')">✓ Recibido correctamente</button>
-            <button class="btn btn-secondary btn-small" onclick="cambiarEstadoRecepcion(${r.id}, 'parcial')">◐ Recibido parcial</button>`;
-        }
-        if (r.estado === 'correcto' || r.estado === 'parcial') {
-          botonesEstado += ` <button class="btn btn-ghost btn-small acc-ops" onclick="deshacerRecepcion(${r.id})" title="Se marcó por error">↩️ Deshacer</button>`;
-          botonesEstado += ` <button class="btn btn-ghost btn-small" onclick="cambiarEstadoRecepcion(${r.id}, 'cerrado')">🔒 Cerrar</button>`;
-        }
-        if (cerrada) {
-          botonesEstado = `<button class="btn btn-ghost btn-small" onclick="cambiarEstadoRecepcion(${r.id}, 'pendiente')">↩️ Reabrir</button>`;
+        if (hayLineas) {
+          if (r.estado === 'pendiente' || r.estado === 'parcial') {
+            botonesEstado = `<button class="btn btn-primary btn-small" onclick="completarRecepcionConLineas(${r.id})">✅ Completar recepción (sumar al inventario)</button>`;
+          }
+          if (r.estado === 'correcto' || r.estado === 'parcial') {
+            botonesEstado += ` <button class="btn btn-ghost btn-small acc-ops" onclick="deshacerRecepcion(${r.id})" title="Se marcó por error">↩️ Deshacer</button>`;
+            botonesEstado += ` <button class="btn btn-ghost btn-small" onclick="cambiarEstadoRecepcion(${r.id}, 'cerrado')">🔒 Cerrar</button>`;
+          }
+          if (cerrada) {
+            botonesEstado = `<button class="btn btn-ghost btn-small" onclick="cambiarEstadoRecepcion(${r.id}, 'pendiente')">↩️ Reabrir</button>`;
+          }
+        } else {
+          if (r.estado === 'pendiente' || r.estado === 'parcial') {
+            botonesEstado = `
+              <button class="btn btn-primary btn-small" onclick="cambiarEstadoRecepcion(${r.id}, 'correcto')">✓ Recibido correctamente</button>
+              <button class="btn btn-secondary btn-small" onclick="cambiarEstadoRecepcion(${r.id}, 'parcial')">◐ Recibido parcial</button>`;
+          }
+          if (r.estado === 'correcto' || r.estado === 'parcial') {
+            botonesEstado += ` <button class="btn btn-ghost btn-small acc-ops" onclick="deshacerRecepcion(${r.id})" title="Se marcó por error">↩️ Deshacer</button>`;
+            botonesEstado += ` <button class="btn btn-ghost btn-small" onclick="cambiarEstadoRecepcion(${r.id}, 'cerrado')">🔒 Cerrar</button>`;
+          }
+          if (cerrada) {
+            botonesEstado = `<button class="btn btn-ghost btn-small" onclick="cambiarEstadoRecepcion(${r.id}, 'pendiente')">↩️ Reabrir</button>`;
+          }
         }
 
         html += `<tr id="contenido-rec-${r.id}" style="display:none;">
@@ -6635,6 +6730,8 @@
                 <div><span style="color:var(--muted); font-size:11px; text-transform:uppercase;">Cantidad esperada</span><br>${r.cantidad_esperada || '—'}</div>
               </div>
               ${r.observaciones ? `<p style="font-size:12px; color:var(--muted); margin-bottom:12px;">📝 ${r.observaciones}</p>` : ''}
+
+              ${lineasHtml}
 
               ${!cerrada ? `<div style="background:var(--dark); padding:10px 12px; border-radius:8px; margin-bottom:12px;">
                 <div style="font-size:11px; text-transform:uppercase; color:var(--muted); margin-bottom:8px;">Seguimiento de la recepción</div>
@@ -6679,6 +6776,101 @@
     }
 
     function nuevaRecepcion() { if (!exigeCap('ops')) return; mostrarModalRecepcion(); }
+
+    // ── Líneas de recepción (producto esperado) ──
+    function mostrarModalLineaRecepcion(recepcionId) { if (!exigeCap('ops')) return;
+      document.getElementById('lineaRecepcionRecepcionId').value = recepcionId;
+      document.getElementById('lineaRecepcionProducto').innerHTML = '<option value="">Seleccionar producto...</option>' +
+        productos.slice().sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es'))
+          .map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+      document.getElementById('lineaRecepcionProducto').value = '';
+      document.getElementById('lineaRecepcionVariante').innerHTML = '<option value="">Seleccionar variante...</option>';
+      document.getElementById('lineaRecepcionCantidad').value = '';
+      document.getElementById('lineaRecepcionVarianteGrupo').style.display = '';
+      document.getElementById('lineaRecepcionCantidadGrupo').style.display = '';
+      document.getElementById('lineaRecepcionMultiGrupo').style.display = 'none';
+      refrescarBuscador('lineaRecepcionProducto', 'Buscar producto...');
+      abrirModalAdmin('modalLineaRecepcion');
+    }
+
+    function cargarVariantesLineaRecepcion() {
+      const prodId = parseInt(document.getElementById('lineaRecepcionProducto').value);
+      const vars = variantes.filter(v => v.producto_id === prodId);
+      document.getElementById('lineaRecepcionVariante').innerHTML = '<option value="">Seleccionar variante...</option>' +
+        vars.map(v => `<option value="${v.id}">${etiquetaVariante(v)}</option>`).join('');
+
+      const modoMulti = vars.length > 1;
+      document.getElementById('lineaRecepcionVarianteGrupo').style.display = modoMulti ? 'none' : '';
+      document.getElementById('lineaRecepcionCantidadGrupo').style.display = modoMulti ? 'none' : '';
+      document.getElementById('lineaRecepcionMultiGrupo').style.display = modoMulti ? '' : 'none';
+      if (modoMulti) renderTablaMultiVariante('lineaRecepcionMultiCont', vars, null);
+    }
+
+    function abrirNuevoProductoDesdeRecepcion() {
+      const recepcionId = parseInt(document.getElementById('lineaRecepcionRecepcionId').value);
+      cerrarModalAdmin('modalLineaRecepcion');
+      productoRecienCreadoCallback = (nuevoProdId) => {
+        mostrarModalLineaRecepcion(recepcionId);
+        document.getElementById('lineaRecepcionProducto').value = nuevoProdId;
+        cargarVariantesLineaRecepcion();
+        refrescarBuscador('lineaRecepcionProducto', 'Buscar producto...');
+      };
+      mostrarModalProducto();
+    }
+
+    async function guardarLineaRecepcion() { if (!exigeCap('ops')) return;
+      const recepcionId = parseInt(document.getElementById('lineaRecepcionRecepcionId').value);
+      const modoMulti = document.getElementById('lineaRecepcionMultiGrupo').style.display !== 'none';
+
+      if (modoMulti) {
+        const filas = leerCantidadesMulti('lineaRecepcionMultiCont');
+        if (!filas.length) { alert('❌ Indica alguna cantidad'); return; }
+        for (const { varId, cantidad } of filas) {
+          const id = idUnico();
+          const { error } = await sb.from('recepcion_lineas')
+            .insert({ id, recepcion_id: recepcionId, variante_id: varId, cantidad_esperada: cantidad });
+          if (error) { alert('❌ Error: ' + error.message); return; }
+        }
+        cerrarModalAdmin('modalLineaRecepcion');
+        toast(`✅ ${filas.length} producto(s) añadidos como esperados`);
+        await cargarRecepcionesTabla();
+        setTimeout(() => toggleContenidoRecepcion(recepcionId), 120);
+        return;
+      }
+
+      const varId = parseInt(document.getElementById('lineaRecepcionVariante').value);
+      const cantidad = parseInt(document.getElementById('lineaRecepcionCantidad').value);
+      if (!varId) { alert('❌ Selecciona una variante'); return; }
+      if (!cantidad || cantidad <= 0) { alert('❌ Indica una cantidad válida'); return; }
+
+      const id = idUnico();
+      const { error } = await sb.from('recepcion_lineas')
+        .insert({ id, recepcion_id: recepcionId, variante_id: varId, cantidad_esperada: cantidad });
+      if (error) { alert('❌ Error: ' + error.message); return; }
+
+      cerrarModalAdmin('modalLineaRecepcion');
+      toast('✅ Producto esperado añadido');
+      await cargarRecepcionesTabla();
+      setTimeout(() => toggleContenidoRecepcion(recepcionId), 120);
+    }
+
+    async function eliminarLineaRecepcion(lineaId) { if (!exigeCap('ops')) return;
+      const l = recepcionLineas.find(x => x.id === lineaId);
+      if (!l) return;
+      const recepcionId = l.recepcion_id;
+      if (l.sumado) {
+        if (!confirmar('Esta línea ya se sumó al inventario. Si la quitas, se restará esa cantidad del stock para no dejarlo descuadrado.\n\n¿Continuar?')) return;
+        const v = variantes.find(x => x.id === l.variante_id);
+        const nuevoStock = Math.max(0, (v?.stock_total || 0) - (l.cantidad_recibida || 0));
+        await sb.from('variantes').update({ stock_total: nuevoStock }).eq('id', l.variante_id);
+      } else {
+        if (!confirmar('¿Quitar este producto esperado de la recepción?')) return;
+      }
+      await sb.from('recepcion_lineas').delete().eq('id', lineaId);
+      toast('✓ Quitado');
+      await cargarRecepcionesTabla();
+      setTimeout(() => toggleContenidoRecepcion(recepcionId), 120);
+    }
 
     function mostrarModalRecepcion(id = null) {
       const campos = ['recProveedor','recCliente','recDescripcion','recTracking','recTransportista','recBultos','recCantidad','recFechaEstimada','recObservaciones'];
@@ -6751,11 +6943,61 @@
 
     async function deshacerRecepcion(id) { if (!exigeCap('ops')) return;
       const r = recepciones.find(x => x.id === id);
-      if (!confirmar(`¿Deshacer la recepción de "${r?.descripcion || 'este envío'}"?\n\nVolverá a estado "pendiente" y se quitará la fecha de recepción que se puso automáticamente.\n\n(Los bultos recibidos y las incidencias que hayas anotado se conservan.)`)) return;
+      const lineasSumadas = recepcionLineas.filter(l => l.recepcion_id === id && l.sumado);
+      const avisoStock = lineasSumadas.length
+        ? `\n\nEsta recepción tiene ${lineasSumadas.length} producto(s) ya sumados al inventario — al deshacerla, esa cantidad se restará del stock para que no quede descuadrado.`
+        : '';
+      if (!confirmar(`¿Deshacer la recepción de "${r?.descripcion || 'este envío'}"?\n\nVolverá a estado "pendiente" y se quitará la fecha de recepción que se puso automáticamente.\n\n(Los bultos recibidos y las incidencias que hayas anotado se conservan.)${avisoStock}`)) return;
+
+      for (const l of lineasSumadas) {
+        const v = variantes.find(x => x.id === l.variante_id);
+        const nuevoStock = Math.max(0, (v?.stock_total || 0) - (l.cantidad_recibida || 0));
+        await sb.from('variantes').update({ stock_total: nuevoStock }).eq('id', l.variante_id);
+        await sb.from('recepcion_lineas').update({ sumado: false }).eq('id', l.id);
+      }
+
       const { error } = await sb.from('recepciones').update({ estado: 'pendiente', fecha_recepcion: null }).eq('id', id);
       if (error) { toast('❌ Error: ' + error.message); return; }
       toast('↩️ Recepción deshecha — vuelve a "pendiente"');
       registrarActividad('estado', 'recepción', `Deshizo la recepción "${r?.descripcion}" (volvió a pendiente)`);
+      await cargarRecepcionesTabla();
+      setTimeout(() => toggleContenidoRecepcion(id), 120);
+    }
+
+    async function completarRecepcionConLineas(id) { if (!exigeCap('ops')) return;
+      const lineasR = recepcionLineas.filter(l => l.recepcion_id === id);
+      if (!lineasR.length) return;
+
+      let todasCompletas = true;
+      for (const l of lineasR) {
+        const inputRecibida = document.querySelector(`.rec-linea-recibida[data-linea="${l.id}"]`);
+        const inputSumar = document.querySelector(`.rec-linea-sumar[data-linea="${l.id}"]`);
+        const recibida = inputRecibida ? (parseInt(inputRecibida.value) || 0) : (l.cantidad_recibida || 0);
+        const sumar = inputSumar ? inputSumar.checked : l.sumar_inventario;
+
+        if (recibida < l.cantidad_esperada) todasCompletas = false;
+
+        const datosLinea = { cantidad_recibida: recibida, sumar_inventario: sumar };
+
+        if (sumar && !l.sumado && recibida > 0) {
+          const v = variantes.find(x => x.id === l.variante_id);
+          const nuevoStock = (v?.stock_total || 0) + recibida;
+          await sb.from('variantes').update({ stock_total: nuevoStock }).eq('id', l.variante_id);
+          datosLinea.sumado = true;
+        }
+
+        await sb.from('recepcion_lineas').update(datosLinea).eq('id', l.id);
+      }
+
+      const nuevoEstado = todasCompletas ? 'correcto' : 'parcial';
+      const r = recepciones.find(x => x.id === id);
+      const datosRecepcion = { estado: nuevoEstado };
+      if (!r?.fecha_recepcion) datosRecepcion.fecha_recepcion = new Date().toISOString().slice(0, 10);
+      const { error } = await sb.from('recepciones').update(datosRecepcion).eq('id', id);
+      if (error) { toast('❌ Error: ' + error.message); return; }
+
+      toast(nuevoEstado === 'correcto' ? '✅ Recepción completada — inventario actualizado' : '◐ Marcada como parcial — inventario actualizado con lo recibido');
+      registrarActividad('estado', 'recepción', `Completó la recepción "${r?.descripcion}" (${nuevoEstado})`);
       await cargarRecepcionesTabla();
       setTimeout(() => toggleContenidoRecepcion(id), 120);
     }
