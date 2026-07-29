@@ -876,7 +876,7 @@
         <div class="card">
           <h3>📥 Recepciones</h3>
           <p id="stat-recepciones" style="font-size: 32px; color: var(--accent); margin: 12px 0;">—</p>
-          <p>Total de recepciones</p>
+          <p>Recepciones pendientes</p>
         </div>
       </div>
 
@@ -2595,14 +2595,15 @@
       const palesD = await obtenerPales();
       const salidasD = (await sb.from('salidas').select('*')).data || [];
       const salidasFuera = salidasD.filter(s => s.estado === 'fuera').length;
-      const recepcionesD = (await sb.from('recepciones').select('id')).data || [];
+      const recepcionesD = (await sb.from('recepciones').select('id,estado')).data || [];
+      const recepcionesPendientes = recepcionesD.filter(r => r.estado === 'pendiente' || r.estado === 'parcial').length;
       const variantesD = await obtenerVariantes();
 
       document.getElementById('stat-productos').textContent = productosD.length;
       document.getElementById('stat-cajas').textContent = cajasD.length;
       document.getElementById('stat-pales').textContent = palesD.length;
       document.getElementById('stat-salidas').textContent = salidasFuera;
-      document.getElementById('stat-recepciones').textContent = recepcionesD.length;
+      document.getElementById('stat-recepciones').textContent = recepcionesPendientes;
 
       mostrarMisEventos();
       cargarMiniCalendario();
