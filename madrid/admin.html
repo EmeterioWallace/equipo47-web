@@ -3794,6 +3794,11 @@
       });
     }
 
+    function contenidoSueltoPale(paleId) {
+      return (stockItems || []).filter(s => s.pale_id === paleId && !s.caja_id)
+        .map(s => ({ nombre: nombreVarianteCompleto(s.variante_id), cantidad: s.cantidad || 0 }));
+    }
+
     function togglePaleDetalle(id) {
       const row = document.getElementById(`pale-detalle-${id}`);
       if (row) row.style.display = (row.style.display === 'none') ? '' : 'none';
@@ -3880,9 +3885,11 @@
       const palesFiltrados = pales.filter(p => {
         if (filtroUbi && String(p.ubicacion_id) !== filtroUbi) return false;
         if (!q) return true;
-        // Buscar en código, descripción, y en el contenido (códigos de caja y productos)
+        // Buscar en código, descripción, y en el contenido (códigos de caja, productos y material suelto)
         const detalle = contenidoPaleDetallado(p.id);
-        const textoContenido = detalle.map(c => c.codigo + ' ' + c.items.map(i => i.nombre).join(' ')).join(' ');
+        const sueltosBusq = contenidoSueltoPale(p.id);
+        const textoContenido = detalle.map(c => c.codigo + ' ' + c.items.map(i => i.nombre).join(' ')).join(' ')
+          + ' ' + sueltosBusq.map(i => i.nombre).join(' ');
         const texto = `${p.codigo || ''} ${p.descripcion || ''} ${textoContenido}`.toLowerCase();
         return texto.includes(q);
       });
@@ -3932,13 +3939,19 @@
       for (const p of palesFiltrados) {
         const ubi = ubicaciones.find(u => u.id === p.ubicacion_id);
         const detalle = contenidoPaleDetallado(p.id);
+        const sueltos = contenidoSueltoPale(p.id);
         const nCajas = detalle.length;
+        const udsSueltas = sueltos.reduce((a, i) => a + i.cantidad, 0);
+        const hayContenido = nCajas > 0 || sueltos.length > 0;
+        const etiquetaBoton = nCajas > 0 && sueltos.length > 0
+          ? `${nCajas} 📦 + suelto ▾`
+          : (nCajas > 0 ? `${nCajas} 📦 ▾` : `🧺 ${udsSueltas} uds sueltas ▾`);
         html += `
           <tr>
             <td class="sel-col"><input type="checkbox" class="sel-check" ${selPales.has(p.id) ? 'checked' : ''} onclick="toggleSelPale(${p.id}, this.checked)"></td>
             <td><strong>${p.codigo || '—'}</strong></td>
             <td style="font-size: 13px;">${ubi ? ubi.nombre : '<span style="color: var(--muted);">Sin ubicación</span>'}</td>
-            <td>${nCajas > 0 ? `<button class="btn btn-ghost btn-sm" onclick="togglePaleDetalle(${p.id})">${nCajas} 📦 ▾</button>` : '0'}</td>
+            <td>${hayContenido ? `<button class="btn btn-ghost btn-sm" onclick="togglePaleDetalle(${p.id})">${etiquetaBoton}</button>` : '0'}</td>
             <td style="font-size: 12px; color: var(--muted);">${p.descripcion || '—'}</td>
             <td>
               <button class="btn btn-secondary btn-sm acc-inv" onclick="mostrarModalMoverCont('pale', ${p.id})" title="Mover de sitio">↔️</button>
@@ -3947,13 +3960,19 @@
               <button class="btn btn-danger btn-sm" onclick="eliminarPaleAdmin(${p.id})">🗑️</button>
             </td>
           </tr>`;
-        const detalleHtml = detalle.length ? detalle.map(c => `
+        const cajasHtml = detalle.length ? detalle.map(c => `
           <div style="margin-bottom:10px;">
             <strong>📦 ${c.codigo}</strong> <span style="color:var(--muted); font-size:13px;">(${c.uds} uds)</span>
             ${c.items.length
               ? '<ul style="margin:4px 0 0 18px; font-size:13px;">' + c.items.map(i => `<li>${i.nombre} — ${i.cantidad} uds</li>`).join('') + '</ul>'
               : '<span style="color:var(--muted); font-size:12px;"> — caja vacía</span>'}
-          </div>`).join('') : '<span style="color:var(--muted);">Este palé no tiene cajas.</span>';
+          </div>`).join('') : '';
+        const sueltosHtml = sueltos.length ? `
+          <div style="margin-bottom:10px;">
+            <strong>🧺 Material suelto en el palé</strong> <span style="color:var(--muted); font-size:13px;">(${udsSueltas} uds)</span>
+            <ul style="margin:4px 0 0 18px; font-size:13px;">${sueltos.map(i => `<li>${i.nombre} — ${i.cantidad} uds</li>`).join('')}</ul>
+          </div>` : '';
+        const detalleHtml = (cajasHtml + sueltosHtml) || '<span style="color:var(--muted);">Este palé no tiene cajas ni material suelto.</span>';
         html += `
           <tr id="pale-detalle-${p.id}" style="display:none;">
             <td colspan="6" style="background: var(--card);">
@@ -4503,15 +4522,20 @@
         let contenidoHtml = '';
         if (conContenido) {
           const cajasP = contenidoPaleDetallado(p.id);
-          if (cajasP.length) {
-            contenidoHtml = '<ul class="cont">' + cajasP.map(c => {
+          const sueltosP = contenidoSueltoPale(p.id);
+          if (cajasP.length || sueltosP.length) {
+            let bloqueCajas = cajasP.length ? '<ul class="cont">' + cajasP.map(c => {
               const productos = c.items.length
                 ? '<ul>' + c.items.map(i => `<li>${i.nombre} — ${i.cantidad} uds</li>`).join('') + '</ul>'
                 : '';
               return `<li><strong>${c.codigo}</strong> (${c.uds} uds)${productos}</li>`;
-            }).join('') + '</ul>';
+            }).join('') + '</ul>' : '';
+            let bloqueSueltos = sueltosP.length
+              ? '<ul class="cont"><li><strong>🧺 Suelto en el palé</strong><ul>' + sueltosP.map(i => `<li>${i.nombre} — ${i.cantidad} uds</li>`).join('') + '</ul></li></ul>'
+              : '';
+            contenidoHtml = bloqueCajas + bloqueSueltos;
           } else {
-            contenidoHtml = '<p class="vacia">Palé sin cajas</p>';
+            contenidoHtml = '<p class="vacia">Palé sin cajas ni material suelto</p>';
           }
         }
         return `<div class="etiqueta">
