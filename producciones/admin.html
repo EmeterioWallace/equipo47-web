@@ -841,18 +841,23 @@
         <div class="lineas-wrap">
           <table class="lineas-tabla">
             <thead><tr>
-              <th style="width:19%">Producto *</th>
-              <th style="width:14%">Variante</th>
-              <th style="width:22%">Descripción (PDF)</th>
-              <th style="width:11%">Cantidad *</th>
-              <th style="width:14%">Coste interno €</th>
-              <th style="width:14%">Precio cliente €</th>
+              <th style="width:16%">Producto *</th>
+              <th style="width:12%">Variante</th>
+              <th style="width:14%">Proveedor</th>
+              <th style="width:16%">Descripción (PDF)</th>
+              <th style="width:9%">Cantidad *</th>
+              <th style="width:12%">Coste interno €</th>
+              <th style="width:12%">Precio cliente €</th>
               <th style="width:6%"></th>
             </tr></thead>
             <tbody id="lineasBody"></tbody>
           </table>
         </div>
-        <button type="button" class="btn btn-ghost btn-sm" onclick="anadirLinea()" style="margin-top:10px;">➕ Añadir producto</button>
+        <p style="font-size:12px; color:var(--muted); margin-top:8px;">
+          Si los productos de este pedido vienen de proveedores distintos, escribe el proveedor de cada uno:
+          el control de pagos separará automáticamente un bloque para cada proveedor.
+        </p>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="anadirLinea()" style="margin-top:4px;">➕ Añadir producto</button>
 
         <div class="resumen-carpeta" id="resumenCarpeta"></div>
 
@@ -913,16 +918,17 @@
           <div class="form-group" style="flex:0 0 auto;"><button type="button" class="btn btn-primary" onclick="anadirCobro()">➕ Añadir cobro</button></div>
         </div>
 
-        <h3 class="seccion-pagos">🏭 Pagos a proveedor</h3>
-        <div id="pagosProveedorBarra" style="margin-bottom:12px;"></div>
-        <div id="pagosProveedor"></div>
-        <div class="form-row" style="margin-top:10px; align-items:flex-end;">
-          <div class="form-group"><label>Fecha</label><input type="date" id="provFecha"></div>
-          <div class="form-group"><label>Importe €</label><input type="number" id="provImporte" min="0" step="0.01"></div>
-          <div class="form-group"><label>Concepto</label><input type="text" id="provConcepto" placeholder="Ej: 30% anticipo"></div>
-          <div class="form-group" style="flex:0 0 auto;"><button type="button" class="btn btn-ghost" onclick="rellenarRestoProveedor()" title="Poner lo que queda por pagar">Resto</button></div>
-          <div class="form-group" style="flex:0 0 auto;"><button type="button" class="btn btn-primary" onclick="anadirPagoProveedor()">➕ Añadir pago</button></div>
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-top:26px;">
+          <h3 class="seccion-pagos" style="margin:0;">🏭 Pagos a proveedor</h3>
+          <div class="form-group" style="margin:0; min-width:220px;">
+            <select id="modoPagosProveedor" onchange="cambiarModoPagosProveedor()" style="font-size:12px; padding:7px 10px;">
+              <option value="automatico">Automático (según proveedores)</option>
+              <option value="unico">Ver como un único total</option>
+              <option value="separado">Separar siempre por proveedor</option>
+            </select>
+          </div>
         </div>
+        <div id="pagosProveedorContenedor"></div>
 
         <h3 class="seccion-pagos">🚚 Transporte y otros gastos</h3>
         <div id="pagosGastos"></div>
@@ -1881,19 +1887,31 @@
       return lista.map(p => `<option value="${p.id}" ${p.id === seleccionado ? 'selected' : ''}>${esc(p.nombre)}${p.activo ? '' : ' (inactivo)'}</option>`).join('');
     }
 
+    // Proveedores ya usados en cualquier producto, para sugerirlos con autocompletado
+    // y no acabar con "Fábrica López" y "fabrica lopez" conviviendo como si fueran distintos.
+    function proveedoresUsados() {
+      const usados = lineas.filter(l => l.proveedor).map(l => l.proveedor);
+      return [...new Set(usados)].sort((a, b) => a.localeCompare(b));
+    }
+
     function renderLineasEditor() {
       const body = document.getElementById('lineasBody');
       if (!lineasEditor.length) {
-        body.innerHTML = `<tr><td colspan="7" style="padding:16px; text-align:center; color:var(--muted); font-size:13px;">Todavía no hay productos. Pulsa "Añadir producto".</td></tr>`;
+        body.innerHTML = `<tr><td colspan="8" style="padding:16px; text-align:center; color:var(--muted); font-size:13px;">Todavía no hay productos. Pulsa "Añadir producto".</td></tr>`;
         actualizarResumenCarpeta();
         return;
       }
+      const sugerenciasProveedor = proveedoresUsados().map(v => `<option value="${esc(v)}">`).join('');
       body.innerHTML = lineasEditor.map((l, i) => `
         <tr>
           <td><select onchange="setLinea(${i},'producto_id',this.value)">${opcionesProducto(l.producto_id)}</select></td>
           <td>
             <input type="text" value="${esc(l.variante)}" list="dlv${i}" placeholder="Sublimados" oninput="setLinea(${i},'variante',this.value)" autocomplete="off">
             <datalist id="dlv${i}">${variantesDeProducto(l.producto_id).map(v => `<option value="${esc(v)}">`).join('')}</datalist>
+          </td>
+          <td>
+            <input type="text" value="${esc(l.proveedor)}" list="dlp${i}" placeholder="Ej: Fábrica López" oninput="setLinea(${i},'proveedor',this.value)" autocomplete="off">
+            <datalist id="dlp${i}">${sugerenciasProveedor}</datalist>
           </td>
           <td><input type="text" value="${esc(l.descripcion)}" placeholder="Buff de microfibra" oninput="setLinea(${i},'descripcion',this.value)"></td>
           <td><input type="number" min="1" step="1" value="${esc(l.cantidad)}" oninput="setLinea(${i},'cantidad',this.value)"></td>
@@ -1916,7 +1934,7 @@
     function anadirLinea() {
       const primerProducto = productos.find(p => p.activo);
       if (!primerProducto) { alert('❌ Primero crea algún producto en el catálogo.'); return; }
-      lineasEditor.push({ id: null, producto_id: primerProducto.id, variante: '', descripcion: '', cantidad: '', coste_interno_unitario: '', precio_cliente_unitario: '' });
+      lineasEditor.push({ id: null, producto_id: primerProducto.id, variante: '', proveedor: '', descripcion: '', cantidad: '', coste_interno_unitario: '', precio_cliente_unitario: '' });
       renderLineasEditor();
     }
     function quitarLinea(i) {
@@ -1956,7 +1974,7 @@
         poblarLineasPresupuesto(p.linea_negocio_id || '');
         document.getElementById('presObservaciones').value = p.observaciones || '';
         lineasEditor = lineas.filter(l => l.presupuesto_id === id).map(l => ({
-          id: l.id, producto_id: l.producto_id, variante: l.variante || '', descripcion: l.descripcion || '',
+          id: l.id, producto_id: l.producto_id, variante: l.variante || '', proveedor: l.proveedor || '', descripcion: l.descripcion || '',
           cantidad: l.cantidad, coste_interno_unitario: l.coste_interno_unitario, precio_cliente_unitario: l.precio_cliente_unitario
         }));
       } else {
@@ -1975,7 +1993,7 @@
     }
     function anadirLineaSilencioso() {
       const p = productos.find(x => x.activo);
-      if (p) lineasEditor.push({ id: null, producto_id: p.id, variante: '', descripcion: '', cantidad: '', coste_interno_unitario: '', precio_cliente_unitario: '' });
+      if (p) lineasEditor.push({ id: null, producto_id: p.id, variante: '', proveedor: '', descripcion: '', cantidad: '', coste_interno_unitario: '', precio_cliente_unitario: '' });
     }
 
     async function guardarPresupuesto() {
@@ -2031,6 +2049,7 @@
           presupuesto_id: presupuestoId,
           producto_id: l.producto_id,
           variante: (l.variante || '').trim() || null,
+          proveedor: (l.proveedor || '').trim() || null,
           descripcion: (l.descripcion || '').trim() || null,
           cantidad: parseInt(l.cantidad),
           coste_interno_unitario: parseFloat(l.coste_interno_unitario),
@@ -2381,15 +2400,13 @@
         `${p.nombre} · ${c ? c.nombre_empresa : '—'} · ${formatoFecha(p.fecha)}`;
       const hoy = new Date().toISOString().slice(0, 10);
       document.getElementById('cobroFecha').value = hoy;
-      document.getElementById('provFecha').value = hoy;
       document.getElementById('gastoFecha').value = hoy;
       document.getElementById('cobroImporte').value = '';
       document.getElementById('cobroConcepto').value = '';
-      document.getElementById('provImporte').value = '';
-      document.getElementById('provConcepto').value = '';
       document.getElementById('gastoImporte').value = '';
       document.getElementById('gastoConcepto').value = '';
       document.getElementById('gastoTipo').value = 'transporte';
+      document.getElementById('modoPagosProveedor').value = p.modo_pagos_proveedor || 'automatico';
       toggleModalidad();
       renderPagos();
       abrirModal('modalPagos');
@@ -2424,7 +2441,6 @@
         </div>`;
 
       document.getElementById('cobrosBarra').innerHTML = barraProgreso(t.cobrado, t.totalCliente, 'Cobrado del cliente');
-      document.getElementById('pagosProveedorBarra').innerHTML = barraProgreso(t.pagadoProveedores, t.costeInterno, 'Pagado a proveedor');
 
       renderPagosCobros();
       renderPagosProveedor();
@@ -2446,30 +2462,105 @@
         </div>`).join('');
     }
 
-    // Pagos a proveedor: AHORA es un pago único contra el TOTAL del pedido,
-    // igual que los cobros del cliente. Ya no se reparte producto a producto.
-    function renderPagosProveedor() {
-      const ps = pagos.filter(p => p.presupuesto_id === pagosPresupuestoId && p.tipo === 'proveedor')
-        .sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
-      const cont = document.getElementById('pagosProveedor');
-      if (!ps.length) {
-        cont.innerHTML = '<p style="font-size:13px; color:var(--muted);">Todavía no se ha pagado nada al proveedor.</p>';
-        return;
+    // Pagos a proveedor: por defecto ("automático") un pago único contra el
+    // TOTAL del pedido, salvo que mezcle productos de proveedores DISTINTOS,
+    // en cuyo caso se separa solo. Pero Fátima puede forzar el modo que
+    // quiera desde el desplegable: "unico" (aunque haya varios proveedores)
+    // o "separado" (aunque solo haya uno), y queda guardado en ese pedido.
+    function gruposProveedor(presupuestoId) {
+      const ls = lineas.filter(l => l.presupuesto_id === presupuestoId);
+      const pres = presupuestos.find(p => p.id === presupuestoId);
+      const modo = pres?.modo_pagos_proveedor || 'automatico';
+
+      const nombres = [...new Set(ls.map(l => (l.proveedor || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+      const hayGeneral = ls.some(l => !(l.proveedor || '').trim());
+
+      const grupoUnico = () => {
+        const costeInterno = ls.reduce((a, l) => a + (Number(l.cantidad) || 0) * (Number(l.coste_interno_unitario) || 0), 0);
+        return [{ nombre: null, etiqueta: 'Proveedor', costeInterno, unico: true }];
+      };
+      const gruposSeparados = () => {
+        const grupos = nombres.map(n => ({
+          nombre: n, etiqueta: n,
+          costeInterno: ls.filter(l => (l.proveedor || '').trim() === n)
+            .reduce((a, l) => a + (Number(l.cantidad) || 0) * (Number(l.coste_interno_unitario) || 0), 0),
+          unico: false
+        }));
+        if (hayGeneral || !nombres.length) {
+          grupos.push({
+            nombre: null, etiqueta: nombres.length ? 'Sin proveedor especificado' : 'Proveedor',
+            costeInterno: ls.filter(l => !(l.proveedor || '').trim())
+              .reduce((a, l) => a + (Number(l.cantidad) || 0) * (Number(l.coste_interno_unitario) || 0), 0),
+            unico: false
+          });
+        }
+        return grupos;
+      };
+
+      if (modo === 'unico') return grupoUnico();
+      if (modo === 'separado') return gruposSeparados();
+
+      // 'automatico': un único grupo si hay 0 o 1 proveedor distinto (y nada
+      // sin especificar mezclado); separado en cuanto hay 2 o más.
+      if (nombres.length <= 1 && (nombres.length === 0 || !hayGeneral)) {
+        const nombreUnico = nombres[0] || null;
+        const costeInterno = ls.reduce((a, l) => a + (Number(l.cantidad) || 0) * (Number(l.coste_interno_unitario) || 0), 0);
+        return [{ nombre: nombreUnico, etiqueta: nombreUnico || 'Proveedor', costeInterno, unico: true }];
       }
-      cont.innerHTML = ps.map(p => `
-        <div class="apunte">
-          <span>${formatoFecha(p.fecha)} · <strong>${formatoEuro(p.importe)}</strong>${p.concepto ? ' · ' + esc(p.concepto) : ''}</span>
-          <button type="button" class="btn btn-danger btn-sm" onclick="eliminarPago('${p.id}')">🗑️</button>
-        </div>`).join('');
+      return gruposSeparados();
+    }
+
+    async function cambiarModoPagosProveedor() {
+      const modo = document.getElementById('modoPagosProveedor').value;
+      const { error } = await sb.from('presupuestos').update({ modo_pagos_proveedor: modo }).eq('id', pagosPresupuestoId);
+      if (error) { alert('❌ Error al guardar: ' + error.message); return; }
+      await recargarPresupuestos();
+      renderPagosProveedor();
+      refrescarVistaActual();
+    }
+
+    // Clave estable para usar en los ids del DOM (índice de posición, ya que
+    // el nombre del proveedor puede tener espacios, tildes o estar vacío).
+    function renderPagosProveedor() {
+      const cont = document.getElementById('pagosProveedorContenedor');
+      const grupos = gruposProveedor(pagosPresupuestoId);
+      const hoy = new Date().toISOString().slice(0, 10);
+
+      cont.innerHTML = grupos.map((g, i) => {
+        const pagosGrupo = pagos.filter(p => p.presupuesto_id === pagosPresupuestoId && p.tipo === 'proveedor' && (p.proveedor || null) === g.nombre)
+          .sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+        const pagado = pagosGrupo.reduce((a, p) => a + (Number(p.importe) || 0), 0);
+        const pendiente = Math.max(0, g.costeInterno - pagado);
+
+        const listaApuntes = pagosGrupo.length
+          ? pagosGrupo.map(p => `
+              <div class="apunte">
+                <span>${formatoFecha(p.fecha)} · <strong>${formatoEuro(p.importe)}</strong>${p.concepto ? ' · ' + esc(p.concepto) : ''}</span>
+                <button type="button" class="btn btn-danger btn-sm" onclick="eliminarPago('${p.id}')">🗑️</button>
+              </div>`).join('')
+          : '<p style="font-size:13px; color:var(--muted);">Todavía no se ha pagado nada.</p>';
+
+        return `<div ${grupos.length > 1 ? 'class="bloque-linea"' : ''} style="margin-bottom:14px;">
+          ${grupos.length > 1 ? `<strong style="display:block; margin-bottom:8px;">🏭 ${esc(g.etiqueta)}</strong>` : ''}
+          <div style="margin-bottom:10px;">${barraProgreso(pagado, g.costeInterno, grupos.length > 1 ? 'Pagado' : 'Pagado a proveedor')}</div>
+          ${listaApuntes}
+          <div class="form-row" style="margin-top:10px; align-items:flex-end;">
+            <div class="form-group"><label>Fecha</label><input type="date" class="mini-input" id="provFecha_${i}" value="${hoy}"></div>
+            <div class="form-group"><label>Importe €</label><input type="number" class="mini-input" id="provImporte_${i}" min="0" step="0.01" placeholder="Importe €"></div>
+            <div class="form-group"><label>Concepto</label><input type="text" class="mini-input" id="provConcepto_${i}" placeholder="Ej: 30% anticipo"></div>
+            <div class="form-group" style="flex:0 0 auto;"><button type="button" class="btn btn-ghost btn-sm" onclick="rellenarRestoProveedor(${i}, ${pendiente})" title="Poner lo que queda por pagar">Resto</button></div>
+            <div class="form-group" style="flex:0 0 auto;"><button type="button" class="btn btn-primary btn-sm" onclick="anadirPagoProveedor(${i}, ${g.nombre ? `'${esc(g.nombre).replace(/'/g, "\\'")}'` : 'null'})">➕ Pago</button></div>
+          </div>
+        </div>`;
+      }).join('');
     }
 
     function rellenarRestoCobro() {
       const t = totalesPagos(pagosPresupuestoId);
       document.getElementById('cobroImporte').value = Math.max(0, t.pendienteCobro).toFixed(2);
     }
-    function rellenarRestoProveedor() {
-      const t = totalesPagos(pagosPresupuestoId);
-      document.getElementById('provImporte').value = Math.max(0, t.pendientePago).toFixed(2);
+    function rellenarRestoProveedor(i, pendiente) {
+      document.getElementById('provImporte_' + i).value = Math.max(0, Number(pendiente)).toFixed(2);
     }
 
     function renderPagosGastos() {
@@ -2515,18 +2606,16 @@
       refrescarVistaActual();
     }
 
-    async function anadirPagoProveedor() {
-      const fecha = document.getElementById('provFecha').value;
-      const importe = parseFloat(document.getElementById('provImporte').value);
+    async function anadirPagoProveedor(i, proveedor) {
+      const fecha = document.getElementById('provFecha_' + i).value;
+      const importe = parseFloat(document.getElementById('provImporte_' + i).value);
       if (!fecha) { alert('❌ Indica la fecha del pago'); return; }
       if (isNaN(importe) || importe <= 0) { alert('❌ Indica un importe mayor que 0'); return; }
       const { error } = await sb.from('pagos').insert({
-        presupuesto_id: pagosPresupuestoId, tipo: 'proveedor', fecha, importe,
-        concepto: document.getElementById('provConcepto').value.trim() || null
+        presupuesto_id: pagosPresupuestoId, tipo: 'proveedor', proveedor: proveedor || null, fecha, importe,
+        concepto: document.getElementById('provConcepto_' + i).value.trim() || null
       });
       if (error) { alert('❌ Error al guardar el pago: ' + error.message); return; }
-      document.getElementById('provImporte').value = '';
-      document.getElementById('provConcepto').value = '';
       toast('✓ Pago registrado');
       await recargarDinero();
       renderPagos();
