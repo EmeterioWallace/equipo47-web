@@ -1631,13 +1631,17 @@
 
         <div id="grupoCajaContenido" style="border-top:1px solid var(--border); padding-top:14px; margin-top:4px;">
           <label style="display:block; margin-bottom:8px;">Contenido inicial (opcional)</label>
-          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-            <select id="cajaNuevoProducto" onchange="cargarVariantesCajaNueva()" style="flex:2; min-width:150px;"><option value="">Producto...</option></select>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px;">
+            <select id="cajaNuevoProducto" onchange="cargarVariantesCajaNueva()" style="flex:1; min-width:200px;"><option value="">Producto...</option></select>
+          </div>
+          <div id="cajaNuevaFilaSimple" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
             <select id="cajaNuevaVariante" onchange="mostrarDispCajaNueva()" style="flex:2; min-width:130px;"><option value="">Variante...</option></select>
             <input type="number" id="cajaNuevaCantidad" min="1" placeholder="Uds" style="flex:1; min-width:70px;">
             <button type="button" class="btn btn-success btn-small" onclick="anadirLineaCajaTemp()">+ Añadir</button>
           </div>
           <p id="dispCajaNueva" style="font-size:11px; color:var(--muted); margin-top:6px;"></p>
+          <div id="cajaNuevaMultiCont" style="display:none; margin-top:8px;"></div>
+          <button type="button" id="btnCajaNuevaMultiAnadir" class="btn btn-success btn-small" style="display:none; margin-top:8px;" onclick="anadirMultiCajaTemp()">+ Añadir todas las indicadas</button>
           <div id="cajaLineasTempLista" style="margin-top:8px;"></div>
         </div>
       </div>
@@ -1663,7 +1667,7 @@
             <option value="">Seleccionar producto...</option>
           </select>
         </div>
-        <div class="form-group">
+        <div class="form-group" id="lineaVarianteGrupo">
           <label>Variante *</label>
           <select id="lineaVariante" onchange="mostrarDisponibleLinea()">
             <option value="">Seleccionar variante...</option>
@@ -1672,12 +1676,16 @@
         <div id="infoDisponibleLinea" style="display:none; background: var(--card); padding: 10px 12px; border-radius: 8px; margin-bottom: 14px; font-size: 13px;">
           Disponible sin organizar: <strong id="dispLinea" style="color: var(--accent);">0</strong> uds
         </div>
-        <div class="form-group">
+        <div class="form-group" id="lineaCantidadGrupo">
           <label>Cantidad *</label>
           <div style="display: flex; gap: 8px; align-items: center;">
             <input type="number" id="lineaCantidad" min="1" placeholder="Cantidad" style="flex: 1;">
             <button type="button" class="btn btn-success btn-small" onclick="llenarMaximoLinea()">MAX</button>
           </div>
+        </div>
+        <div class="form-group" id="lineaMultiGrupo" style="display:none;">
+          <label>Cantidad por variante *</label>
+          <div id="lineaMultiCont"></div>
         </div>
       </div>
       <div class="modal-footer">
@@ -1890,7 +1898,7 @@
             <option value="">Seleccionar producto...</option>
           </select>
         </div>
-        <div class="form-group">
+        <div class="form-group" id="lineaSalidaVarianteGrupo">
           <label>Variante *</label>
           <select id="lineaSalidaVariante" onchange="mostrarDisponibleLineaSalida()">
             <option value="">Seleccionar variante...</option>
@@ -1899,12 +1907,16 @@
         <div id="infoDisponibleLineaSalida" style="display:none; background: var(--card); padding: 10px 12px; border-radius: 8px; margin-bottom: 14px; font-size: 13px;">
           Disponible para sacar: <strong id="dispLineaSalida" style="color: var(--accent);">0</strong> uds
         </div>
-        <div class="form-group">
+        <div class="form-group" id="lineaSalidaCantidadGrupo">
           <label>Cantidad *</label>
           <div style="display: flex; gap: 8px; align-items: center;">
             <input type="number" id="lineaSalidaCantidad" min="1" placeholder="Cantidad" style="flex: 1;">
             <button type="button" class="btn btn-success btn-small" onclick="llenarMaximoLineaSalida()">MAX</button>
           </div>
+        </div>
+        <div class="form-group" id="lineaSalidaMultiGrupo" style="display:none;">
+          <label>Cantidad por variante *</label>
+          <div id="lineaSalidaMultiCont"></div>
         </div>
       </div>
       <div class="modal-footer">
@@ -4618,6 +4630,29 @@
       sel.innerHTML = '<option value="">Variante...</option>' +
         vars.map(v => `<option value="${v.id}">${etiquetaVariante(v)}</option>`).join('');
       document.getElementById('dispCajaNueva').textContent = '';
+
+      const modoMulti = vars.length > 1;
+      document.getElementById('cajaNuevaFilaSimple').style.display = modoMulti ? 'none' : '';
+      document.getElementById('cajaNuevaMultiCont').style.display = modoMulti ? '' : 'none';
+      document.getElementById('btnCajaNuevaMultiAnadir').style.display = modoMulti ? '' : 'none';
+      if (modoMulti) renderTablaMultiVariante('cajaNuevaMultiCont', vars, dispCajaNuevaDe);
+    }
+
+    function anadirMultiCajaTemp() {
+      const filas = leerCantidadesMulti('cajaNuevaMultiCont');
+      if (!filas.length) { alert('❌ Indica alguna cantidad'); return; }
+      const rechazadas = [];
+      filas.forEach(({ varId, cantidad }) => {
+        const disp = dispCajaNuevaDe(varId);
+        if (cantidad > disp) { rechazadas.push(`${nombreVarianteCompleto(varId)} (pediste ${cantidad}, hay ${disp})`); return; }
+        const yaEnLista = cajaLineasTemp.find(l => l.variante_id === varId);
+        if (yaEnLista) yaEnLista.cantidad += cantidad;
+        else cajaLineasTemp.push({ variante_id: varId, cantidad });
+      });
+      renderCajaLineasTemp();
+      document.querySelectorAll('.cajaNuevaMultiCont-qty').forEach(inp => inp.value = '');
+      if (rechazadas.length) alert('⚠️ Estas no se han añadido por falta de stock sin organizar:\n\n' + rechazadas.join('\n'));
+      else toast('✅ Artículos añadidos a la lista');
     }
 
     function dispCajaNuevaDe(varId) {
@@ -4718,6 +4753,9 @@
         document.getElementById('cajaNuevaVariante').innerHTML = '<option value="">Variante...</option>';
         document.getElementById('cajaNuevaCantidad').value = '';
         document.getElementById('dispCajaNueva').textContent = '';
+        document.getElementById('cajaNuevaFilaSimple').style.display = '';
+        document.getElementById('cajaNuevaMultiCont').style.display = 'none';
+        document.getElementById('btnCajaNuevaMultiAnadir').style.display = 'none';
         renderCajaLineasTemp();
         refrescarBuscador('cajaNuevoProducto', 'Buscar producto...');
       }
@@ -5030,6 +5068,39 @@
     }
 
     // ── BUSCADOR reutilizable sobre <select> (texto + orden alfabético) ──
+    // ── Tabla multi-variante: añadir varias variantes de un producto a la vez ──
+    function renderTablaMultiVariante(contId, vars, dispFn) {
+      const cont = document.getElementById(contId);
+      if (!cont) return;
+      cont.innerHTML = `
+        <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px; font-size:12px;">
+          <span style="color:var(--muted);">Poner</span>
+          <input type="number" min="1" id="${contId}-todas" style="width:70px;" placeholder="ej. 2">
+          <button type="button" class="btn btn-ghost btn-small" onclick="multiVarAplicarATodas('${contId}')">a todas las tallas/variantes</button>
+        </div>
+        <div style="max-height:280px; overflow-y:auto; border:1px solid var(--border); border-radius:8px;">
+          ${vars.map(v => {
+            const disp = dispFn ? dispFn(v.id) : null;
+            return `<div style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:6px 10px; border-bottom:1px solid var(--border); font-size:13px;">
+              <span>${etiquetaVariante(v)} ${disp !== null ? `<span style="color:var(--muted); font-size:11px;">(disp. ${disp})</span>` : ''}</span>
+              <input type="number" min="0" class="${contId}-qty" data-var="${v.id}" style="width:70px;" placeholder="0">
+            </div>`;
+          }).join('')}
+        </div>`;
+    }
+
+    function multiVarAplicarATodas(contId) {
+      const valor = document.getElementById(`${contId}-todas`).value;
+      if (!valor) return;
+      document.querySelectorAll(`.${contId}-qty`).forEach(inp => inp.value = valor);
+    }
+
+    function leerCantidadesMulti(contId) {
+      return Array.from(document.querySelectorAll(`.${contId}-qty`))
+        .map(inp => ({ varId: parseInt(inp.getAttribute('data-var')), cantidad: parseInt(inp.value) || 0 }))
+        .filter(x => x.cantidad > 0);
+    }
+
     function refrescarBuscador(selectId, placeholder) {
       const sel = document.getElementById(selectId);
       if (!sel) return;
@@ -5107,6 +5178,9 @@
       document.getElementById('lineaCajaId').value = cajaId;
       document.getElementById('lineaCantidad').value = '';
       document.getElementById('infoDisponibleLinea').style.display = 'none';
+      document.getElementById('lineaMultiGrupo').style.display = 'none';
+      document.getElementById('lineaVarianteGrupo').style.display = '';
+      document.getElementById('lineaCantidadGrupo').style.display = '';
 
       if (lineaId) {
         const linea = stockItems.find(s => s.id === lineaId);
@@ -5138,6 +5212,13 @@
           return `<option value="${v.id}">${etiqueta}</option>`;
         }).join('');
       document.getElementById('infoDisponibleLinea').style.display = 'none';
+
+      const editando = !!document.getElementById('lineaId').value;
+      const modoMulti = !editando && vars.length > 1;
+      document.getElementById('lineaVarianteGrupo').style.display = modoMulti ? 'none' : '';
+      document.getElementById('lineaCantidadGrupo').style.display = modoMulti ? 'none' : '';
+      document.getElementById('lineaMultiGrupo').style.display = modoMulti ? '' : 'none';
+      if (modoMulti) renderTablaMultiVariante('lineaMultiCont', vars, varId => calcularDisponible(varId, null));
     }
 
     function mostrarDisponibleLinea() {
@@ -5158,9 +5239,34 @@
 
     async function guardarLinea() { if (!exigeCap('inv')) return;
       const cajaId = parseInt(document.getElementById('lineaCajaId').value);
+      const lineaIdStr = document.getElementById('lineaId').value;
+      const modoMulti = document.getElementById('lineaMultiGrupo').style.display !== 'none';
+
+      if (modoMulti && !lineaIdStr) {
+        const filas = leerCantidadesMulti('lineaMultiCont');
+        if (!filas.length) { alert('❌ Indica alguna cantidad'); return; }
+        const rechazadas = [];
+        let anadidas = 0;
+        for (const { varId, cantidad } of filas) {
+          const disp = calcularDisponible(varId, null);
+          if (cantidad > disp) { rechazadas.push(`${nombreVarianteCompleto(varId)} (pediste ${cantidad}, hay ${disp})`); continue; }
+          const id = Date.now() + Math.floor(Math.random() * 100000);
+          const { error } = await sb.from('stock').insert({ id, variante_id: varId, cantidad, caja_id: cajaId });
+          if (error) { rechazadas.push(`${nombreVarianteCompleto(varId)} (error: ${error.message})`); continue; }
+          anadidas++;
+        }
+        if (anadidas) {
+          cerrarModalAdmin('modalLinea');
+          toast(`✅ ${anadidas} artículo(s) añadidos a la caja`);
+          await cargarCajasTabla();
+          setTimeout(() => toggleContenidoCaja(cajaId), 100);
+        }
+        if (rechazadas.length) alert('⚠️ Esto no se ha podido añadir:\n\n' + rechazadas.join('\n'));
+        return;
+      }
+
       const varId = parseInt(document.getElementById('lineaVariante').value);
       const cantidad = parseInt(document.getElementById('lineaCantidad').value);
-      const lineaIdStr = document.getElementById('lineaId').value;
 
       if (!varId) { alert('❌ Selecciona una variante'); return; }
       if (!cantidad || cantidad <= 0) { alert('❌ Indica una cantidad válida'); return; }
@@ -5887,6 +5993,9 @@
       document.getElementById('lineaSalidaSalidaId').value = salidaId;
       document.getElementById('lineaSalidaCantidad').value = '';
       document.getElementById('infoDisponibleLineaSalida').style.display = 'none';
+      document.getElementById('lineaSalidaMultiGrupo').style.display = 'none';
+      document.getElementById('lineaSalidaVarianteGrupo').style.display = '';
+      document.getElementById('lineaSalidaCantidadGrupo').style.display = '';
 
       if (lineaId) {
         const l = salidaLineas.find(x => x.id === lineaId);
@@ -5918,6 +6027,13 @@
           return `<option value="${v.id}">${et}</option>`;
         }).join('');
       document.getElementById('infoDisponibleLineaSalida').style.display = 'none';
+
+      const editando = !!document.getElementById('lineaSalidaId').value;
+      const modoMulti = !editando && vars.length > 1;
+      document.getElementById('lineaSalidaVarianteGrupo').style.display = modoMulti ? 'none' : '';
+      document.getElementById('lineaSalidaCantidadGrupo').style.display = modoMulti ? 'none' : '';
+      document.getElementById('lineaSalidaMultiGrupo').style.display = modoMulti ? '' : 'none';
+      if (modoMulti) renderTablaMultiVariante('lineaSalidaMultiCont', vars, varId => disponibleParaSalida(varId, null));
     }
 
     function mostrarDisponibleLineaSalida() {
@@ -5938,9 +6054,40 @@
 
     async function guardarLineaSalida() { if (!exigeCap('ops')) return;
       const salidaId = parseInt(document.getElementById('lineaSalidaSalidaId').value);
+      const lineaIdStr = document.getElementById('lineaSalidaId').value;
+      const modoMulti = document.getElementById('lineaSalidaMultiGrupo').style.display !== 'none';
+
+      if (modoMulti && !lineaIdStr) {
+        const filas = leerCantidadesMulti('lineaSalidaMultiCont');
+        if (!filas.length) { alert('❌ Indica alguna cantidad'); return; }
+        const rechazadas = [];
+        let anadidas = 0;
+        for (const { varId, cantidad } of filas) {
+          const disp = disponibleParaSalida(varId, null);
+          if (cantidad > disp) { rechazadas.push(`${nombreVarianteCompleto(varId)} (pediste ${cantidad}, hay ${disp} disponibles)`); continue; }
+          const existente = salidaLineas.find(l => l.salida_id === salidaId && l.variante_id === varId);
+          if (existente) {
+            const { error } = await sb.from('salida_lineas').update({ cantidad: existente.cantidad + cantidad }).eq('id', existente.id);
+            if (error) { rechazadas.push(`${nombreVarianteCompleto(varId)} (error: ${error.message})`); continue; }
+          } else {
+            const id = idUnico();
+            const { error } = await sb.from('salida_lineas').insert({ id, salida_id: salidaId, variante_id: varId, cantidad });
+            if (error) { rechazadas.push(`${nombreVarianteCompleto(varId)} (error: ${error.message})`); continue; }
+          }
+          anadidas++;
+        }
+        if (anadidas) {
+          cerrarModalAdmin('modalLineaSalida');
+          toast(`✅ ${anadidas} artículo(s) añadidos`);
+          await cargarSalidasTabla();
+          setTimeout(() => toggleContenidoSalida(salidaId), 120);
+        }
+        if (rechazadas.length) alert('⚠️ Esto no se ha podido añadir:\n\n' + rechazadas.join('\n'));
+        return;
+      }
+
       const varId = parseInt(document.getElementById('lineaSalidaVariante').value);
       const cantidad = parseInt(document.getElementById('lineaSalidaCantidad').value);
-      const lineaIdStr = document.getElementById('lineaSalidaId').value;
 
       if (!varId) { alert('❌ Selecciona una variante'); return; }
       if (!cantidad || cantidad <= 0) { alert('❌ Indica una cantidad válida'); return; }
