@@ -423,6 +423,10 @@
     .barra-progreso { flex: 1; height: 22px; background: var(--border); border-radius: 6px; overflow: hidden; position: relative; }
     .barra-progreso-relleno { height: 100%; border-radius: 6px; transition: width .3s; }
     .barra-progreso-texto { flex: 0 0 auto; font-size: 13px; font-weight: 600; white-space: nowrap; }
+    .tabla-calc { width: 100%; border-collapse: collapse; margin-top: 6px; }
+    .tabla-calc th { padding: 8px 10px; font-size: 10px; }
+    .tabla-calc td { padding: 8px 10px; font-size: 13px; text-align: center; }
+    .tabla-calc td:first-child, .tabla-calc th:first-child { text-align: left; }
     .apunte {
       display: flex; justify-content: space-between; align-items: center; gap: 8px;
       font-size: 12px; padding: 6px 0; border-top: 1px solid var(--border);
@@ -643,6 +647,7 @@
           <p>Catálogo de productos que se fabrican, con sus variantes (sublimados, nylon, poliéster...)</p>
         </div>
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn btn-ghost" onclick="descargarExcelPrecios()">📥 Descargar en Excel</button>
           <button class="btn btn-danger" onclick="eliminarProductosSeleccionados()">🗑️ Eliminar seleccionados</button>
           <button class="btn btn-primary" onclick="mostrarModalProducto()">➕ Nuevo producto</button>
         </div>
@@ -775,13 +780,20 @@
 
   <!-- MODAL PRODUCTO -->
   <div id="modalProducto" class="modal">
-    <div class="modal-content" style="max-width:440px;">
+    <div class="modal-content" style="max-width:640px;">
       <div class="modal-header"><h2 id="tituloModalProducto">Nuevo producto</h2></div>
       <div class="modal-body">
         <input type="hidden" id="productoId">
-        <div class="form-group">
-          <label>Nombre del producto *</label>
-          <input type="text" id="productoNombre" placeholder="Ej: Calcetines">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Nombre del producto *</label>
+            <input type="text" id="productoNombre" placeholder="Ej: Sudadera sublimada">
+          </div>
+          <div class="form-group">
+            <label>Categoría (opcional)</label>
+            <input type="text" id="productoCategoria" placeholder="Ej: Sudaderas" list="dlCategorias">
+            <datalist id="dlCategorias"></datalist>
+          </div>
         </div>
         <div class="form-group" id="grupoProductoActivo" style="display:none;">
           <label>Estado</label>
@@ -790,7 +802,46 @@
             <option value="false">Inactivo (se conserva el histórico, pero no aparece)</option>
           </select>
         </div>
+
         <div class="form-group">
+          <label>Cómo se calcula el precio</label>
+          <select id="productoModoCalculo" onchange="cambiarModoCalculoUI()">
+            <option value="cantidad">Por cantidad del pedido (lo normal: prendas, artículos que se piden en lotes)</option>
+            <option value="general">Artículo suelto (carpas, trofeos... no se piden por lotes)</option>
+          </select>
+        </div>
+
+        <!-- Modo CANTIDAD: coste distinto por cada tramo -->
+        <div id="bloqueModoCantidad">
+          <p style="font-size:12px; color:var(--muted); margin:-2px 0 8px;">
+            Rellena el coste del proveedor para las cantidades que tengas cotizadas — no hace falta
+            rellenarlas todas. El proveedor suele hacer mejor precio cuanto más se compra, así que lo
+            normal es que el coste baje en los tramos grandes.
+          </p>
+          <div class="lineas-wrap">
+            <table class="lineas-tabla">
+              <thead><tr><th>Cantidad</th><th>Coste proveedor (€/ud)</th><th>Transporte (€/ud)</th><th>Precio sugerido</th></tr></thead>
+              <tbody id="costesPorCantidadBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Modo GENERAL: un único coste -->
+        <div id="bloqueModoGeneral" style="display:none;">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Coste del proveedor (€)</label>
+              <input type="number" id="productoCosteProveedor" min="0" step="0.0001" placeholder="Ej: 150" oninput="actualizarCalculadoraGeneral()">
+            </div>
+            <div class="form-group">
+              <label>Transporte (€)</label>
+              <input type="number" id="productoTransporte" min="0" step="0.0001" placeholder="Ej: 20" oninput="actualizarCalculadoraGeneral()">
+            </div>
+          </div>
+          <div id="calculadoraGeneral"></div>
+        </div>
+
+        <div class="form-group" style="margin-top:16px;">
           <label>Variantes (opcional)</label>
           <p style="font-size:12px; color:var(--muted); margin:-2px 0 8px;">
             Lo que distingue una versión de otra: sublimados, nylon, poliéster... Luego se eligen
@@ -1029,6 +1080,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/pdfmake@0.2.20/build/pdfmake.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/pdfmake@0.2.20/build/vfs_fonts.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script>
     // ════════════════════════════════════════
     //  COPIA DE SEGURIDAD
@@ -1042,7 +1094,7 @@
       const estado = document.getElementById('backupEstado');
       estado.textContent = 'Preparando la copia...';
       try {
-        const tablas = ['clientes', 'productos', 'producto_variantes', 'presupuestos',
+        const tablas = ['clientes', 'productos', 'producto_variantes', 'producto_precios_referencia', 'tramos_precio', 'presupuestos',
           'presupuesto_lineas', 'lineas_negocio', 'cobros', 'pagos', 'configuracion'];
         const resultados = await Promise.all(tablas.map(t => sb.from(t).select('*')));
 
@@ -1075,6 +1127,189 @@
     }
 
     // ════════════════════════════════════════
+    //  CALCULADORA DE PRECIOS (reglas del Excel)
+    // ════════════════════════════════════════
+    // Replica exactamente la fórmula del Excel de Fátima: se busca el tramo
+    // que corresponde al coste total unitario (coste del proveedor +
+    // transporte) dentro de la tabla de ese modo de cantidad, se aplica el
+    // % de margen de ese tramo, y el resultado se redondea a un "precio
+    // bonito" (sube al siguiente múltiplo de 5 céntimos, salvo que ya esté
+    // muy cerca de un euro cerrado, en cuyo caso se deja en ,95 o ,99).
+    const MODOS_CALCULADORA = ['50', '100', '500', '1000', '5000', '10000'];
+
+    // Redondea a 6 decimales para evitar el ruido de coma flotante de JS
+    // (0.1*1.5 no da exactamente 0.15 en binario) antes de floor/ceil.
+    function limpioDecimal(n) { return Math.round(n * 1e6) / 1e6; }
+
+    function porcentajeExtra(modo, totalUnitario) {
+      const tabla = tramosPrecio.filter(t => t.modo === modo).sort((a, b) => a.coste_minimo - b.coste_minimo);
+      if (!tabla.length) return 0;
+      let elegido = Number(tabla[0].porcentaje_extra);
+      for (const t of tabla) {
+        if (totalUnitario >= Number(t.coste_minimo)) elegido = Number(t.porcentaje_extra);
+        else break;
+      }
+      return elegido;
+    }
+
+    function redondearPrecioBonito(calculoBruto) {
+      const calculo = limpioDecimal(calculoBruto);
+      const dec = limpioDecimal(calculo - Math.floor(calculo));
+      if (dec > 0.95) return Math.floor(calculo) + 0.99;
+      if (dec > 0.9) return Math.floor(calculo) + 0.95;
+      return Math.ceil(limpioDecimal(calculo * 20)) / 20;
+    }
+
+    // Devuelve { total, pct, precio } para un modo (cantidad) concreto.
+    function calcularPrecioSugerido(modo, costeProveedor, transporte) {
+      const total = limpioDecimal((Number(costeProveedor) || 0) + (Number(transporte) || 0));
+      const pct = porcentajeExtra(modo, total);
+      const calculo = limpioDecimal(total * (1 + pct));
+      return { total, pct, precio: redondearPrecioBonito(calculo) };
+    }
+
+    // ── MODO GENERAL (artículo suelto: carpas, trofeos...) ──
+    function actualizarCalculadoraGeneral() {
+      const cont = document.getElementById('calculadoraGeneral');
+      const coste = parseFloat(document.getElementById('productoCosteProveedor').value);
+      const transporte = parseFloat(document.getElementById('productoTransporte').value) || 0;
+      if (isNaN(coste) || coste <= 0) {
+        cont.innerHTML = '<p style="font-size:13px; color:var(--muted); margin-top:8px;">Escribe el coste del proveedor para ver el precio sugerido.</p>';
+        return;
+      }
+      const r = calcularPrecioSugerido('general', coste, transporte);
+      cont.innerHTML = `<p style="font-size:13px; color:var(--muted); margin-top:8px;">
+        Coste + transporte: <strong style="color:var(--text);">${formatoEuro(r.total)}</strong> ·
+        Margen: <strong style="color:var(--text);">+${(r.pct * 100).toFixed(0)}%</strong> ·
+        Precio sugerido: <strong style="color:var(--accent); font-size:15px;">${formatoEuro(r.precio)}</strong>
+      </p>`;
+    }
+
+    // ── MODO CANTIDAD (coste distinto por cada tramo) ────────
+    function cambiarModoCalculoUI() {
+      const modo = document.getElementById('productoModoCalculo').value;
+      document.getElementById('bloqueModoCantidad').style.display = modo === 'cantidad' ? 'block' : 'none';
+      document.getElementById('bloqueModoGeneral').style.display = modo === 'general' ? 'block' : 'none';
+    }
+
+    function renderCostesPorCantidad() {
+      const body = document.getElementById('costesPorCantidadBody');
+      body.innerHTML = MODOS_CALCULADORA.map(modo => {
+        const fila = precioReferenciaEditor.find(f => f.modo === modo) || { modo, coste_proveedor: '', transporte: '' };
+        const coste = parseFloat(fila.coste_proveedor);
+        let sugerido = '<span style="color:var(--muted); font-size:12px;">—</span>';
+        if (!isNaN(coste) && coste > 0) {
+          const r = calcularPrecioSugerido(modo, coste, parseFloat(fila.transporte) || 0);
+          sugerido = `<strong style="color:var(--accent);">${formatoEuro(r.precio)}</strong> <span style="color:var(--muted); font-size:11px;">(+${(r.pct * 100).toFixed(0)}%)</span>`;
+        }
+        return `<tr>
+          <td><strong>${modo} uds</strong></td>
+          <td><input type="number" min="0" step="0.0001" value="${esc(fila.coste_proveedor)}" placeholder="—" oninput="setCostePorCantidad('${modo}','coste_proveedor',this.value)"></td>
+          <td><input type="number" min="0" step="0.0001" value="${esc(fila.transporte)}" placeholder="0" oninput="setCostePorCantidad('${modo}','transporte',this.value)"></td>
+          <td style="text-align:center;">${sugerido}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    function setCostePorCantidad(modo, campo, valor) {
+      let fila = precioReferenciaEditor.find(f => f.modo === modo);
+      if (!fila) { fila = { modo, coste_proveedor: '', transporte: '' }; precioReferenciaEditor.push(fila); }
+      fila[campo] = valor;
+      renderCostesPorCantidad();
+    }
+
+    // Entre los tramos que este producto TIENE rellenos, el igual o inferior
+    // más cercano a la cantidad real (320 uds -> el de 100, aunque no exista
+    // el de 200; si solo tiene el de 500 relleno, usa ese).
+    function modoParaCantidadDeProducto(productoId, cantidad) {
+      const n = Number(cantidad) || 0;
+      const disponibles = preciosReferencia
+        .filter(r => r.producto_id === productoId)
+        .map(r => Number(r.modo))
+        .sort((a, b) => a - b);
+      if (!disponibles.length) return null;
+      let elegido = disponibles[0];
+      for (const d of disponibles) { if (n >= d) elegido = d; else break; }
+      return String(elegido);
+    }
+
+    // ── EXPORTAR A EXCEL (copia de seguridad reconocible) ──────
+    // Genera un libro con una hoja por cada cantidad (50/100/500/1000/
+    // 5000/10000), replicando la misma estructura y las mismas fórmulas
+    // que el Excel original de Fátima: TOTAL = coste + transporte,
+    // EXTRA = búsqueda en la tabla de tramos, PRECIO FINAL = fórmula de
+    // redondeo a precio bonito. Al abrirlo en Excel, se recalcula solo.
+    function descargarExcelPrecios() {
+      if (typeof XLSX === 'undefined') { alert('❌ No se pudo cargar la librería de Excel. Comprueba tu conexión e inténtalo de nuevo.'); return; }
+      if (!preciosReferencia.length && !productos.some(p => p.modo_calculo === 'general' && p.coste_proveedor != null)) {
+        alert('❌ Ningún producto tiene coste de proveedor guardado todavía. Añádelo desde "Editar producto".');
+        return;
+      }
+
+      const wb = XLSX.utils.book_new();
+      const nombreProducto = (id) => productos.find(p => p.id === id);
+
+      // Una hoja por cada cantidad: solo con los productos que tienen coste
+      // guardado en ESE tramo concreto (igual que en el Excel original, donde
+      // un producto solo aparece en las hojas en las que está cotizado).
+      for (const modo of MODOS_CALCULADORA) {
+        const filasProd = preciosReferencia.filter(r => r.modo === modo);
+        if (!filasProd.length) continue;
+        const tabla = tramosPrecio.filter(t => t.modo === modo).sort((a, b) => a.coste_minimo - b.coste_minimo);
+        const filas = [['CATEGORÍA', 'PRODUCTO', 'UDS', 'PRECIO NUESTRO', 'TRANSPORTE', 'TOTAL', 'EXTRA', 'PRECIO FINAL A COBRAR', '', 'PRECIO MINIMO', '% EXTRA']];
+        filasProd.forEach(r => {
+          const p = nombreProducto(r.producto_id);
+          filas.push([p?.categoria || '', p?.nombre || '(producto eliminado)', Number(modo), Number(r.coste_proveedor), Number(r.transporte) || 0, null, null, null]);
+        });
+        tabla.forEach((t, i) => {
+          const filaDestino = i + 1;
+          if (!filas[filaDestino]) filas[filaDestino] = [];
+          filas[filaDestino][9] = Number(t.coste_minimo);
+          filas[filaDestino][10] = Number(t.porcentaje_extra);
+        });
+
+        const ws = XLSX.utils.aoa_to_sheet(filas);
+        for (let r = 2; r <= filasProd.length + 1; r++) {
+          ws[`F${r}`] = { t: 'n', f: `D${r}+E${r}` };
+          ws[`G${r}`] = { t: 'n', f: `VLOOKUP(F${r},$J$2:$K$${tabla.length + 1},2,TRUE)` };
+          const CALC = `F${r}*(1+G${r})`;
+          ws[`H${r}`] = { t: 'n', f: `IF((${CALC}-INT(${CALC}))>0.95,INT(${CALC})+0.99,IF((${CALC}-INT(${CALC}))>0.9,INT(${CALC})+0.95,ROUNDUP(${CALC}*20,0)/20))` };
+        }
+        ws['!cols'] = [{ wch: 18 }, { wch: 28 }, { wch: 8 }, { wch: 13 }, { wch: 11 }, { wch: 10 }, { wch: 8 }, { wch: 14 }, { wch: 2 }, { wch: 12 }, { wch: 9 }];
+        XLSX.utils.book_append_sheet(wb, ws, `${modo} UDS`);
+      }
+
+      // Hoja "General": artículos sueltos (carpas, trofeos...)
+      const generales = productos.filter(p => p.modo_calculo === 'general' && p.coste_proveedor != null);
+      if (generales.length) {
+        const tabla = tramosPrecio.filter(t => t.modo === 'general').sort((a, b) => a.coste_minimo - b.coste_minimo);
+        const filas = [['CATEGORÍA', 'PRODUCTO', 'PRECIO NUESTRO', 'TRANSPORTE', 'TOTAL', 'EXTRA', 'PRECIO FINAL A COBRAR', '', 'PRECIO MINIMO', '% EXTRA']];
+        generales.forEach(p => filas.push([p.categoria || '', p.nombre, Number(p.coste_proveedor), Number(p.transporte_unitario) || 0, null, null, null]));
+        tabla.forEach((t, i) => {
+          const filaDestino = i + 1;
+          if (!filas[filaDestino]) filas[filaDestino] = [];
+          filas[filaDestino][8] = Number(t.coste_minimo);
+          filas[filaDestino][9] = Number(t.porcentaje_extra);
+        });
+        const ws = XLSX.utils.aoa_to_sheet(filas);
+        for (let r = 2; r <= generales.length + 1; r++) {
+          ws[`E${r}`] = { t: 'n', f: `C${r}+D${r}` };
+          ws[`F${r}`] = { t: 'n', f: `VLOOKUP(E${r},$I$2:$J$${tabla.length + 1},2,TRUE)` };
+          const CALC = `E${r}*(1+F${r})`;
+          ws[`G${r}`] = { t: 'n', f: `IF((${CALC}-INT(${CALC}))>0.95,INT(${CALC})+0.99,IF((${CALC}-INT(${CALC}))>0.9,INT(${CALC})+0.95,ROUNDUP(${CALC}*20,0)/20))` };
+        }
+        ws['!cols'] = [{ wch: 18 }, { wch: 28 }, { wch: 13 }, { wch: 11 }, { wch: 10 }, { wch: 8 }, { wch: 14 }, { wch: 2 }, { wch: 12 }, { wch: 9 }];
+        XLSX.utils.book_append_sheet(wb, ws, `General`);
+      }
+
+      if (!wb.SheetNames.length) { alert('❌ No hay datos suficientes para generar el Excel.'); return; }
+      const fecha = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(wb, `precios_e47_${fecha}.xlsx`);
+      toast('✓ Excel descargado');
+    }
+
+
+    // ════════════════════════════════════════
     //  CONFIGURACIÓN DE SUPABASE
     //  Sustituye estos dos valores por los de tu proyecto e47-producciones
     //  (Project Settings → Data API).
@@ -1099,6 +1334,9 @@
       validez_dias: 15
     };
     let variantesCatalogo = []; // variantes definidas dentro de cada producto
+    let tramosPrecio = []; // reglas de margen de la calculadora de precios (del Excel)
+    let preciosReferencia = []; // coste del proveedor por producto y cantidad
+    let precioReferenciaEditor = []; // filas que se están editando en el modal de producto
     let variantesEditor = [];   // variantes que se están editando en el modal
     let lineasNegocio = [];  // agrupaciones de pedidos dentro de un cliente
     let cobros = [];         // dinero que entra (cliente → nosotros)
@@ -1195,7 +1433,7 @@
 
     // ── CARGA INICIAL ───────────────────────
     async function cargarTodo() {
-      const [rc, rp, rpr, rl, rco, rpa, rln, rvc, rcfg] = await Promise.all([
+      const [rc, rp, rpr, rl, rco, rpa, rln, rvc, rcfg, rtp, rpref] = await Promise.all([
         sb.from('clientes').select('*').order('nombre_empresa'),
         sb.from('productos').select('*').order('nombre'),
         sb.from('presupuestos').select('*').order('fecha', { ascending: false }),
@@ -1204,9 +1442,13 @@
         sb.from('pagos').select('*').order('fecha'),
         sb.from('lineas_negocio').select('*').order('nombre'),
         sb.from('producto_variantes').select('*').order('nombre'),
-        sb.from('configuracion').select('*').eq('id', 1).single()
+        sb.from('configuracion').select('*').eq('id', 1).single(),
+        sb.from('tramos_precio').select('*'),
+        sb.from('producto_precios_referencia').select('*')
       ]);
       if (rcfg.data) config = rcfg.data;
+      tramosPrecio = rtp.data || [];
+      preciosReferencia = rpref.data || [];
       variantesCatalogo = rvc.data || [];
       lineasNegocio = rln.data || [];
       clientes = rc.data || [];
@@ -1484,15 +1726,24 @@
       }
       let html = `<table><thead><tr>
         <th style="width:40px;"><input type="checkbox" onchange="marcarProductos(this.checked)" title="Seleccionar todos" style="width:auto; cursor:pointer;"></th>
-        <th>Producto</th><th>Variantes</th><th>Estado</th><th>En uso</th><th></th>
+        <th>Producto</th><th>Categoría</th><th>Variantes</th><th>Precios cargados</th><th>Estado</th><th>En uso</th><th></th>
       </tr></thead><tbody>`;
       for (const p of productos) {
         const vs = variantesDeProducto(p.id);
         const usos = usosDeProducto(p.id);
+        let precios;
+        if (p.modo_calculo === 'general') {
+          precios = p.coste_proveedor != null ? '✓ Artículo suelto' : '<span style="color:var(--muted);">sin coste</span>';
+        } else {
+          const n = preciosReferencia.filter(r => r.producto_id === p.id).length;
+          precios = n ? `${n} tramo(s)` : '<span style="color:var(--muted);">sin coste</span>';
+        }
         html += `<tr>
           <td><input type="checkbox" class="prod-chk" value="${p.id}" style="width:auto; cursor:pointer;"></td>
           <td><strong>${esc(p.nombre)}</strong></td>
+          <td style="color:var(--muted); font-size:12px;">${esc(p.categoria) || '—'}</td>
           <td style="color:var(--muted); font-size:12px;">${vs.length ? vs.map(esc).join(' · ') : '—'}</td>
+          <td style="font-size:12px;">${precios}</td>
           <td><span class="badge badge-${p.activo ? 'success' : 'warning'}">${p.activo ? 'Activo' : 'Inactivo'}</span></td>
           <td style="font-size:12px; color:var(--muted);">${usos ? usos + ' presupuesto(s)' : 'sin usar'}</td>
           <td style="white-space:nowrap; text-align:right;">
@@ -1511,20 +1762,40 @@
         document.getElementById('tituloModalProducto').textContent = 'Editar producto';
         document.getElementById('productoId').value = p.id;
         document.getElementById('productoNombre').value = p.nombre;
+        document.getElementById('productoCategoria').value = p.categoria || '';
+        document.getElementById('productoModoCalculo').value = p.modo_calculo || 'cantidad';
+        document.getElementById('productoCosteProveedor').value = p.coste_proveedor != null ? p.coste_proveedor : '';
+        document.getElementById('productoTransporte').value = p.transporte_unitario || 0;
         document.getElementById('productoActivo').value = String(p.activo);
         grupoActivo.style.display = 'block';
         variantesEditor = variantesCatalogo.filter(v => v.producto_id === p.id).map(v => ({ id: v.id, nombre: v.nombre }));
+        precioReferenciaEditor = preciosReferencia.filter(r => r.producto_id === p.id)
+          .map(r => ({ id: r.id, modo: r.modo, coste_proveedor: r.coste_proveedor, transporte: r.transporte }));
       } else {
         document.getElementById('tituloModalProducto').textContent = 'Nuevo producto';
         document.getElementById('productoId').value = '';
         document.getElementById('productoNombre').value = '';
+        document.getElementById('productoCategoria').value = '';
+        document.getElementById('productoModoCalculo').value = 'cantidad';
+        document.getElementById('productoCosteProveedor').value = '';
+        document.getElementById('productoTransporte').value = '';
         document.getElementById('productoActivo').value = 'true';
         grupoActivo.style.display = 'none';
         variantesEditor = [];
+        precioReferenciaEditor = [];
       }
       document.getElementById('nuevaVariante').value = '';
       renderVariantesEditor();
+      cambiarModoCalculoUI();
+      renderCostesPorCantidad();
+      actualizarCalculadoraGeneral();
+      poblarSugerenciasCategorias();
       abrirModal('modalProducto');
+    }
+
+    function poblarSugerenciasCategorias() {
+      const cats = [...new Set(productos.map(p => p.categoria).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+      document.getElementById('dlCategorias').innerHTML = cats.map(c => `<option value="${esc(c)}">`).join('');
     }
 
     // ── VARIANTES DENTRO DEL PRODUCTO ───────
@@ -1563,17 +1834,65 @@
     async function guardarProducto() {
       const nombre = document.getElementById('productoNombre').value.trim();
       if (!nombre) { alert('❌ El nombre del producto es obligatorio'); return; }
+      const modoCalculo = document.getElementById('productoModoCalculo').value;
+
+      // Modo general: validar coste único
+      let coste = null, transporte = 0;
+      if (modoCalculo === 'general') {
+        const costeStr = document.getElementById('productoCosteProveedor').value;
+        coste = costeStr === '' ? null : parseFloat(costeStr);
+        if (coste !== null && (isNaN(coste) || coste < 0)) { alert('❌ El coste del proveedor no puede ser negativo'); return; }
+        transporte = parseFloat(document.getElementById('productoTransporte').value) || 0;
+      }
+
+      // Modo cantidad: validar que las filas rellenas tengan un coste válido
+      let filasCantidadValidas = [];
+      if (modoCalculo === 'cantidad') {
+        for (const f of precioReferenciaEditor) {
+          const c = parseFloat(f.coste_proveedor);
+          if (f.coste_proveedor === '' || f.coste_proveedor == null) continue; // fila vacía, se ignora
+          if (isNaN(c) || c < 0) { alert(`❌ El coste para ${f.modo} uds no puede ser negativo`); return; }
+          filasCantidadValidas.push({ id: f.id, modo: f.modo, coste_proveedor: c, transporte: parseFloat(f.transporte) || 0 });
+        }
+      }
+
       const idStr = document.getElementById('productoId').value;
       let productoId = idStr;
 
+      const datosComunes = {
+        nombre,
+        categoria: document.getElementById('productoCategoria').value.trim() || null,
+        modo_calculo: modoCalculo,
+        coste_proveedor: coste,
+        transporte_unitario: transporte
+      };
+
       if (idStr) {
-        const payload = { nombre, activo: document.getElementById('productoActivo').value === 'true' };
+        const payload = { ...datosComunes, activo: document.getElementById('productoActivo').value === 'true' };
         const { error } = await sb.from('productos').update(payload).eq('id', idStr);
         if (error) { alert('❌ Error al guardar: ' + error.message); return; }
       } else {
-        const { data, error } = await sb.from('productos').insert({ nombre, activo: true }).select('id').single();
+        const { data, error } = await sb.from('productos').insert({ ...datosComunes, activo: true }).select('id').single();
         if (error) { alert('❌ Error al guardar: ' + error.message); return; }
         productoId = data.id;
+      }
+
+      // Sincronizar los costes por cantidad: se insertan/actualizan las filas
+      // rellenas y se borran las que se hayan vaciado en el editor.
+      const idsConDatos = filasCantidadValidas.filter(f => f.id).map(f => f.id);
+      const idsEnBdCantidad = preciosReferencia.filter(r => r.producto_id === productoId).map(r => r.id);
+      const aBorrarCantidad = idsEnBdCantidad.filter(x => !idsConDatos.includes(x));
+
+      for (const f of filasCantidadValidas) {
+        const fila = { producto_id: productoId, modo: f.modo, coste_proveedor: f.coste_proveedor, transporte: f.transporte };
+        const { error } = f.id
+          ? await sb.from('producto_precios_referencia').update(fila).eq('id', f.id)
+          : await sb.from('producto_precios_referencia').insert(fila);
+        if (error) { alert('❌ Error al guardar los costes por cantidad: ' + error.message); return; }
+      }
+      if (aBorrarCantidad.length) {
+        const { error } = await sb.from('producto_precios_referencia').delete().in('id', aBorrarCantidad);
+        if (error) { alert('❌ Error al borrar costes por cantidad: ' + error.message); return; }
       }
 
       // Sincronizar las variantes: se insertan las nuevas y se borran las quitadas.
@@ -1600,12 +1919,14 @@
     }
 
     async function recargarProductos() {
-      const [rp, rv] = await Promise.all([
+      const [rp, rv, rpref] = await Promise.all([
         sb.from('productos').select('*').order('nombre'),
-        sb.from('producto_variantes').select('*').order('nombre')
+        sb.from('producto_variantes').select('*').order('nombre'),
+        sb.from('producto_precios_referencia').select('*')
       ]);
       productos = rp.data || [];
       variantesCatalogo = rv.data || [];
+      preciosReferencia = rpref.data || [];
     }
 
     // ── BORRAR PRODUCTOS ────────────────────
@@ -1924,12 +2245,49 @@
 
     function setLinea(i, campo, valor) {
       lineasEditor[i][campo] = valor;
+      let necesitaRepintar = false;
       // Al cambiar de producto, refrescamos las variantes sugeridas de esa fila
       if (campo === 'producto_id') {
         const dl = document.getElementById('dlv' + i);
         if (dl) dl.innerHTML = variantesDeProducto(valor).map(v => `<option value="${esc(v)}">`).join('');
       }
-      actualizarResumenCarpeta();
+      // Sugerencia de precio: solo si el producto tiene coste de referencia y
+      // los campos de coste/precio de ESTA línea siguen vacíos (para no pisar
+      // nada que Fátima ya haya escrito a mano).
+      if (campo === 'producto_id' || campo === 'cantidad') {
+        necesitaRepintar = aplicarSugerenciaPrecio(i);
+      }
+      if (necesitaRepintar) renderLineasEditor();
+      else actualizarResumenCarpeta();
+    }
+
+    // Devuelve true si ha rellenado algo (para saber si hay que repintar la fila)
+    function aplicarSugerenciaPrecio(i) {
+      const l = lineasEditor[i];
+      const p = productos.find(x => x.id === l.producto_id);
+      const cantidad = parseInt(l.cantidad);
+      if (!p || !cantidad || cantidad <= 0) return false;
+      const yaTieneCoste = l.coste_interno_unitario !== '' && l.coste_interno_unitario != null;
+      const yaTienePrecio = l.precio_cliente_unitario !== '' && l.precio_cliente_unitario != null;
+      if (yaTieneCoste && yaTienePrecio) return false;
+
+      let r = null;
+      if (p.modo_calculo === 'general' && p.coste_proveedor != null) {
+        r = calcularPrecioSugerido('general', p.coste_proveedor, p.transporte_unitario || 0);
+      } else {
+        // Modo cantidad: usar el tramo relleno más cercano (igual o inferior) a la cantidad real
+        const modo = modoParaCantidadDeProducto(p.id, cantidad);
+        if (modo) {
+          const ref = preciosReferencia.find(x => x.producto_id === p.id && x.modo === modo);
+          if (ref) r = calcularPrecioSugerido(modo, ref.coste_proveedor, ref.transporte);
+        }
+      }
+      if (!r) return false;
+
+      let cambiado = false;
+      if (!yaTieneCoste) { l.coste_interno_unitario = r.total.toFixed(4); cambiado = true; }
+      if (!yaTienePrecio) { l.precio_cliente_unitario = r.precio.toFixed(2); cambiado = true; }
+      return cambiado;
     }
     function anadirLinea() {
       const primerProducto = productos.find(p => p.activo);
