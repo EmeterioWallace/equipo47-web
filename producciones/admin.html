@@ -2412,9 +2412,8 @@
       return cambiado;
     }
     function anadirLinea() {
-      const primerProducto = productos.find(p => p.activo);
-      if (!primerProducto) { alert('❌ Primero crea algún producto en el catálogo.'); return; }
-      lineasEditor.push({ id: null, producto_id: primerProducto.id, variante: '', proveedor: '', descripcion: '', cantidad: '', coste_interno_unitario: '', precio_cliente_unitario: '', precioAuto: true });
+      if (!productos.some(p => p.activo)) { alert('❌ Primero crea algún producto en el catálogo.'); return; }
+      lineasEditor.push({ id: null, producto_id: '', variante: '', proveedor: '', descripcion: '', cantidad: '', coste_interno_unitario: '', precio_cliente_unitario: '', precioAuto: true });
       renderLineasEditor();
     }
     function quitarLinea(i) {
@@ -2475,8 +2474,9 @@
       abrirModal('modalPresupuesto');
     }
     function anadirLineaSilencioso() {
-      const p = productos.find(x => x.activo);
-      if (p) lineasEditor.push({ id: null, producto_id: p.id, variante: '', proveedor: '', descripcion: '', cantidad: '', coste_interno_unitario: '', precio_cliente_unitario: '', precioAuto: true });
+      if (productos.some(p => p.activo)) {
+        lineasEditor.push({ id: null, producto_id: '', variante: '', proveedor: '', descripcion: '', cantidad: '', coste_interno_unitario: '', precio_cliente_unitario: '', precioAuto: true });
+      }
     }
 
     async function guardarPresupuesto() {
