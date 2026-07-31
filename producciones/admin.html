@@ -652,6 +652,34 @@
           <button class="btn btn-primary" onclick="mostrarModalProducto()">➕ Nuevo producto</button>
         </div>
       </div>
+      <div class="form-row" style="margin-bottom:12px;">
+        <div class="form-group">
+          <label>Buscar</label>
+          <input type="text" id="buscadorProductos" placeholder="Nombre o categoría..." oninput="renderProductosTabla()">
+        </div>
+      </div>
+      <div class="form-row" style="margin-bottom:20px;">
+        <div class="form-group">
+          <label>Categoría</label>
+          <select id="filtroProductosCategoria" onchange="renderProductosTabla()"><option value="">Todas</option></select>
+        </div>
+        <div class="form-group">
+          <label>Estado</label>
+          <select id="filtroProductosEstado" onchange="renderProductosTabla()">
+            <option value="">Todos</option>
+            <option value="true">Activos</option>
+            <option value="false">Inactivos</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Precios</label>
+          <select id="filtroProductosPrecios" onchange="renderProductosTabla()">
+            <option value="">Todos</option>
+            <option value="con">Con precios cargados</option>
+            <option value="sin">Sin precios cargados</option>
+          </select>
+        </div>
+      </div>
       <div id="productos-tabla" class="loading">Cargando...</div>
     </section>
 
@@ -680,7 +708,7 @@
           </div>
           <div class="form-group">
             <label>Porcentaje (%)</label>
-            <input type="number" id="cfgImpuestoPct" min="0" max="100" step="0.01">
+            <input type="text" inputmode="decimal" id="cfgImpuestoPct" placeholder="Ej: 22" oninput="normalizarComaInput(this)">
           </div>
         </div>
         <p style="font-size:12px; color:var(--muted); margin-top:4px;">
@@ -820,7 +848,7 @@
           </p>
           <div class="lineas-wrap">
             <table class="lineas-tabla">
-              <thead><tr><th>Cantidad</th><th>Coste proveedor (€/ud)</th><th>Transporte (€/ud)</th><th>Precio sugerido</th></tr></thead>
+              <thead><tr><th>Cantidad</th><th>Coste proveedor (€/ud)</th><th>Transporte (€/ud)</th><th>Coste total</th><th>Precio sugerido</th></tr></thead>
               <tbody id="costesPorCantidadBody"></tbody>
             </table>
           </div>
@@ -831,11 +859,11 @@
           <div class="form-row">
             <div class="form-group">
               <label>Coste del proveedor (€)</label>
-              <input type="number" id="productoCosteProveedor" min="0" step="0.0001" placeholder="Ej: 150" oninput="actualizarCalculadoraGeneral()">
+              <input type="text" inputmode="decimal" id="productoCosteProveedor" placeholder="Ej: 150" oninput="normalizarComaInput(this); actualizarCalculadoraGeneral()">
             </div>
             <div class="form-group">
               <label>Transporte (€)</label>
-              <input type="number" id="productoTransporte" min="0" step="0.0001" placeholder="Ej: 20" oninput="actualizarCalculadoraGeneral()">
+              <input type="text" inputmode="decimal" id="productoTransporte" placeholder="Ej: 20" oninput="normalizarComaInput(this); actualizarCalculadoraGeneral()">
             </div>
           </div>
           <div id="calculadoraGeneral"></div>
@@ -963,7 +991,7 @@
         <div id="pagosCobros"></div>
         <div class="form-row" style="margin-top:10px; align-items:flex-end;">
           <div class="form-group"><label>Fecha</label><input type="date" id="cobroFecha"></div>
-          <div class="form-group"><label>Importe €</label><input type="number" id="cobroImporte" min="0" step="0.01"></div>
+          <div class="form-group"><label>Importe €</label><input type="text" inputmode="decimal" id="cobroImporte" placeholder="0,00" oninput="normalizarComaInput(this)"></div>
           <div class="form-group"><label>Concepto</label><input type="text" id="cobroConcepto" placeholder="Ej: Anticipo 30%"></div>
           <div class="form-group" style="flex:0 0 auto;"><button type="button" class="btn btn-ghost" onclick="rellenarRestoCobro()" title="Poner lo que queda por cobrar">Resto</button></div>
           <div class="form-group" style="flex:0 0 auto;"><button type="button" class="btn btn-primary" onclick="anadirCobro()">➕ Añadir cobro</button></div>
@@ -998,7 +1026,7 @@
               <option value="terrestre">🚚 Terrestre</option>
             </select>
           </div>
-          <div class="form-group"><label>Importe €</label><input type="number" id="gastoImporte" min="0" step="0.01"></div>
+          <div class="form-group"><label>Importe €</label><input type="text" inputmode="decimal" id="gastoImporte" placeholder="0,00" oninput="normalizarComaInput(this)"></div>
           <div class="form-group"><label>Concepto</label><input type="text" id="gastoConcepto" placeholder="Ej: Contenedor Shanghai-Valencia"></div>
           <div class="form-group" style="flex:0 0 auto;"><button type="button" class="btn btn-primary" onclick="anadirGasto()">➕ Añadir</button></div>
         </div>
@@ -1197,15 +1225,19 @@
       body.innerHTML = MODOS_CALCULADORA.map(modo => {
         const fila = precioReferenciaEditor.find(f => f.modo === modo) || { modo, coste_proveedor: '', transporte: '' };
         const coste = parseFloat(fila.coste_proveedor);
+        const transp = parseFloat(fila.transporte) || 0;
         let sugerido = '<span style="color:var(--muted); font-size:12px;">—</span>';
+        let totalTxt = '<span style="color:var(--muted); font-size:12px;">—</span>';
         if (!isNaN(coste) && coste > 0) {
-          const r = calcularPrecioSugerido(modo, coste, parseFloat(fila.transporte) || 0);
+          const r = calcularPrecioSugerido(modo, coste, transp);
           sugerido = `<strong style="color:var(--accent);">${formatoEuro(r.precio)}</strong> <span style="color:var(--muted); font-size:11px;">(+${(r.pct * 100).toFixed(0)}%)</span>`;
+          totalTxt = formatoEuro(r.total);
         }
         return `<tr>
           <td><strong>${modo} uds</strong></td>
-          <td><input type="number" min="0" step="0.0001" value="${esc(fila.coste_proveedor)}" placeholder="—" oninput="setCostePorCantidad('${modo}','coste_proveedor',this.value)"></td>
-          <td><input type="number" min="0" step="0.0001" value="${esc(fila.transporte)}" placeholder="0" oninput="setCostePorCantidad('${modo}','transporte',this.value)"></td>
+          <td><input type="text" inputmode="decimal" value="${esc(fila.coste_proveedor)}" placeholder="—" oninput="normalizarComaInput(this); setCostePorCantidad('${modo}','coste_proveedor',this.value)"></td>
+          <td><input type="text" inputmode="decimal" value="${esc(fila.transporte)}" placeholder="0" oninput="normalizarComaInput(this); setCostePorCantidad('${modo}','transporte',this.value)"></td>
+          <td style="text-align:center; color:var(--muted);">${totalTxt}</td>
           <td style="text-align:center;">${sugerido}</td>
         </tr>`;
       }).join('');
@@ -1363,6 +1395,15 @@
       const d = new Date(f + 'T00:00:00');
       return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
     }
+    // Acepta la coma como separador decimal (3,01) además del punto (3.01),
+    // que es como se escribe de forma natural en un teclado español. Los campos
+    // de coste/precio son type="text" con este ayudante en vez de type="number",
+    // porque los campos numéricos de HTML solo aceptan el punto y no dejan
+    // escribir la coma en absoluto.
+    function normalizarComaInput(el) {
+      el.value = el.value.replace(',', '.');
+    }
+
     function esc(s) {
       return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
@@ -1388,7 +1429,7 @@
       if (pagina === 'clientes') renderClientesTabla();
       if (pagina === 'presupuestos') { poblarFiltrosPresupuestos(); renderPresupuestosTabla(); }
       if (pagina === 'aprobados') { poblarFiltrosAprobados(); renderAprobadosTabla(); }
-      if (pagina === 'productos') renderProductosTabla();
+      if (pagina === 'productos') { poblarFiltrosProductos(); renderProductosTabla(); }
       if (pagina === 'configuracion') cargarFormularioConfig();
     }
 
@@ -1718,24 +1759,75 @@
     // ════════════════════════════════════════
     //  PRODUCTOS
     // ════════════════════════════════════════
+    function poblarFiltrosProductos() {
+      const sel = document.getElementById('filtroProductosCategoria');
+      const v = sel.value;
+      const cats = [...new Set(productos.map(p => p.categoria).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+      sel.innerHTML = '<option value="">Todas</option>' + cats.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+      sel.value = v;
+    }
+
+    function numeroPreciosProducto(p) {
+      if (p.modo_calculo === 'general') return p.coste_proveedor != null ? 1 : 0;
+      return preciosReferencia.filter(r => r.producto_id === p.id).length;
+    }
+
     function renderProductosTabla() {
       const cont = document.getElementById('productos-tabla');
       if (!productos.length) {
         cont.innerHTML = `<div class="empty"><div class="empty-icon">🏷️</div><p>No hay productos todavía. Crea el primero con "Nuevo producto".</p></div>`;
         return;
       }
+      const busqueda = document.getElementById('buscadorProductos').value.trim().toLowerCase();
+      const fCat = document.getElementById('filtroProductosCategoria').value;
+      const fEstado = document.getElementById('filtroProductosEstado').value;
+      const fPrecios = document.getElementById('filtroProductosPrecios').value;
+
+      let lista = productos.slice();
+      if (busqueda) lista = lista.filter(p => p.nombre.toLowerCase().includes(busqueda) || (p.categoria || '').toLowerCase().includes(busqueda));
+      if (fCat) lista = lista.filter(p => p.categoria === fCat);
+      if (fEstado) lista = lista.filter(p => String(p.activo) === fEstado);
+      if (fPrecios === 'con') lista = lista.filter(p => numeroPreciosProducto(p) > 0);
+      if (fPrecios === 'sin') lista = lista.filter(p => numeroPreciosProducto(p) === 0);
+
+      if (!lista.length) {
+        cont.innerHTML = `<div class="empty"><div class="empty-icon">🏷️</div><p>Ningún producto coincide con la búsqueda o los filtros.</p></div>`;
+        return;
+      }
+
+      const o = ordenTabla['productos-tabla'];
+      const dir = o.asc ? 1 : -1;
+      const valorOrden = (p) => {
+        switch (o.col) {
+          case 'categoria': return (p.categoria || '').toLowerCase();
+          case 'precios': return numeroPreciosProducto(p);
+          case 'estado': return p.activo ? 1 : 0;
+          case 'uso': return usosDeProducto(p.id);
+          default: return (p.nombre || '').toLowerCase();
+        }
+      };
+      lista.sort((a, b) => {
+        const va = valorOrden(a), vb = valorOrden(b);
+        if (va < vb) return -1 * dir;
+        if (va > vb) return 1 * dir;
+        return a.nombre.localeCompare(b.nombre);
+      });
+
+      const flecha = (col) => o.col === col ? (o.asc ? ' ▲' : ' ▼') : '';
+      const th = (col, txt) => `<th class="th-orden" onclick="ordenarTabla('productos-tabla','${col}')" title="Ordenar por ${txt}">${txt}${flecha(col)}</th>`;
+
       let html = `<table><thead><tr>
         <th style="width:40px;"><input type="checkbox" onchange="marcarProductos(this.checked)" title="Seleccionar todos" style="width:auto; cursor:pointer;"></th>
-        <th>Producto</th><th>Categoría</th><th>Variantes</th><th>Precios cargados</th><th>Estado</th><th>En uso</th><th></th>
+        ${th('nombre', 'Producto')}${th('categoria', 'Categoría')}<th>Variantes</th>${th('precios', 'Precios cargados')}${th('estado', 'Estado')}${th('uso', 'En uso')}<th></th>
       </tr></thead><tbody>`;
-      for (const p of productos) {
+      for (const p of lista) {
         const vs = variantesDeProducto(p.id);
         const usos = usosDeProducto(p.id);
         let precios;
         if (p.modo_calculo === 'general') {
           precios = p.coste_proveedor != null ? '✓ Artículo suelto' : '<span style="color:var(--muted);">sin coste</span>';
         } else {
-          const n = preciosReferencia.filter(r => r.producto_id === p.id).length;
+          const n = numeroPreciosProducto(p);
           precios = n ? `${n} tramo(s)` : '<span style="color:var(--muted);">sin coste</span>';
         }
         html += `<tr>
@@ -1915,6 +2007,7 @@
       cerrarModal('modalProducto');
       toast(idStr ? '✓ Producto actualizado' : '✓ Producto creado');
       await recargarProductos();
+      poblarFiltrosProductos();
       renderProductosTabla();
     }
 
@@ -2077,7 +2170,8 @@
       'presupuestos-tabla': { col: 'fecha', asc: false },
       'aprobados-tabla': { col: 'fecha', asc: false },
       'ficha-aprobados-tabla': { col: 'fecha', asc: false },
-      'ficha-presupuestos-tabla': { col: 'fecha', asc: false }
+      'ficha-presupuestos-tabla': { col: 'fecha', asc: false },
+      'productos-tabla': { col: 'nombre', asc: true }
     };
 
     // El "producto principal" de una carpeta es el de mayor importe: es lo que
@@ -2099,6 +2193,7 @@
       // Cada tabla se vuelve a pintar desde su propia función de origen
       if (contenedorId === 'presupuestos-tabla') renderPresupuestosTabla();
       else if (contenedorId === 'aprobados-tabla') renderAprobadosTabla();
+      else if (contenedorId === 'productos-tabla') renderProductosTabla();
       else aplicarFiltroFicha();
     }
 
@@ -2197,15 +2292,31 @@
     }
 
     // ── EDITOR DE LÍNEAS ────────────────────
-    function opcionesProducto(seleccionado) {
+    // Igual que opcionesProducto, pero para un <datalist>: el valor visible
+    // es el propio nombre (así se puede escribir "bo" y ver "Botellas
+    // plegables" entre las sugerencias, en vez de tener que desplegar y
+    // buscar a ojo en una lista larga).
+    function opcionesProductoDatalist(seleccionado) {
       let lista = productos.filter(p => p.activo);
-      // Si la línea usa un producto que ya está inactivo, se añade igualmente
-      // para no perderlo al editar un presupuesto antiguo.
       if (seleccionado && !lista.some(p => p.id === seleccionado)) {
         const p = productos.find(x => x.id === seleccionado);
         if (p) lista = [...lista, p];
       }
-      return lista.map(p => `<option value="${p.id}" ${p.id === seleccionado ? 'selected' : ''}>${esc(p.nombre)}${p.activo ? '' : ' (inactivo)'}</option>`).join('');
+      return lista.map(p => `<option value="${esc(p.nombre)}">`).join('');
+    }
+
+    function nombreProducto(id) {
+      const p = productos.find(x => x.id === id);
+      return p ? p.nombre : '';
+    }
+
+    // Al escribir en el campo de producto, en cuanto el texto coincide
+    // exactamente (sin distinguir mayúsculas) con uno del catálogo, se
+    // resuelve a su id y se aplica como si se hubiera elegido del desplegable.
+    function setLineaProductoTexto(i, texto) {
+      const t = texto.trim().toLowerCase();
+      const encontrado = productos.find(p => p.nombre.toLowerCase() === t);
+      if (encontrado) setLinea(i, 'producto_id', encontrado.id);
     }
 
     // Proveedores ya usados en cualquier producto, para sugerirlos con autocompletado
@@ -2225,7 +2336,10 @@
       const sugerenciasProveedor = proveedoresUsados().map(v => `<option value="${esc(v)}">`).join('');
       body.innerHTML = lineasEditor.map((l, i) => `
         <tr>
-          <td><select onchange="setLinea(${i},'producto_id',this.value)">${opcionesProducto(l.producto_id)}</select></td>
+          <td>
+            <input type="text" value="${esc(nombreProducto(l.producto_id))}" list="dlprod${i}" placeholder="Escribe para buscar..." oninput="setLineaProductoTexto(${i}, this.value)" autocomplete="off">
+            <datalist id="dlprod${i}">${opcionesProductoDatalist(l.producto_id)}</datalist>
+          </td>
           <td>
             <input type="text" value="${esc(l.variante)}" list="dlv${i}" placeholder="Sublimados" oninput="setLinea(${i},'variante',this.value)" autocomplete="off">
             <datalist id="dlv${i}">${variantesDeProducto(l.producto_id).map(v => `<option value="${esc(v)}">`).join('')}</datalist>
@@ -2236,8 +2350,8 @@
           </td>
           <td><input type="text" value="${esc(l.descripcion)}" placeholder="Buff de microfibra" oninput="setLinea(${i},'descripcion',this.value)"></td>
           <td><input type="number" min="1" step="1" value="${esc(l.cantidad)}" oninput="setLinea(${i},'cantidad',this.value)"></td>
-          <td><input type="number" min="0" step="0.01" value="${esc(l.coste_interno_unitario)}" oninput="setLinea(${i},'coste_interno_unitario',this.value)"></td>
-          <td><input type="number" min="0" step="0.01" value="${esc(l.precio_cliente_unitario)}" oninput="setLinea(${i},'precio_cliente_unitario',this.value)"></td>
+          <td><input type="text" inputmode="decimal" value="${esc(l.coste_interno_unitario)}" oninput="normalizarComaInput(this); setLinea(${i},'coste_interno_unitario',this.value)"></td>
+          <td><input type="text" inputmode="decimal" value="${esc(l.precio_cliente_unitario)}" oninput="normalizarComaInput(this); setLinea(${i},'precio_cliente_unitario',this.value)"></td>
           <td style="text-align:center;"><button type="button" class="btn btn-danger btn-sm" onclick="quitarLinea(${i})">🗑️</button></td>
         </tr>`).join('');
       actualizarResumenCarpeta();
@@ -2915,7 +3029,7 @@
           ${listaApuntes}
           <div class="form-row" style="margin-top:10px; align-items:flex-end;">
             <div class="form-group"><label>Fecha</label><input type="date" class="mini-input" id="provFecha_${i}" value="${hoy}"></div>
-            <div class="form-group"><label>Importe €</label><input type="number" class="mini-input" id="provImporte_${i}" min="0" step="0.01" placeholder="Importe €"></div>
+            <div class="form-group"><label>Importe €</label><input type="text" inputmode="decimal" class="mini-input" id="provImporte_${i}" placeholder="Importe €" oninput="normalizarComaInput(this)"></div>
             <div class="form-group"><label>Concepto</label><input type="text" class="mini-input" id="provConcepto_${i}" placeholder="Ej: 30% anticipo"></div>
             <div class="form-group" style="flex:0 0 auto;"><button type="button" class="btn btn-ghost btn-sm" onclick="rellenarRestoProveedor(${i}, ${pendiente})" title="Poner lo que queda por pagar">Resto</button></div>
             <div class="form-group" style="flex:0 0 auto;"><button type="button" class="btn btn-primary btn-sm" onclick="anadirPagoProveedor(${i}, ${g.nombre ? `'${esc(g.nombre).replace(/'/g, "\\'")}'` : 'null'})">➕ Pago</button></div>
