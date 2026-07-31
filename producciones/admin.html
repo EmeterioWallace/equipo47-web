@@ -2251,9 +2251,14 @@
         const dl = document.getElementById('dlv' + i);
         if (dl) dl.innerHTML = variantesDeProducto(valor).map(v => `<option value="${esc(v)}">`).join('');
       }
-      // Sugerencia de precio: solo si el producto tiene coste de referencia y
-      // los campos de coste/precio de ESTA línea siguen vacíos (para no pisar
-      // nada que Fátima ya haya escrito a mano).
+      // En cuanto Fátima escribe directamente el coste o el precio, "bloqueamos"
+      // la sugerencia para esa línea: a partir de ahí, cambiar la cantidad ya
+      // no le pisa lo que ha puesto a mano.
+      if (campo === 'coste_interno_unitario' || campo === 'precio_cliente_unitario') {
+        lineasEditor[i].precioAuto = false;
+      }
+      // Mientras la línea siga en automático, cambiar cantidad o producto
+      // recalcula y REEMPLAZA la sugerencia (antes se quedaba congelada).
       if (campo === 'producto_id' || campo === 'cantidad') {
         necesitaRepintar = aplicarSugerenciaPrecio(i);
       }
@@ -2261,15 +2266,16 @@
       else actualizarResumenCarpeta();
     }
 
-    // Devuelve true si ha rellenado algo (para saber si hay que repintar la fila)
+    // Devuelve true si ha cambiado algo (para saber si hay que repintar la fila).
+    // Se recalcula mientras la línea siga "en automático" (precioAuto !== false);
+    // en cuanto Fátima teclea el coste o el precio a mano, esa línea se bloquea
+    // y aquí ya no se toca más.
     function aplicarSugerenciaPrecio(i) {
       const l = lineasEditor[i];
+      if (l.precioAuto === false) return false;
       const p = productos.find(x => x.id === l.producto_id);
       const cantidad = parseInt(l.cantidad);
       if (!p || !cantidad || cantidad <= 0) return false;
-      const yaTieneCoste = l.coste_interno_unitario !== '' && l.coste_interno_unitario != null;
-      const yaTienePrecio = l.precio_cliente_unitario !== '' && l.precio_cliente_unitario != null;
-      if (yaTieneCoste && yaTienePrecio) return false;
 
       let r = null;
       if (p.modo_calculo === 'general' && p.coste_proveedor != null) {
@@ -2284,15 +2290,17 @@
       }
       if (!r) return false;
 
-      let cambiado = false;
-      if (!yaTieneCoste) { l.coste_interno_unitario = r.total.toFixed(4); cambiado = true; }
-      if (!yaTienePrecio) { l.precio_cliente_unitario = r.precio.toFixed(2); cambiado = true; }
+      const nuevoCoste = r.total.toFixed(4);
+      const nuevoPrecio = r.precio.toFixed(2);
+      const cambiado = l.coste_interno_unitario !== nuevoCoste || l.precio_cliente_unitario !== nuevoPrecio;
+      l.coste_interno_unitario = nuevoCoste;
+      l.precio_cliente_unitario = nuevoPrecio;
       return cambiado;
     }
     function anadirLinea() {
       const primerProducto = productos.find(p => p.activo);
       if (!primerProducto) { alert('❌ Primero crea algún producto en el catálogo.'); return; }
-      lineasEditor.push({ id: null, producto_id: primerProducto.id, variante: '', proveedor: '', descripcion: '', cantidad: '', coste_interno_unitario: '', precio_cliente_unitario: '' });
+      lineasEditor.push({ id: null, producto_id: primerProducto.id, variante: '', proveedor: '', descripcion: '', cantidad: '', coste_interno_unitario: '', precio_cliente_unitario: '', precioAuto: true });
       renderLineasEditor();
     }
     function quitarLinea(i) {
@@ -2331,9 +2339,12 @@
         document.getElementById('presFecha').value = p.fecha;
         poblarLineasPresupuesto(p.linea_negocio_id || '');
         document.getElementById('presObservaciones').value = p.observaciones || '';
+        // Las líneas que ya estaban guardadas se cargan "bloqueadas" (precioAuto:
+        // false): no queremos que, al abrir un presupuesto ya hecho, la app se
+        // ponga a recalcular precios que ya estaban confirmados.
         lineasEditor = lineas.filter(l => l.presupuesto_id === id).map(l => ({
           id: l.id, producto_id: l.producto_id, variante: l.variante || '', proveedor: l.proveedor || '', descripcion: l.descripcion || '',
-          cantidad: l.cantidad, coste_interno_unitario: l.coste_interno_unitario, precio_cliente_unitario: l.precio_cliente_unitario
+          cantidad: l.cantidad, coste_interno_unitario: l.coste_interno_unitario, precio_cliente_unitario: l.precio_cliente_unitario, precioAuto: false
         }));
       } else {
         document.getElementById('tituloModalPresupuesto').textContent = 'Nuevo presupuesto';
@@ -2351,7 +2362,7 @@
     }
     function anadirLineaSilencioso() {
       const p = productos.find(x => x.activo);
-      if (p) lineasEditor.push({ id: null, producto_id: p.id, variante: '', proveedor: '', descripcion: '', cantidad: '', coste_interno_unitario: '', precio_cliente_unitario: '' });
+      if (p) lineasEditor.push({ id: null, producto_id: p.id, variante: '', proveedor: '', descripcion: '', cantidad: '', coste_interno_unitario: '', precio_cliente_unitario: '', precioAuto: true });
     }
 
     async function guardarPresupuesto() {
