@@ -832,6 +832,16 @@
         </div>
 
         <div class="form-group">
+          <label style="display:flex; align-items:center; gap:8px; text-transform:none; letter-spacing:0; font-size:13px; color:var(--text); cursor:pointer;">
+            <input type="checkbox" id="productoPublicado" style="width:auto;">
+            🌐 Publicado en la web (aparece en la calculadora pública de equipo47.com)
+          </label>
+          <p style="font-size:12px; color:var(--muted); margin:4px 0 0 26px;">
+            La web solo ve el nombre, la categoría y el precio final calculado — nunca el coste de proveedor ni el margen.
+          </p>
+        </div>
+
+        <div class="form-group">
           <label>Cómo se calcula el precio</label>
           <select id="productoModoCalculo" onchange="cambiarModoCalculoUI()">
             <option value="cantidad">Por cantidad del pedido (lo normal: prendas, artículos que se piden en lotes)</option>
@@ -1222,32 +1232,41 @@
 
     function renderCostesPorCantidad() {
       const body = document.getElementById('costesPorCantidadBody');
-      body.innerHTML = MODOS_CALCULADORA.map(modo => {
-        const fila = precioReferenciaEditor.find(f => f.modo === modo) || { modo, coste_proveedor: '', transporte: '' };
-        const coste = parseFloat(fila.coste_proveedor);
-        const transp = parseFloat(fila.transporte) || 0;
-        let sugerido = '<span style="color:var(--muted); font-size:12px;">—</span>';
-        let totalTxt = '<span style="color:var(--muted); font-size:12px;">—</span>';
-        if (!isNaN(coste) && coste > 0) {
-          const r = calcularPrecioSugerido(modo, coste, transp);
-          sugerido = `<strong style="color:var(--accent);">${formatoEuro(r.precio)}</strong> <span style="color:var(--muted); font-size:11px;">(+${(r.pct * 100).toFixed(0)}%)</span>`;
-          totalTxt = formatoEuro(r.total);
-        }
-        return `<tr>
+      body.innerHTML = MODOS_CALCULADORA.map(modo => `<tr>
           <td><strong>${modo} uds</strong></td>
-          <td><input type="text" inputmode="decimal" value="${esc(fila.coste_proveedor)}" placeholder="—" oninput="normalizarComaInput(this); setCostePorCantidad('${modo}','coste_proveedor',this.value)"></td>
-          <td><input type="text" inputmode="decimal" value="${esc(fila.transporte)}" placeholder="0" oninput="normalizarComaInput(this); setCostePorCantidad('${modo}','transporte',this.value)"></td>
-          <td style="text-align:center; color:var(--muted);">${totalTxt}</td>
-          <td style="text-align:center;">${sugerido}</td>
-        </tr>`;
-      }).join('');
+          <td><input type="text" inputmode="decimal" value="${esc((precioReferenciaEditor.find(f => f.modo === modo) || {}).coste_proveedor)}" placeholder="—" oninput="normalizarComaInput(this); setCostePorCantidad('${modo}','coste_proveedor',this.value)"></td>
+          <td><input type="text" inputmode="decimal" value="${esc((precioReferenciaEditor.find(f => f.modo === modo) || {}).transporte)}" placeholder="0" oninput="normalizarComaInput(this); setCostePorCantidad('${modo}','transporte',this.value)"></td>
+          <td id="costeTotal_${modo}" style="text-align:center; color:var(--muted);"></td>
+          <td id="costeSugerido_${modo}" style="text-align:center;"></td>
+        </tr>`).join('');
+      MODOS_CALCULADORA.forEach(actualizarCeldaCalculada);
+    }
+
+    // Recalcula y pinta solo las dos celdas de resultado de una fila (total y
+    // precio sugerido), sin tocar los campos de texto donde se está escribiendo.
+    // Así no se pierde el foco ni el cursor con cada tecla que se pulsa.
+    function actualizarCeldaCalculada(modo) {
+      const fila = precioReferenciaEditor.find(f => f.modo === modo) || { coste_proveedor: '', transporte: '' };
+      const coste = parseFloat(fila.coste_proveedor);
+      const transp = parseFloat(fila.transporte) || 0;
+      const celdaTotal = document.getElementById(`costeTotal_${modo}`);
+      const celdaSugerido = document.getElementById(`costeSugerido_${modo}`);
+      if (!celdaTotal || !celdaSugerido) return;
+      if (!isNaN(coste) && coste > 0) {
+        const r = calcularPrecioSugerido(modo, coste, transp);
+        celdaTotal.textContent = formatoEuro(r.total);
+        celdaSugerido.innerHTML = `<strong style="color:var(--accent);">${formatoEuro(r.precio)}</strong> <span style="color:var(--muted); font-size:11px;">(+${(r.pct * 100).toFixed(0)}%)</span>`;
+      } else {
+        celdaTotal.innerHTML = '<span style="color:var(--muted); font-size:12px;">—</span>';
+        celdaSugerido.innerHTML = '<span style="color:var(--muted); font-size:12px;">—</span>';
+      }
     }
 
     function setCostePorCantidad(modo, campo, valor) {
       let fila = precioReferenciaEditor.find(f => f.modo === modo);
       if (!fila) { fila = { modo, coste_proveedor: '', transporte: '' }; precioReferenciaEditor.push(fila); }
       fila[campo] = valor;
-      renderCostesPorCantidad();
+      actualizarCeldaCalculada(modo); // solo repinta el resultado, no las casillas
     }
 
     // Entre los tramos que este producto TIENE rellenos, el igual o inferior
@@ -1832,7 +1851,7 @@
         }
         html += `<tr>
           <td><input type="checkbox" class="prod-chk" value="${p.id}" style="width:auto; cursor:pointer;"></td>
-          <td><strong>${esc(p.nombre)}</strong></td>
+          <td><strong>${esc(p.nombre)}</strong>${p.publicado ? ' <span title="Publicado en la web">🌐</span>' : ''}</td>
           <td style="color:var(--muted); font-size:12px;">${esc(p.categoria) || '—'}</td>
           <td style="color:var(--muted); font-size:12px;">${vs.length ? vs.map(esc).join(' · ') : '—'}</td>
           <td style="font-size:12px;">${precios}</td>
@@ -1859,6 +1878,7 @@
         document.getElementById('productoCosteProveedor').value = p.coste_proveedor != null ? p.coste_proveedor : '';
         document.getElementById('productoTransporte').value = p.transporte_unitario || 0;
         document.getElementById('productoActivo').value = String(p.activo);
+        document.getElementById('productoPublicado').checked = !!p.publicado;
         grupoActivo.style.display = 'block';
         variantesEditor = variantesCatalogo.filter(v => v.producto_id === p.id).map(v => ({ id: v.id, nombre: v.nombre }));
         precioReferenciaEditor = preciosReferencia.filter(r => r.producto_id === p.id)
@@ -1872,6 +1892,7 @@
         document.getElementById('productoCosteProveedor').value = '';
         document.getElementById('productoTransporte').value = '';
         document.getElementById('productoActivo').value = 'true';
+        document.getElementById('productoPublicado').checked = false;
         grupoActivo.style.display = 'none';
         variantesEditor = [];
         precioReferenciaEditor = [];
@@ -1956,7 +1977,8 @@
         categoria: document.getElementById('productoCategoria').value.trim() || null,
         modo_calculo: modoCalculo,
         coste_proveedor: coste,
-        transporte_unitario: transporte
+        transporte_unitario: transporte,
+        publicado: document.getElementById('productoPublicado').checked
       };
 
       if (idStr) {
@@ -2350,8 +2372,8 @@
           </td>
           <td><input type="text" value="${esc(l.descripcion)}" placeholder="Buff de microfibra" oninput="setLinea(${i},'descripcion',this.value)"></td>
           <td><input type="number" min="1" step="1" value="${esc(l.cantidad)}" oninput="setLinea(${i},'cantidad',this.value)"></td>
-          <td><input type="text" inputmode="decimal" value="${esc(l.coste_interno_unitario)}" oninput="normalizarComaInput(this); setLinea(${i},'coste_interno_unitario',this.value)"></td>
-          <td><input type="text" inputmode="decimal" value="${esc(l.precio_cliente_unitario)}" oninput="normalizarComaInput(this); setLinea(${i},'precio_cliente_unitario',this.value)"></td>
+          <td><input type="text" inputmode="decimal" id="lineaCoste${i}" value="${esc(l.coste_interno_unitario)}" oninput="normalizarComaInput(this); setLinea(${i},'coste_interno_unitario',this.value)"></td>
+          <td><input type="text" inputmode="decimal" id="lineaPrecio${i}" value="${esc(l.precio_cliente_unitario)}" oninput="normalizarComaInput(this); setLinea(${i},'precio_cliente_unitario',this.value)"></td>
           <td style="text-align:center;"><button type="button" class="btn btn-danger btn-sm" onclick="quitarLinea(${i})">🗑️</button></td>
         </tr>`).join('');
       actualizarResumenCarpeta();
@@ -2359,7 +2381,6 @@
 
     function setLinea(i, campo, valor) {
       lineasEditor[i][campo] = valor;
-      let necesitaRepintar = false;
       // Al cambiar de producto, refrescamos las variantes sugeridas de esa fila
       if (campo === 'producto_id') {
         const dl = document.getElementById('dlv' + i);
@@ -2372,18 +2393,17 @@
         lineasEditor[i].precioAuto = false;
       }
       // Mientras la línea siga en automático, cambiar cantidad o producto
-      // recalcula y REEMPLAZA la sugerencia (antes se quedaba congelada).
+      // recalcula la sugerencia y actualiza solo esas dos casillas (no toda
+      // la tabla), para no perder el foco de la casilla donde se escribe.
       if (campo === 'producto_id' || campo === 'cantidad') {
-        necesitaRepintar = aplicarSugerenciaPrecio(i);
+        aplicarSugerenciaPrecio(i);
       }
-      if (necesitaRepintar) renderLineasEditor();
-      else actualizarResumenCarpeta();
+      actualizarResumenCarpeta();
     }
 
-    // Devuelve true si ha cambiado algo (para saber si hay que repintar la fila).
-    // Se recalcula mientras la línea siga "en automático" (precioAuto !== false);
-    // en cuanto Fátima teclea el coste o el precio a mano, esa línea se bloquea
-    // y aquí ya no se toca más.
+    // Recalcula la sugerencia de una línea y, si cambia algo, actualiza
+    // directamente las casillas de coste/precio de ESA fila (sin repintar
+    // toda la tabla, para no perder el foco mientras se escribe).
     function aplicarSugerenciaPrecio(i) {
       const l = lineasEditor[i];
       if (l.precioAuto === false) return false;
@@ -2409,6 +2429,12 @@
       const cambiado = l.coste_interno_unitario !== nuevoCoste || l.precio_cliente_unitario !== nuevoPrecio;
       l.coste_interno_unitario = nuevoCoste;
       l.precio_cliente_unitario = nuevoPrecio;
+      if (cambiado) {
+        const inCoste = document.getElementById('lineaCoste' + i);
+        const inPrecio = document.getElementById('lineaPrecio' + i);
+        if (inCoste) inCoste.value = nuevoCoste;
+        if (inPrecio) inPrecio.value = nuevoPrecio;
+      }
       return cambiado;
     }
     function anadirLinea() {
