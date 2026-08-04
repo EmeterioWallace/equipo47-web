@@ -186,46 +186,9 @@ window.addEventListener('load', () => {
     document.body.classList.add('loaded');
 });
 
-// ===== CALCULATOR FUNCTIONALITY (only on tienda.html) =====
-const calcProduct = document.getElementById('calc-product');
-const calcQuantity = document.getElementById('calc-quantity');
-const calcCustomization = document.getElementById('calc-customization');
-const basePrice = document.getElementById('base-price');
-const customPrice = document.getElementById('custom-price');
-const totalPrice = document.getElementById('total-price');
-const unitPrice = document.getElementById('unit-price');
-
-if (calcProduct && calcQuantity && calcCustomization) {
-    function updateCalculator() {
-        const productPrice = parseFloat(calcProduct.value);
-        const quantity = parseInt(calcQuantity.value);
-        const customizationPrice = parseFloat(calcCustomization.value);
-        
-        if (productPrice === 0 || isNaN(productPrice)) {
-            basePrice.textContent = '0,00€';
-            customPrice.textContent = '0,00€';
-            totalPrice.textContent = '0,00€';
-            unitPrice.textContent = '0,00€';
-            return;
-        }
-        
-        const base = productPrice * quantity;
-        const custom = customizationPrice * quantity;
-        const total = base + custom;
-        const unit = total / quantity;
-        
-        basePrice.textContent = base.toFixed(2).replace('.', ',') + '€';
-        customPrice.textContent = custom.toFixed(2).replace('.', ',') + '€';
-        totalPrice.textContent = total.toFixed(2).replace('.', ',') + '€';
-        unitPrice.textContent = unit.toFixed(2).replace('.', ',') + '€';
-    }
-
-    calcProduct.addEventListener('change', updateCalculator);
-    calcQuantity.addEventListener('input', updateCalculator);
-    calcCustomization.addEventListener('change', updateCalculator);
-    
-    updateCalculator();
-}
+// ===== CALCULADORA PÚBLICA =====
+// Pendiente de integrar con la lógica de márgenes de producciones (ver 22_contexto_producciones.md).
+// No reconstruir aquí una calculadora con precios propios.
 
 // ===== CONSOLE LOG =====
 console.log('✅ Equipo 47 - Main scripts loaded');
