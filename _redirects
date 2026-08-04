@@ -14,5 +14,9 @@
 # Redirigir páginas antiguas (si las tuvieras)
 # /old-page /new-page 301
 
+# eventos.html ya no existe como página independiente - redirige a la sección de la home
+/eventos.html /index.html#eventos 301
+/eventos /index.html#eventos 301
+
 # 404 personalizado (opcional)
 # /* /404.html 404
