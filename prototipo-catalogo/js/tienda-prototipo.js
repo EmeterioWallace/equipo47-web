@@ -158,6 +158,85 @@ function renderSubcategoryFilters(sport) {
     });
 }
 
+// ===== SELECTOR DE CANTIDADES (precio por tramo, bajo demanda) =====
+// Mismos 6 tramos fijos que usa Fátima en Producciones. No se precargan
+// los precios de todos los tramos (evitaría 6 consultas por producto solo
+// con cargar la página) — se consulta calcular_precio_publico() solo del
+// tramo que el visitante pulse, y se guarda en caché en memoria para no
+// volver a pedirlo si lo pulsa otra vez.
+const TRAMOS_CANTIDAD = [50, 100, 500, 1000, 5000, 10000];
+const cachePreciosPorTramo = {}; // "productId:cantidad" -> {precio, aproximado} | null
+
+function crearSelectorCantidadesHTML(product) {
+    const botones = TRAMOS_CANTIDAD.map(cantidad => `
+        <button
+            type="button"
+            class="tramo-cantidad-btn"
+            data-product-id="${product.id}"
+            data-cantidad="${cantidad}"
+            onclick="consultarPrecioPorCantidad('${product.id}', ${cantidad}, this)"
+            style="padding: 4px 10px; margin: 3px 4px 0 0; border: 1px solid #ddd; border-radius: 14px; background: #f8f8f8; color: #555; font-size: 0.75rem; cursor: pointer;"
+        >${cantidad} uds</button>
+    `).join('');
+
+    return `
+        <div class="selector-cantidades" style="margin-top: 10px;">
+            <div style="font-size: 0.7rem; color: #999; margin-bottom: 2px;">Ver precio para otras cantidades:</div>
+            <div style="display: flex; flex-wrap: wrap;">${botones}</div>
+            <div class="resultado-tramo" data-product-id="${product.id}" style="font-size: 0.8rem; margin-top: 6px; min-height: 18px;"></div>
+        </div>
+    `;
+}
+
+async function consultarPrecioPorCantidad(productId, cantidad, botonEl) {
+    const card = botonEl.closest('.product-card');
+    const resultadoEl = card ? card.querySelector('.resultado-tramo') : null;
+    if (!resultadoEl) return;
+
+    // Marcar visualmente el botón activo
+    card.querySelectorAll('.tramo-cantidad-btn').forEach(b => {
+        b.style.background = '#f8f8f8';
+        b.style.color = '#555';
+        b.style.borderColor = '#ddd';
+    });
+    botonEl.style.background = '#FF4B1F';
+    botonEl.style.color = '#fff';
+    botonEl.style.borderColor = '#FF4B1F';
+
+    const claveCache = `${productId}:${cantidad}`;
+    if (cachePreciosPorTramo[claveCache] !== undefined) {
+        pintarResultadoTramo(resultadoEl, cachePreciosPorTramo[claveCache], cantidad);
+        return;
+    }
+
+    resultadoEl.textContent = 'Calculando...';
+
+    try {
+        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const { data, error } = await sb.rpc('calcular_precio_publico', {
+            p_producto_id: productId,
+            p_cantidad: cantidad
+        });
+        if (error) throw error;
+        const resultado = (data && data[0]) ? data[0] : null; // {precio, aproximado} | null
+        cachePreciosPorTramo[claveCache] = resultado;
+        pintarResultadoTramo(resultadoEl, resultado, cantidad);
+    } catch (err) {
+        console.error('❌ Error consultando precio por cantidad:', err);
+        resultadoEl.textContent = 'No se pudo calcular el precio ahora mismo.';
+    }
+}
+
+function pintarResultadoTramo(resultadoEl, resultado, cantidad) {
+    if (!resultado || resultado.precio === null || resultado.precio === undefined) {
+        resultadoEl.innerHTML = `<span style="color:#999;">Consultar disponibilidad para ${cantidad} uds</span>`;
+        return;
+    }
+    const precioTexto = Number(resultado.precio).toFixed(2).replace('.', ',') + ' €';
+    const etiqueta = resultado.aproximado ? 'Precio orientativo' : 'Precio';
+    resultadoEl.innerHTML = `<strong>${etiqueta} para ${cantidad} uds: ${precioTexto}</strong> <span style="color:#999;">/ unidad, sin IVA</span>`;
+}
+
 function createProductCard(product) {
     const card = document.createElement('div');
     card.className = 'product-card';
@@ -203,7 +282,6 @@ function createProductCard(product) {
     let priceHTML = '';
     if (product.price) {
         const priceAmount = product.price === 'Consultar' ? 'A CONSULTAR' : product.price;
-        const moqText = product.moq ? `<div style="font-size: 0.8rem; color: #999; margin-top: 8px; font-weight: 400;">Pedido mínimo: ${product.moq} unidades</div>` : '';
         // De cara al cliente: cuando el precio es aproximado (viene del tramo
         // más bajo disponible, no del tramo real del MOQ publicado), la
         // etiqueta cambia a "Precio orientativo" — sin mencionar el tramo
@@ -214,7 +292,7 @@ function createProductCard(product) {
                 <span class="price-from">${priceLabel}</span>
                 <span class="price-amount">${priceAmount}</span>
             </div>
-            ${moqText}
+            ${crearSelectorCantidadesHTML(product)}
         `;
     } else {
         priceHTML = `
