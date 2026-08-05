@@ -1,5 +1,15 @@
 // ===== CARGA DEL CATÁLOGO DESDE catalogo_web (Supabase) =====
 //
+// NOTA sobre el futuro selector de cantidad (todavía no construido):
+// la función RPC calcular_precio_publico(p_producto_id, p_cantidad) NO
+// devuelve un número suelto. Devuelve un array con un solo objeto:
+//   [{ precio: 5.5, aproximado: false }]
+// Hay que desestructurar así:
+//   const { data } = await sb.rpc('calcular_precio_publico', {...});
+//   const { precio, aproximado } = data[0] || {};
+// Si `aproximado` es true, aplicar la misma regla que en las tarjetas:
+// mostrar "Precio orientativo" sin mencionar el tramo.
+//
 // Este módulo sustituye al array `products` escrito a mano en tienda.js.
 // Mientras Producciones no tenga el script ejecutado en Supabase real,
 // SUPABASE_CATALOGO_ACTIVO se queda en false y se usan los datos de

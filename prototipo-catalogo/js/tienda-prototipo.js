@@ -204,17 +204,17 @@ function createProductCard(product) {
     if (product.price) {
         const priceAmount = product.price === 'Consultar' ? 'A CONSULTAR' : product.price;
         const moqText = product.moq ? `<div style="font-size: 0.8rem; color: #999; margin-top: 8px; font-weight: 400;">Pedido mínimo: ${product.moq} unidades</div>` : '';
-        // Aviso PRIVADO (solo para revisión interna del prototipo, no es texto
-        // definitivo de cara al cliente): marca los precios calculados con el
-        // tramo más bajo disponible en vez del tramo real del MOQ mostrado.
-        const approxNote = product.approxPrice ? `<div style="font-size: 0.7rem; color: #FF4B1F; margin-top: 4px; font-weight: 600;">⚠ precio_aproximado (revisar tramo)</div>` : '';
+        // De cara al cliente: cuando el precio es aproximado (viene del tramo
+        // más bajo disponible, no del tramo real del MOQ publicado), la
+        // etiqueta cambia a "Precio orientativo" — sin mencionar el tramo
+        // ni ningún detalle interno de cómo se calculó.
+        const priceLabel = product.approxPrice ? 'Precio orientativo:' : 'Precio:';
         priceHTML = `
             <div class="product-price">
-                <span class="price-from">Precio:</span>
+                <span class="price-from">${priceLabel}</span>
                 <span class="price-amount">${priceAmount}</span>
             </div>
             ${moqText}
-            ${approxNote}
         `;
     } else {
         priceHTML = `
