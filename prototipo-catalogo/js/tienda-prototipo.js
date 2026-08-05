@@ -468,6 +468,17 @@ function updateModalContent() {
     // Update title and description
     document.getElementById('modal-title').textContent = product.title;
     document.getElementById('modal-description').textContent = product.description;
+
+    // Update price (antes era texto fijo que nunca se actualizaba)
+    const priceLabel = product.approxPrice ? 'Precio orientativo' : 'Precio';
+    const priceValue = product.price === 'Consultar' ? 'A CONSULTAR' : (product.price || 'Consultar');
+    document.getElementById('modal-price-label').textContent = priceLabel;
+    document.getElementById('modal-price').textContent = priceValue;
+
+    const moqEl = document.getElementById('modal-moq');
+    if (moqEl) {
+        moqEl.textContent = product.moq ? `Pedido mínimo: ${product.moq} unidades · precio por unidad, sin IVA` : '';
+    }
     
     // Create color selector if product has colors
     let colorSelectorHTML = '';

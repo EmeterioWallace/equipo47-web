@@ -30,6 +30,43 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const RUTA_IMAGENES_BASE = 'images/products/';
 const RUTA_MOCK_LOCAL = 'prototipo-catalogo/data/catalogo-web-mock.json';
+const RUTA_MANIFIESTO_IMAGENES = 'images/products/manifest.json';
+
+// Producciones solo guarda el NOMBRE del archivo (ej. "foto.jpg"), no en
+// qué subcarpeta vive dentro de /images/products/ (running/, merchandising/...).
+// No tiene sentido pedirle a Fátima que sepa esa estructura interna, así
+// que se resuelve aquí: el manifiesto es un mapa "nombre_de_archivo.jpg"
+// -> "images/products/subcarpeta/nombre_de_archivo.jpg", generado a partir
+// de lo que de verdad existe en el repo.
+//
+// IMPORTANTE: si se añaden imágenes nuevas al repo, hay que regenerar
+// images/products/manifest.json (script de generación en el repo, ver
+// commit "Resolver imágenes de catalogo_web por nombre de archivo").
+let manifiestoImagenes = null;
+
+async function cargarManifiestoImagenes() {
+    try {
+        const res = await fetch(RUTA_MANIFIESTO_IMAGENES);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        manifiestoImagenes = await res.json();
+    } catch (err) {
+        console.warn('⚠️ No se pudo cargar el manifiesto de imágenes, se usará la ruta tal cual venga:', err);
+        manifiestoImagenes = {};
+    }
+}
+
+function resolverRutaImagen(nombreArchivo) {
+    if (!nombreArchivo) return '';
+    // Si ya viene con subcarpeta incluida (ej. "running/foto.jpg"), respetarlo tal cual.
+    if (nombreArchivo.includes('/')) return RUTA_IMAGENES_BASE + nombreArchivo;
+
+    const clave = nombreArchivo.toLowerCase();
+    const rutaReal = manifiestoImagenes ? manifiestoImagenes[clave] : null;
+    if (rutaReal) return rutaReal;
+
+    console.warn(`⚠️ Imagen no encontrada en el manifiesto: "${nombreArchivo}". Comprobar que el archivo existe en /images/products/ y que el manifiesto está actualizado.`);
+    return RUTA_IMAGENES_BASE + nombreArchivo; // fallback: se mostrará rota, pero visible en consola por qué
+}
 
 // Convierte el precio numérico (o null) al formato que ya usa la web:
 // "7,70 €" o el literal "Consultar".
@@ -46,7 +83,7 @@ function adaptarProductoDesdeCatalogoWeb(fila) {
     const colores = (fila.colores || []).map(c => ({
         name: c.nombre,
         hex: resolverHexDeColor(c.nombre),
-        image: RUTA_IMAGENES_BASE + c.imagen
+        image: resolverRutaImagen(c.imagen)
     }));
 
     return {
@@ -61,7 +98,7 @@ function adaptarProductoDesdeCatalogoWeb(fila) {
         subcategory: fila.subcategory,
         gender: fila.gender,
         moq: fila.moq,
-        image: RUTA_IMAGENES_BASE + fila.image,
+        image: resolverRutaImagen(fila.image),
         price: formatearPrecio(fila.precio_final),
         // precio_aproximado: pendiente de que Producciones lo añada a la
         // vista (ver nota-actualizacion-tramos-precio.md). Si no viene en
@@ -94,6 +131,7 @@ async function cargarDesdeSupabase() {
 // lista para usar exactamente como se usaba el array `products` de antes.
 async function cargarCatalogoWeb() {
     try {
+        await cargarManifiestoImagenes();
         const filas = SUPABASE_CATALOGO_ACTIVO
             ? await cargarDesdeSupabase()
             : await cargarDesdeMock();
