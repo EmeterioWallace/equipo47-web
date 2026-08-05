@@ -168,7 +168,13 @@ const TRAMOS_CANTIDAD = [50, 100, 500, 1000, 5000, 10000];
 const cachePreciosPorTramo = {}; // "productId:cantidad" -> {precio, aproximado} | null
 
 function crearSelectorCantidadesHTML(product) {
-    const botones = TRAMOS_CANTIDAD.map(cantidad => `
+    // Nunca ofrecer una cantidad por debajo del pedido mínimo real del
+    // producto (si el MOQ es 100, no tiene sentido mostrar un botón de 50
+    // como si fuera pedible).
+    const tramosValidos = TRAMOS_CANTIDAD.filter(cantidad => cantidad >= (product.moq || 0));
+    if (tramosValidos.length === 0) return '';
+
+    const botones = tramosValidos.map(cantidad => `
         <button
             type="button"
             class="tramo-cantidad-btn"
