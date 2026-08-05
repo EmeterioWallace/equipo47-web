@@ -287,10 +287,15 @@ function createProductCard(product) {
         // etiqueta cambia a "Precio orientativo" — sin mencionar el tramo
         // ni ningún detalle interno de cómo se calculó.
         const priceLabel = product.approxPrice ? 'Precio orientativo:' : 'Precio:';
+        // Misma aclaración que en el modal de detalle: dejar claro que el
+        // precio mostrado es por unidad y sin IVA, no el total del pedido.
+        const unitNote = product.price !== 'Consultar'
+            ? `<span style="font-size: 0.75rem; color: #999; font-weight: 400;"> / unidad, sin IVA</span>`
+            : '';
         priceHTML = `
             <div class="product-price">
                 <span class="price-from">${priceLabel}</span>
-                <span class="price-amount">${priceAmount}</span>
+                <span class="price-amount">${priceAmount}</span>${unitNote}
             </div>
             ${crearSelectorCantidadesHTML(product)}
         `;
