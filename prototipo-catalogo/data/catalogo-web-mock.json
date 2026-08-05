@@ -1,0 +1,58 @@
+[
+  {
+    "id": "mock-001",
+    "titulo": "E47 Running Tee Sub - Hombre",
+    "descripcion": "Camiseta técnica de running con sublimación total, tejido transpirable y costuras planas.",
+    "especificaciones": ["Tejido 100% poliéster técnico", "Secado rápido", "Costuras planas antirozaduras"],
+    "detalles": ["Sublimación de área completa", "Corte regular", "Tallas S a XXL"],
+    "opciones": ["Serigrafía", "Bordado", "Sublimación completa"],
+    "sport": "running",
+    "category": "camisetas",
+    "subcategory": "camisetas",
+    "gender": "hombre",
+    "moq": 100,
+    "image": "running/E47-Running-Tank-Hombre.jpg",
+    "precio_final": 7.70,
+    "precio_aproximado": false,
+    "colores": [
+      { "nombre": "Negro", "imagen": "running/E47-Running-Tank-Hombre.jpg" },
+      { "nombre": "Rojo", "imagen": "running/E47-Running-Tank-Hombre-Rojo.jpg" }
+    ]
+  },
+  {
+    "id": "mock-002",
+    "titulo": "E47 Zip Gymsac 420D Sublimación",
+    "descripcion": "Mochila saco con cremallera, tejido resistente 420D y sublimación total.",
+    "especificaciones": ["Tejido 420D resistente al agua", "Cordones reforzados", "Bolsillo interior con cremallera"],
+    "detalles": ["Sublimación de área completa", "Medida estándar 34x40cm"],
+    "opciones": ["Sublimación completa"],
+    "sport": "merchandising",
+    "category": "accesorios",
+    "subcategory": "merchandising-bolsas",
+    "gender": "unisex",
+    "moq": 100,
+    "image": "running/E47-Zip-Gymsac-420D-Sublimación.jpg",
+    "precio_final": null,
+    "precio_aproximado": false,
+    "colores": []
+  },
+  {
+    "id": "mock-003",
+    "titulo": "E47 Silicone Wristband",
+    "descripcion": "Pulsera de silicona personalizable, ideal para eventos y carreras.",
+    "especificaciones": ["Silicona hipoalergénica", "Ajuste universal"],
+    "detalles": ["Grabado en relieve o color", "Varios tamaños de banda"],
+    "opciones": ["Grabado en relieve", "Impresión a color"],
+    "sport": "merchandising",
+    "category": "accesorios",
+    "subcategory": "merchandising-pulseras",
+    "gender": "unisex",
+    "moq": 500,
+    "image": "running/E47-LED-Silicone-Wristband.jpg",
+    "precio_final": 1.15,
+    "precio_aproximado": true,
+    "colores": [
+      { "nombre": "Coral", "imagen": "running/E47-LED-Silicone-Wristband.jpg" }
+    ]
+  }
+]

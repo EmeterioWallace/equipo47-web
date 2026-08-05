@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tienda - Ropa Deportiva Personalizada | Equipo 47</title>
+    <meta name="description" content="Ropa deportiva técnica personalizada. Running, Urban, Lucha y Merchandising. Sublimación, bordado y serigrafía.">
+    <link rel="icon" type="image/png" href="images/brand/logo.png">
+    <link rel="apple-touch-icon" href="images/brand/logo.png">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <a href="index.html" style="text-decoration: none;">
+                    <img src="images/brand/logo.png" alt="Equipo 47" style="height: 55px; width: auto; display: block;">
+                </a>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="tienda.html" class="active">Tienda</a></li>
+                <li><a href="calendario.html">Calendario</a></li>
+                <li><a href="index.html#contact" class="nav-cta">Contacto</a></li>
+            </ul>
+            <div class="nav-toggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero tienda-hero">
+        <div class="hero-background"></div>
+        <div class="hero-content">
+            <div class="hero-text">
+                <h1 class="hero-title">
+                    <span class="hero-title-line" data-delay="0">Ropa Deportiva</span>
+                    <span class="hero-title-line" data-delay="1">Personalizada</span>
+                </h1>
+                <p class="hero-subtitle" data-delay="2">
+                    Calidad profesional. Diseño único.<br>
+                    Running, Urban, Lucha y Merchandising
+                </p>
+                <div class="hero-cta" data-delay="3">
+                    <a href="#catalog" class="btn btn-primary">Ver Catálogo</a>
+                    <a href="#calculator" class="btn btn-secondary">Calcular Precio</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Strip -->
+    <section class="features-strip">
+        <div class="feature-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+            </svg>
+            <span>Calidad Garantizada</span>
+        </div>
+        <div class="feature-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                <line x1="12" y1="22.08" x2="12" y2="12"/>
+            </svg>
+            <span>Entrega Garantizada</span>
+        </div>
+        <div class="feature-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+            </svg>
+            <span>Diseño Personalizado</span>
+        </div>
+        <div class="feature-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            <span>Plazos Claros</span>
+        </div>
+    </section>
+
+    <!-- Catalog Section -->
+    <section id="catalog" class="catalog">
+        <div class="catalog-header">
+            <h2 class="section-title">Catálogo de Productos</h2>
+            <p class="section-subtitle">Ropa técnica de alta calidad lista para personalizar con tu diseño</p>
+        </div>
+
+        <!-- Gender Filters + Search Bar -->
+        <div class="gender-search-section" style="max-width: 1200px; margin: 0 auto 30px; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+            <!-- Gender Filters -->
+            <div class="gender-filters" style="display: flex; gap: 30px;">
+                <button class="gender-filter active" data-gender="todos" style="background: none; border: none; font-size: 1.1rem; font-weight: 600; color: #2C3E50; cursor: pointer; padding: 10px 0; border-bottom: 3px solid #FF4B1F; transition: all 0.3s ease;">Todos</button>
+                <button class="gender-filter" data-gender="hombre" style="background: none; border: none; font-size: 1.1rem; font-weight: 600; color: #666; cursor: pointer; padding: 10px 0; border-bottom: 3px solid transparent; transition: all 0.3s ease;">Hombre</button>
+                <button class="gender-filter" data-gender="mujer" style="background: none; border: none; font-size: 1.1rem; font-weight: 600; color: #666; cursor: pointer; padding: 10px 0; border-bottom: 3px solid transparent; transition: all 0.3s ease;">Mujer</button>
+                <button class="gender-filter" data-gender="unisex" style="background: none; border: none; font-size: 1.1rem; font-weight: 600; color: #666; cursor: pointer; padding: 10px 0; border-bottom: 3px solid transparent; transition: all 0.3s ease;">Unisex</button>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="search-bar" style="position: relative;">
+                <input type="text" id="product-search" placeholder="Buscar productos..." style="padding: 12px 45px 12px 20px; border: 2px solid #e0e0e0; border-radius: 25px; font-size: 0.95rem; width: 280px; outline: none; transition: all 0.3s ease;">
+                <span style="position: absolute; right: 18px; top: 50%; transform: translateY(-50%); color: #999; pointer-events: none;">🔍</span>
+            </div>
+        </div>
+
+        <!-- Sport Filters -->
+        <div class="sport-filters-section" style="max-width: 1200px; margin: 0 auto 40px; padding: 0 20px;">
+            <div class="filters" style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
+                <button class="sport-filter active" data-sport="running" style="padding: 12px 28px; background: #FF4B1F; color: white; border: none; border-radius: 25px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">Running</button>
+                <button class="sport-filter" data-sport="merchandising" style="padding: 12px 28px; background: #f0f0f0; color: #333; border: none; border-radius: 25px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">Merchandising</button>
+                <button class="sport-filter coming-soon" data-sport="urban" disabled style="padding: 12px 28px; background: #e0e0e0; color: #999; border: none; border-radius: 25px; font-size: 0.95rem; font-weight: 600; cursor: not-allowed; opacity: 0.6;">Urban <span style="font-size: 0.8rem;">(Próximamente)</span></button>
+                <button class="sport-filter coming-soon" data-sport="lucha" disabled style="padding: 12px 28px; background: #e0e0e0; color: #999; border: none; border-radius: 25px; font-size: 0.95rem; font-weight: 600; cursor: not-allowed; opacity: 0.6;">Lucha <span style="font-size: 0.8rem;">(Próximamente)</span></button>
+                <button class="sport-filter coming-soon" data-sport="tenis" disabled style="padding: 12px 28px; background: #e0e0e0; color: #999; border: none; border-radius: 25px; font-size: 0.95rem; font-weight: 600; cursor: not-allowed; opacity: 0.6;">Tenis <span style="font-size: 0.8rem;">(Próximamente)</span></button>
+                <button class="sport-filter coming-soon" data-sport="padel" disabled style="padding: 12px 28px; background: #e0e0e0; color: #999; border: none; border-radius: 25px; font-size: 0.95rem; font-weight: 600; cursor: not-allowed; opacity: 0.6;">Padel <span style="font-size: 0.8rem;">(Próximamente)</span></button>
+            </div>
+        </div>
+
+        <!-- Subcategory Filters (hidden by default) -->
+        <div class="subcategory-filters-section" id="subcategory-filters" style="max-width: 1200px; margin: 0 auto 40px; padding: 0 20px; display: none;">
+            <div class="filters" style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+                <!-- Subcategory buttons will be added by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Products Grid -->
+        <div class="products-grid" id="products-container">
+            <!-- Products will be loaded by JavaScript -->
+        </div>
+
+        <div class="catalog-cta">
+            <p>¿No encuentras lo que buscas?</p>
+            <a href="#contact" class="btn btn-primary">Consulta Personalizada</a>
+        </div>
+    </section>
+
+    <!-- Process Section -->
+    <section id="process" class="process">
+        <div class="process-header">
+            <h2 class="section-title">Cómo Funciona</h2>
+            <p class="section-subtitle">Un proceso simple y transparente de principio a fin</p>
+        </div>
+
+        <div class="process-steps">
+            <div class="process-step">
+                <div class="step-number">01</div>
+                <div class="step-content">
+                    <h3>Consulta Inicial</h3>
+                    <p>Cuéntanos tu proyecto, cantidades necesarias y plazos. Te asesoramos sobre las mejores opciones para tu caso.</p>
+                </div>
+            </div>
+
+            <div class="process-step">
+                <div class="step-number">02</div>
+                <div class="step-content">
+                    <h3>Diseño y Presupuesto</h3>
+                    <p>Preparamos una propuesta detallada con precios, especificaciones técnicas y mockups de tu diseño.</p>
+                </div>
+            </div>
+
+            <div class="process-step">
+                <div class="step-number">03</div>
+                <div class="step-content">
+                    <h3>Confirmación</h3>
+                    <p>Revisas y apruebas el diseño final. Una vez confirmado, iniciamos la producción.</p>
+                </div>
+            </div>
+
+            <div class="process-step">
+                <div class="step-number">04</div>
+                <div class="step-content">
+                    <h3>Producción</h3>
+                    <p>Fabricamos tu pedido con los más altos estándares de calidad. Te mantenemos informado del progreso.</p>
+                </div>
+            </div>
+
+            <div class="process-step">
+                <div class="step-number">05</div>
+                <div class="step-content">
+                    <h3>Entrega</h3>
+                    <p>Recibe tu pedido en el plazo acordado. Soporte post-venta incluido.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Calculator Section -->
+    <section id="calculator" class="calculator" style="position: relative;">
+        <!-- Coming Soon Overlay -->
+        <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255, 255, 255, 0.97); backdrop-filter: blur(3px); z-index: 10; display: flex; align-items: center; justify-content: center; padding: 40px;">
+            <div style="max-width: 600px; text-align: center; background: white; padding: 50px 40px; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); border: 3px solid #FF4B1F;">
+                <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #FF4B1F 0%, #FF8C42 100%); border-radius: 50%; margin: 0 auto 25px; display: flex; align-items: center; justify-content: center;">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                </div>
+                
+                <h3 style="font-size: 1.8rem; color: #2C3E50; margin-bottom: 15px; font-weight: 700;">Calculadora en Desarrollo</h3>
+                
+                <p style="font-size: 1.1rem; color: #666; margin-bottom: 30px; line-height: 1.6;">
+                    Estamos ajustando nuestros precios para ofrecerte la mejor relación calidad-precio del mercado.
+                </p>
+                
+                <div style="background: #FFF5F0; padding: 25px; border-radius: 12px; margin-bottom: 30px; border-left: 4px solid #FF4B1F;">
+                    <p style="font-size: 1rem; color: #2C3E50; margin-bottom: 0; font-weight: 600;">
+                        Mientras tanto, contacta con nosotros para un presupuesto personalizado a través del formulario.
+                    </p>
+                </div>
+                
+                <a href="#contact" class="btn btn-primary" style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, #FF4B1F 0%, #FF8C42 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 1.05rem; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);">
+                    Solicitar Presupuesto Ahora
+                </a>
+                
+                <p style="font-size: 0.9rem; color: #999; margin-top: 20px; font-style: italic;">
+                    💡 Respuesta en menos de 24 horas
+                </p>
+            </div>
+        </div>
+        
+        <!-- Calculadora pública: pendiente de integrar con la lógica de márgenes de producciones (ver 22_contexto_producciones.md).
+             No construir aquí una calculadora con precios propios: debe reutilizar las reglas de margen de Fátima
+             y nunca exponer coste de proveedor ni margen aplicado, solo el precio final al cliente. -->
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="contact">
+        <div class="contact-container">
+            <div class="contact-info">
+                <h2 class="section-title">Solicita tu Presupuesto</h2>
+                <p>¿Necesitas equipar a tu club, lanzar tu marca o vestir un evento? Cuéntanos tu proyecto y te ayudamos.</p>
+                
+                <div class="contact-details">
+                    <div class="contact-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                            <polyline points="22,6 12,13 2,6"/>
+                        </svg>
+                        <div>
+                            <strong>Email</strong>
+                            <p><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="85f1ece0ebe1e4c5e0f4f0ecf5eab1b2abe6eae8">[email&#160;protected]</a></p>
+                        </div>
+                    </div>
+
+                    <div class="contact-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                        <div>
+                            <strong>Horario</strong>
+                            <p>Lun - Vie: 9:00 - 18:00</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="contact-form-container">
+                <form class="contact-form" name="presupuesto-tienda" method="POST" data-netlify="true" data-netlify-honeypot="bot-field">
+                    <input type="hidden" name="form-name" value="presupuesto-tienda">
+                    <p style="display: none;">
+                        <label>No llenes esto si eres humano: <input name="bot-field"></label>
+                    </p>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Nombre</label>
+                            <input type="text" name="nombre" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input type="email" name="email" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Teléfono</label>
+                            <input type="tel" name="telefono">
+                        </div>
+                        <div class="form-group">
+                            <label>Tipo de Cliente</label>
+                            <select name="tipo-cliente">
+                                <option>Club Deportivo</option>
+                                <option>Marca Nueva</option>
+                                <option>Evento</option>
+                                <option>Empresa</option>
+                                <option>Otro</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Cantidad Aproximada</label>
+                        <select name="cantidad">
+                            <option>50-100 unidades</option>
+                            <option>100-250 unidades</option>
+                            <option>250-500 unidades</option>
+                            <option>500-1000 unidades</option>
+                            <option>Más de 1000 unidades</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Cuéntanos sobre tu proyecto</label>
+                        <textarea name="mensaje" rows="5" required></textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Enviar Solicitud</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Product Modal -->
+    <div id="productModal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close">&times;</button>
+            <div class="modal-body">
+                <div class="modal-gallery">
+                    <img id="modal-image" src="" alt="">
+                </div>
+                <div class="modal-info">
+                    <h2 id="modal-title"></h2>
+                    <p id="modal-description"></p>
+                    <div class="modal-price">
+                        <span class="price-from">Consultar</span>
+                        <span class="price-amount" id="modal-price">Precio</span>
+                    </div>
+                    <div class="modal-options">
+                        <h4>Opciones de Personalización</h4>
+                        <div class="options-list" id="modal-options"></div>
+                    </div>
+                    <div class="modal-specs">
+                        <h4>Especificaciones</h4>
+                        <ul>
+                            <li>Tallas disponibles: XS - 3XL</li>
+                            <li>Colores base: Consultar disponibilidad</li>
+                            <li>Material: Tejido técnico de alta calidad</li>
+                            <li>Mínimo: Consultar según personalización</li>
+                        </ul>
+                    </div>
+                    <a href="#contact" class="btn btn-primary">Solicitar Presupuesto</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-brand">
+                <span class="logo-text">EQUIPO <strong>47</strong></span>
+                <p>Organizamos eventos deportivos y fabricamos ropa personalizada con más de 15 años de experiencia.</p>
+                <div class="footer-social">
+                    <a href="https://www.instagram.com/equipo47_?igsh=bGVsYnA4eG5pazF3" target="_blank" rel="noopener noreferrer" class="social-icon" aria-label="Instagram">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                            <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                            <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+            <div class="footer-links">
+                <h4>Enlaces Rápidos</h4>
+                <ul>
+                    <li><a href="index.html">Inicio</a></li>
+                    <li><a href="calendario.html">Calendario</a></li>
+                    <li><a href="tienda.html">Tienda</a></li>
+                    <li><a href="voluntarios.html">Ser Voluntario</a></li>
+                </ul>
+            </div>
+            <div class="footer-legal">
+                <h4>Legal</h4>
+                <ul>
+                    <li><a href="privacidad.html">Política de Privacidad</a></li>
+                    <li><a href="terminos.html">Términos y Condiciones</a></li>
+                    <li><a href="cookies.html">Cookies</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 Equipo 47. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <!-- Fixed Price Info Banner -->
+    <div id="price-info-banner" class="price-info-banner" style="display: none;">
+        <div class="banner-content">
+            <span class="banner-icon">ℹ️</span>
+            <span class="banner-text">Precios orientativos sin IVA · MOQ aplicable · Pedidos personalizados</span>
+            <button class="banner-close" onclick="closePriceBanner()" aria-label="Cerrar">✕</button>
+        </div>
+    </div>
+
+    <style>
+        .price-info-banner {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #f8f9fa;
+            border-top: 3px solid #FF4B1F;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            z-index: 9999;
+            animation: slideUp 0.4s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+            }
+            to {
+                transform: translateY(0);
+            }
+        }
+
+        .banner-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            position: relative;
+        }
+
+        .banner-icon {
+            font-size: 1.2rem;
+        }
+
+        .banner-text {
+            font-size: 0.95rem;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .banner-close {
+            position: absolute;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 1.4rem;
+            color: #666;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .banner-close:hover {
+            background: rgba(0,0,0,0.05);
+            color: #FF4B1F;
+        }
+
+        @media (max-width: 768px) {
+            .banner-content {
+                padding: 12px 15px;
+                gap: 8px;
+            }
+
+            .banner-text {
+                font-size: 0.85rem;
+            }
+
+            .banner-close {
+                right: 10px;
+                width: 25px;
+                height: 25px;
+                font-size: 1.2rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .banner-text {
+                font-size: 0.8rem;
+                line-height: 1.3;
+            }
+        }
+    </style>
+
+    <script>
+        // Mostrar banner si no se ha cerrado antes
+        window.addEventListener('DOMContentLoaded', function() {
+            const bannerClosed = localStorage.getItem('priceBannerClosed');
+            if (!bannerClosed) {
+                document.getElementById('price-info-banner').style.display = 'block';
+            }
+        });
+
+        // Cerrar banner y guardar en localStorage
+        function closePriceBanner() {
+            const banner = document.getElementById('price-info-banner');
+            banner.style.animation = 'slideDown 0.3s ease-out';
+            setTimeout(() => {
+                banner.style.display = 'none';
+                localStorage.setItem('priceBannerClosed', 'true');
+            }, 300);
+        }
+
+        // Animación de cierre
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideDown {
+                from {
+                    transform: translateY(0);
+                }
+                to {
+                    transform: translateY(100%);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+
+    <!-- Scripts -->
+    <!-- PROTOTIPO: catálogo cargado desde catalogo_web (o mock local), no desde js/tienda.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script data-cfasync="false" src="prototipo-catalogo/js/color-hex-map.js"></script>
+    <script data-cfasync="false" src="prototipo-catalogo/js/catalogo-web.js"></script>
+    <script data-cfasync="false" src="prototipo-catalogo/js/tienda-prototipo.js"></script>
+    <div style="position:fixed; bottom:0; left:0; right:0; background:#2C3E50; color:#fff; text-align:center; padding:6px; font-size:12px; z-index:9999;">
+        🧪 PROTOTIPO — catálogo de prueba, no conectado a Supabase real ni enlazado desde ninguna página del sitio
+    </div>
+</body>
+</html>
+
+
+
+
