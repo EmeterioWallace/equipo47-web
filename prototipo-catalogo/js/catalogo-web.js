@@ -24,9 +24,9 @@
 // No hace falta tocar nada más: el resto del código funciona igual con
 // datos reales o de prueba, porque ambos pasan por el mismo adaptador.
 
-const SUPABASE_CATALOGO_ACTIVO = false; // true cuando Producciones confirme el script ejecutado
-const SUPABASE_URL = ''; // ej. 'https://ciszgyorsveumnrtcejn.supabase.co'
-const SUPABASE_ANON_KEY = ''; // la clave pública "anon", nunca la de servicio
+const SUPABASE_CATALOGO_ACTIVO = true; // conectado a datos reales de Producciones
+const SUPABASE_URL = 'https://ciszgyorsveumnrtcejn.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpc3pneW9yc3ZldW1ucnRjZWpuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3ODk0MDYsImV4cCI6MjA5NzM2NTQwNn0.O56WDFFdtZMc1mXpgCEkgQF8ZTT5tnCpzg8xN4H_qK8';
 
 const RUTA_IMAGENES_BASE = 'images/products/';
 const RUTA_MOCK_LOCAL = 'prototipo-catalogo/data/catalogo-web-mock.json';
