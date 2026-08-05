@@ -808,7 +808,7 @@
 
   <!-- MODAL PRODUCTO -->
   <div id="modalProducto" class="modal">
-    <div class="modal-content" style="max-width:640px;">
+    <div class="modal-content" style="max-width:800px;">
       <div class="modal-header"><h2 id="tituloModalProducto">Nuevo producto</h2></div>
       <div class="modal-body">
         <input type="hidden" id="productoId">
@@ -823,22 +823,102 @@
             <datalist id="dlCategorias"></datalist>
           </div>
         </div>
+        <div class="form-group">
+          <label style="display:flex; align-items:center; gap:8px; text-transform:none; letter-spacing:0; font-size:13px; color:var(--text); cursor:pointer;">
+            <input type="checkbox" id="productoPublicado" style="width:auto;" onchange="toggleBloqueWeb()">
+            🌐 Publicado en la web (aparece en la tienda de equipo47.com)
+          </label>
+          <p style="font-size:12px; color:var(--muted); margin:4px 0 0 26px;">
+            La web solo ve lo que se rellena aquí abajo y el precio final calculado — nunca el coste de proveedor ni el margen.
+          </p>
+        </div>
+
+        <div id="bloqueDatosWeb" style="display:none; border:1px solid var(--border); border-radius:6px; padding:16px; margin-bottom:16px; background:var(--card);">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Título en la web *</label>
+              <input type="text" id="productoTituloPublico" placeholder="Ej: Camiseta Running Sublimada Hombre">
+            </div>
+            <div class="form-group">
+              <label>Pedido mínimo (moq) *</label>
+              <input type="number" id="productoMoq" min="1" step="1" placeholder="Ej: 100">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Descripción</label>
+            <textarea id="productoDescripcionPublica" rows="2" placeholder="Camiseta técnica de running con sublimación total."></textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Especificaciones (una por línea)</label>
+              <textarea id="productoEspecificaciones" rows="3" placeholder="Tejido técnico transpirable&#10;Secado rápido"></textarea>
+            </div>
+            <div class="form-group">
+              <label>Detalles (una por línea)</label>
+              <textarea id="productoDetalles" rows="3" placeholder="Tallas: XS - 2XL&#10;Colores base: consultar"></textarea>
+            </div>
+            <div class="form-group">
+              <label>Opciones de personalización (una por línea)</label>
+              <textarea id="productoOpciones" rows="3" placeholder="Sublimación completa"></textarea>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Deporte *</label>
+              <select id="productoDeporteWeb">
+                <option value="running">Running</option>
+                <option value="merchandising">Merchandising</option>
+                <option value="urban">Urban</option>
+                <option value="lucha">Lucha</option>
+                <option value="tenis">Tenis</option>
+                <option value="padel">Padel</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Tipo de prenda</label>
+              <input type="text" id="productoTipoWeb" placeholder="Ej: camisetas" list="dlTipoWeb">
+              <datalist id="dlTipoWeb"></datalist>
+            </div>
+            <div class="form-group">
+              <label>Subcategoría</label>
+              <input type="text" id="productoSubcategoriaWeb" placeholder="Ej: accesorios-running" list="dlSubcategoriaWeb">
+              <datalist id="dlSubcategoriaWeb"></datalist>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Género *</label>
+              <select id="productoGenero">
+                <option value="unisex">Unisex</option>
+                <option value="hombre">Hombre</option>
+                <option value="mujer">Mujer</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Archivo de imagen principal *</label>
+              <input type="text" id="productoImagenArchivo" placeholder="Ej: camiseta-running-h.jpg">
+            </div>
+            <div class="form-group">
+              <label>Orden dentro de su categoría (opcional)</label>
+              <input type="number" id="productoOrdenWeb" step="1" placeholder="En blanco = por nombre">
+            </div>
+          </div>
+
+          <label style="display:block; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted); margin:12px 0 8px;">Colores (opcional — solo si este producto se ve distinto según el color)</label>
+          <div id="listaColoresWeb"></div>
+          <div style="display:flex; gap:6px; margin-top:8px;">
+            <input type="text" class="mini-input" id="nuevoColorNombre" placeholder="Nombre del color (ej: Negro)" style="flex:1;">
+            <input type="text" class="mini-input" id="nuevoColorImagen" placeholder="Archivo de imagen" style="flex:1;">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="anadirColorWeb()">➕ Añadir color</button>
+          </div>
+        </div>
+
         <div class="form-group" id="grupoProductoActivo" style="display:none;">
           <label>Estado</label>
           <select id="productoActivo">
             <option value="true">Activo (aparece para elegir en presupuestos)</option>
             <option value="false">Inactivo (se conserva el histórico, pero no aparece)</option>
           </select>
-        </div>
-
-        <div class="form-group">
-          <label style="display:flex; align-items:center; gap:8px; text-transform:none; letter-spacing:0; font-size:13px; color:var(--text); cursor:pointer;">
-            <input type="checkbox" id="productoPublicado" style="width:auto;">
-            🌐 Publicado en la web (aparece en la calculadora pública de equipo47.com)
-          </label>
-          <p style="font-size:12px; color:var(--muted); margin:4px 0 0 26px;">
-            La web solo ve el nombre, la categoría y el precio final calculado — nunca el coste de proveedor ni el margen.
-          </p>
         </div>
 
         <div class="form-group">
@@ -1389,6 +1469,8 @@
     let preciosReferencia = []; // coste del proveedor por producto y cantidad
     let precioReferenciaEditor = []; // filas que se están editando en el modal de producto
     let variantesEditor = [];   // variantes que se están editando en el modal
+    let coloresWebEditor = [];  // colores (nombre + imagen) que se están editando en el modal
+    let coloresWeb = [];        // todos los colores cargados de la base de datos
     let lineasNegocio = [];  // agrupaciones de pedidos dentro de un cliente
     let cobros = [];         // dinero que entra (cliente → nosotros)
     let pagos = [];          // dinero que sale (nosotros → proveedores / transporte)
@@ -1493,7 +1575,7 @@
 
     // ── CARGA INICIAL ───────────────────────
     async function cargarTodo() {
-      const [rc, rp, rpr, rl, rco, rpa, rln, rvc, rcfg, rtp, rpref] = await Promise.all([
+      const [rc, rp, rpr, rl, rco, rpa, rln, rvc, rcfg, rtp, rpref, rcw] = await Promise.all([
         sb.from('clientes').select('*').order('nombre_empresa'),
         sb.from('productos').select('*').order('nombre'),
         sb.from('presupuestos').select('*').order('fecha', { ascending: false }),
@@ -1504,11 +1586,13 @@
         sb.from('producto_variantes').select('*').order('nombre'),
         sb.from('configuracion').select('*').eq('id', 1).single(),
         sb.from('tramos_precio').select('*'),
-        sb.from('producto_precios_referencia').select('*')
+        sb.from('producto_precios_referencia').select('*'),
+        sb.from('producto_colores_web').select('*').order('orden')
       ]);
       if (rcfg.data) config = rcfg.data;
       tramosPrecio = rtp.data || [];
       preciosReferencia = rpref.data || [];
+      coloresWeb = rcw.data || [];
       variantesCatalogo = rvc.data || [];
       lineasNegocio = rln.data || [];
       clientes = rc.data || [];
@@ -1879,10 +1963,24 @@
         document.getElementById('productoTransporte').value = p.transporte_unitario || 0;
         document.getElementById('productoActivo').value = String(p.activo);
         document.getElementById('productoPublicado').checked = !!p.publicado;
+        document.getElementById('productoTituloPublico').value = p.titulo_publico || '';
+        document.getElementById('productoMoq').value = p.moq != null ? p.moq : '';
+        document.getElementById('productoDescripcionPublica').value = p.descripcion_publica || '';
+        document.getElementById('productoEspecificaciones').value = (p.especificaciones_publicas || []).join('\n');
+        document.getElementById('productoDetalles').value = (p.detalles_publicos || []).join('\n');
+        document.getElementById('productoOpciones').value = (p.opciones_personalizacion || []).join('\n');
+        document.getElementById('productoDeporteWeb').value = p.deporte_web || 'running';
+        document.getElementById('productoTipoWeb').value = p.tipo_web || '';
+        document.getElementById('productoSubcategoriaWeb').value = p.subcategoria_web || '';
+        document.getElementById('productoGenero').value = p.genero || 'unisex';
+        document.getElementById('productoImagenArchivo').value = p.imagen_archivo || '';
+        document.getElementById('productoOrdenWeb').value = p.orden_web != null ? p.orden_web : '';
         grupoActivo.style.display = 'block';
         variantesEditor = variantesCatalogo.filter(v => v.producto_id === p.id).map(v => ({ id: v.id, nombre: v.nombre }));
         precioReferenciaEditor = preciosReferencia.filter(r => r.producto_id === p.id)
           .map(r => ({ id: r.id, modo: r.modo, coste_proveedor: r.coste_proveedor, transporte: r.transporte }));
+        coloresWebEditor = coloresWeb.filter(c => c.producto_id === p.id)
+          .map(c => ({ id: c.id, nombre_color: c.nombre_color, imagen_archivo: c.imagen_archivo }));
       } else {
         document.getElementById('tituloModalProducto').textContent = 'Nuevo producto';
         document.getElementById('productoId').value = '';
@@ -1893,16 +1991,34 @@
         document.getElementById('productoTransporte').value = '';
         document.getElementById('productoActivo').value = 'true';
         document.getElementById('productoPublicado').checked = false;
+        document.getElementById('productoTituloPublico').value = '';
+        document.getElementById('productoMoq').value = '';
+        document.getElementById('productoDescripcionPublica').value = '';
+        document.getElementById('productoEspecificaciones').value = '';
+        document.getElementById('productoDetalles').value = '';
+        document.getElementById('productoOpciones').value = '';
+        document.getElementById('productoDeporteWeb').value = 'running';
+        document.getElementById('productoTipoWeb').value = '';
+        document.getElementById('productoSubcategoriaWeb').value = '';
+        document.getElementById('productoGenero').value = 'unisex';
+        document.getElementById('productoImagenArchivo').value = '';
+        document.getElementById('productoOrdenWeb').value = '';
         grupoActivo.style.display = 'none';
         variantesEditor = [];
         precioReferenciaEditor = [];
+        coloresWebEditor = [];
       }
       document.getElementById('nuevaVariante').value = '';
+      document.getElementById('nuevoColorNombre').value = '';
+      document.getElementById('nuevoColorImagen').value = '';
       renderVariantesEditor();
+      renderColoresWebEditor();
+      toggleBloqueWeb();
       cambiarModoCalculoUI();
       renderCostesPorCantidad();
       actualizarCalculadoraGeneral();
       poblarSugerenciasCategorias();
+      poblarSugerenciasWeb();
       abrirModal('modalProducto');
     }
 
@@ -1944,6 +2060,57 @@
       renderVariantesEditor();
     }
 
+    // ── COLORES DE LA WEB ────────────────────
+    function toggleBloqueWeb() {
+      document.getElementById('bloqueDatosWeb').style.display =
+        document.getElementById('productoPublicado').checked ? 'block' : 'none';
+    }
+
+    function renderColoresWebEditor() {
+      const cont = document.getElementById('listaColoresWeb');
+      if (!coloresWebEditor.length) {
+        cont.innerHTML = '<p style="font-size:13px; color:var(--muted);">Sin colores. La web usará la imagen principal, sin selector.</p>';
+        return;
+      }
+      cont.innerHTML = coloresWebEditor.map((c, i) => `
+        <div class="apunte">
+          <span><strong>${esc(c.nombre_color)}</strong> <span style="color:var(--muted);">· ${esc(c.imagen_archivo)}</span></span>
+          <button type="button" class="btn btn-danger btn-sm" onclick="quitarColorWeb(${i})">🗑️</button>
+        </div>`).join('');
+    }
+
+    function anadirColorWeb() {
+      const inpNombre = document.getElementById('nuevoColorNombre');
+      const inpImagen = document.getElementById('nuevoColorImagen');
+      const nombre = inpNombre.value.trim();
+      const imagen = inpImagen.value.trim();
+      if (!nombre) { alert('❌ Escribe el nombre del color'); return; }
+      if (!imagen) { alert('❌ Escribe el archivo de imagen de ese color'); return; }
+      if (coloresWebEditor.some(c => c.nombre_color.toLowerCase() === nombre.toLowerCase())) {
+        alert('❌ Este producto ya tiene un color con ese nombre');
+        return;
+      }
+      coloresWebEditor.push({ id: null, nombre_color: nombre, imagen_archivo: imagen });
+      inpNombre.value = ''; inpImagen.value = '';
+      inpNombre.focus();
+      renderColoresWebEditor();
+    }
+
+    function quitarColorWeb(i) {
+      coloresWebEditor.splice(i, 1);
+      renderColoresWebEditor();
+    }
+
+    // Sugerencias de "tipo" y "subcategoría" a partir de lo que ya se haya
+    // escrito antes en otros productos, para no reescribir cada vez y evitar
+    // que "camisetas" y "Camisetas" convivan como si fueran cosas distintas.
+    function poblarSugerenciasWeb() {
+      const tipos = [...new Set(productos.map(p => p.tipo_web).filter(Boolean))].sort();
+      const subs = [...new Set(productos.map(p => p.subcategoria_web).filter(Boolean))].sort();
+      document.getElementById('dlTipoWeb').innerHTML = tipos.map(t => `<option value="${esc(t)}">`).join('');
+      document.getElementById('dlSubcategoriaWeb').innerHTML = subs.map(s => `<option value="${esc(s)}">`).join('');
+    }
+
     async function guardarProducto() {
       const nombre = document.getElementById('productoNombre').value.trim();
       if (!nombre) { alert('❌ El nombre del producto es obligatorio'); return; }
@@ -1972,13 +2139,40 @@
       const idStr = document.getElementById('productoId').value;
       let productoId = idStr;
 
+      // Si se marca "Publicado en la web", los campos mínimos son obligatorios
+      // (los mismos que exige la base de datos, comprobados aquí antes para
+      // dar un mensaje claro en vez de un error genérico).
+      const publicado = document.getElementById('productoPublicado').checked;
+      const tituloPublico = document.getElementById('productoTituloPublico').value.trim();
+      const moqStr = document.getElementById('productoMoq').value;
+      const moq = moqStr === '' ? null : parseInt(moqStr);
+      const imagenArchivo = document.getElementById('productoImagenArchivo').value.trim();
+      if (publicado) {
+        if (!tituloPublico) { alert('❌ Un producto publicado necesita un título para la web'); return; }
+        if (!moq || moq <= 0) { alert('❌ Un producto publicado necesita su pedido mínimo (moq)'); return; }
+        if (!imagenArchivo) { alert('❌ Un producto publicado necesita el archivo de imagen principal'); return; }
+      }
+      const lineasTexto = (id) => document.getElementById(id).value.split('\n').map(s => s.trim()).filter(Boolean);
+
       const datosComunes = {
         nombre,
         categoria: document.getElementById('productoCategoria').value.trim() || null,
         modo_calculo: modoCalculo,
         coste_proveedor: coste,
         transporte_unitario: transporte,
-        publicado: document.getElementById('productoPublicado').checked
+        publicado,
+        titulo_publico: tituloPublico || null,
+        descripcion_publica: document.getElementById('productoDescripcionPublica').value.trim() || null,
+        especificaciones_publicas: lineasTexto('productoEspecificaciones'),
+        detalles_publicos: lineasTexto('productoDetalles'),
+        opciones_personalizacion: lineasTexto('productoOpciones'),
+        deporte_web: document.getElementById('productoDeporteWeb').value,
+        tipo_web: document.getElementById('productoTipoWeb').value.trim() || null,
+        subcategoria_web: document.getElementById('productoSubcategoriaWeb').value.trim() || null,
+        genero: document.getElementById('productoGenero').value,
+        moq,
+        imagen_archivo: imagenArchivo || null,
+        orden_web: document.getElementById('productoOrdenWeb').value === '' ? null : parseInt(document.getElementById('productoOrdenWeb').value)
       };
 
       if (idStr) {
@@ -2026,6 +2220,23 @@
         if (error) { alert('❌ Error al borrar variantes: ' + error.message); return; }
       }
 
+      // Sincronizar los colores de la web, con el mismo patrón que las variantes.
+      const idsColoresEditor = coloresWebEditor.filter(c => c.id).map(c => c.id);
+      const idsColoresBd = coloresWeb.filter(c => c.producto_id === productoId).map(c => c.id);
+      const aBorrarColores = idsColoresBd.filter(x => !idsColoresEditor.includes(x));
+      const nuevosColores = coloresWebEditor.filter(c => !c.id).map(c => ({
+        producto_id: productoId, nombre_color: c.nombre_color, imagen_archivo: c.imagen_archivo
+      }));
+
+      if (nuevosColores.length) {
+        const { error } = await sb.from('producto_colores_web').insert(nuevosColores);
+        if (error) { alert('❌ Error al guardar los colores: ' + error.message); return; }
+      }
+      if (aBorrarColores.length) {
+        const { error } = await sb.from('producto_colores_web').delete().in('id', aBorrarColores);
+        if (error) { alert('❌ Error al borrar colores: ' + error.message); return; }
+      }
+
       cerrarModal('modalProducto');
       toast(idStr ? '✓ Producto actualizado' : '✓ Producto creado');
       await recargarProductos();
@@ -2034,14 +2245,16 @@
     }
 
     async function recargarProductos() {
-      const [rp, rv, rpref] = await Promise.all([
+      const [rp, rv, rpref, rcw] = await Promise.all([
         sb.from('productos').select('*').order('nombre'),
         sb.from('producto_variantes').select('*').order('nombre'),
-        sb.from('producto_precios_referencia').select('*')
+        sb.from('producto_precios_referencia').select('*'),
+        sb.from('producto_colores_web').select('*').order('orden')
       ]);
       productos = rp.data || [];
       variantesCatalogo = rv.data || [];
       preciosReferencia = rpref.data || [];
+      coloresWeb = rcw.data || [];
     }
 
     // ── BORRAR PRODUCTOS ────────────────────
