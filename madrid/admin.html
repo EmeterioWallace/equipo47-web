@@ -682,6 +682,7 @@
     /* Visibilidad de botones de acción según rol (Fase 2B) */
     body:not(.cap-inv) .acc-inv { display: none !important; }
     body:not(.cap-ops) .acc-ops { display: none !important; }
+    body:not(.cap-cli) .acc-cli { display: none !important; }
 
     /* Barra de acciones de selección múltiple */
     .sel-barra { display:flex; align-items:center; gap:10px; flex-wrap:wrap; background:var(--card); border:1px solid var(--accent); border-radius:8px; padding:10px 14px; margin-bottom:12px; }
@@ -701,13 +702,8 @@
     .cal-dia:hover { border-color:var(--accent); }
     .cal-dia.otro-mes { opacity:0.35; }
     .cal-dia.hoy { box-shadow:inset 0 0 0 2px var(--accent); }
-    .cal-dia.participo { background:rgba(255,152,0,0.14); border-color:var(--warning); }
     .cal-dia-num { font-size:12px; font-weight:600; color:var(--text); }
     .cal-pill { font-size:10px; padding:1px 5px; border-radius:4px; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
-    .cal-pill.salida { background:#3b82f6; }
-    .cal-pill.devolucion { background:#22c55e; }
-    .cal-pill.recepcion { background:#a855f7; }
-    .cal-pill.evento { background:#06b6d4; }
     .cal-pill.apagado { background:var(--muted) !important; opacity:0.55; }
     .cal-mas { font-size:9px; color:var(--muted); }
     .cal-detalle { margin-top:16px; }
@@ -2171,9 +2167,25 @@
           </div>
         </div>
         <div class="form-group">
+          <label>Hora de inicio</label>
+          <input type="time" id="eventoHoraInicio">
+          <p style="font-size:11px; color:var(--muted); margin-top:4px;">Opcional.</p>
+        </div>
+        <div class="form-group">
           <label>Lugar</label>
           <input type="text" id="eventoLugar" placeholder="Opcional">
         </div>
+        <div class="form-row">
+          <div class="form-group" style="flex:2;">
+            <label>Etiqueta especial</label>
+            <input type="text" id="eventoEtiqueta" placeholder="Ej: ASICS (opcional)">
+          </div>
+          <div class="form-group">
+            <label>Color</label>
+            <input type="color" id="eventoColorEtiqueta" value="#06b6d4" style="width:100%; height:38px; padding:2px;">
+          </div>
+        </div>
+        <p style="font-size:11px; color:var(--muted); margin-top:-10px; margin-bottom:14px;">Si pones una etiqueta, el evento se verá con ese nombre y color en vez del genérico "Evento".</p>
         <div class="form-group">
           <label>Notas</label>
           <textarea id="eventoNotas" rows="2" placeholder="Opcional"></textarea>
@@ -2279,6 +2291,42 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" onclick="cerrarModalAdmin('modalLineaRecepcion')">Cancelar</button>
         <button type="button" class="btn btn-primary" onclick="guardarLineaRecepcion()">💾 Añadir</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL COLORES DEL CALENDARIO -->
+  <div id="modalColoresCalendario" class="modal">
+    <div class="modal-content" style="max-width: 420px;">
+      <div class="modal-header">
+        <h2>🎨 Colores del calendario</h2>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:12px; color:var(--muted); margin-bottom:16px;">Estos colores se aplican a todo el equipo, en todos los calendarios de la app.</p>
+        <div class="form-group" style="display:flex; justify-content:space-between; align-items:center;">
+          <label style="margin:0;">Salida</label>
+          <input type="color" id="colorCalSalida" style="width:50px; height:34px; padding:2px;">
+        </div>
+        <div class="form-group" style="display:flex; justify-content:space-between; align-items:center;">
+          <label style="margin:0;">Devolución</label>
+          <input type="color" id="colorCalDevolucion" style="width:50px; height:34px; padding:2px;">
+        </div>
+        <div class="form-group" style="display:flex; justify-content:space-between; align-items:center;">
+          <label style="margin:0;">Recepción</label>
+          <input type="color" id="colorCalRecepcion" style="width:50px; height:34px; padding:2px;">
+        </div>
+        <div class="form-group" style="display:flex; justify-content:space-between; align-items:center;">
+          <label style="margin:0;">Evento</label>
+          <input type="color" id="colorCalEvento" style="width:50px; height:34px; padding:2px;">
+        </div>
+        <div class="form-group" style="display:flex; justify-content:space-between; align-items:center;">
+          <label style="margin:0;">Participas (resaltado del día)</label>
+          <input type="color" id="colorCalParticipo" style="width:50px; height:34px; padding:2px;">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="cerrarModalAdmin('modalColoresCalendario')">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="guardarColoresCalendario()">💾 Guardar</button>
       </div>
     </div>
   </div>
@@ -7363,6 +7411,7 @@
       // Capacidades de edición (Fase 2B)
       document.body.classList.toggle('cap-inv', nivel >= 2);  // editar inventario: operario+
       document.body.classList.toggle('cap-ops', nivel >= 3);  // editar salidas/recepciones/eventos: responsable+
+      document.body.classList.toggle('cap-cli', nivel >= 4);  // clientes/visibilidad/colores calendario: gestor+
     }
 
     async function cargarEquipoTabla() {
@@ -7534,6 +7583,34 @@
     const CAL_MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
     const CAL_DOW = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
     const CAL_TIPO_NOMBRE = { salida: 'Salida', devolucion: 'Devolución', recepcion: 'Recepción', evento: 'Evento' };
+    let calColores = { salida: '#3b82f6', devolucion: '#22c55e', recepcion: '#a855f7', evento: '#06b6d4', participo: '#FF9800' };
+
+    function hexToRgba(hex, alpha) {
+      const h = (hex || '#888888').replace('#', '');
+      const r = parseInt(h.substring(0, 2), 16), g = parseInt(h.substring(2, 4), 16), b = parseInt(h.substring(4, 6), 16);
+      return `rgba(${r || 0},${g || 0},${b || 0},${alpha})`;
+    }
+
+    function calColorItem(it) {
+      if (it.tipo === 'evento' && it.color_etiqueta) return it.color_etiqueta;
+      return calColores[it.tipo] || '#888888';
+    }
+
+    function calPillTexto(it) {
+      if (it.tipo === 'evento' && it.etiqueta) return it.etiqueta;
+      return it.texto;
+    }
+
+    function calLeyendaHtml(conBotonColores) {
+      return `<div class="cal-leyenda">
+        <span><i style="background:${calColores.salida}"></i>Salida</span>
+        <span><i style="background:${calColores.devolucion}"></i>Devolución</span>
+        <span><i style="background:${calColores.recepcion}"></i>Recepción</span>
+        <span><i style="background:${calColores.evento}"></i>Evento</span>
+        <span><i style="background:${calColores.participo}"></i>Participas</span>
+        ${conBotonColores ? `<button class="btn btn-ghost btn-sm acc-cli" style="margin-left:auto;" onclick="mostrarModalColoresCalendario()">🎨 Colores</button>` : ''}
+      </div>`;
+    }
 
     function calFechaStr(d) {
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -7545,6 +7622,8 @@
       personasEquipo = (await sb.from('personas_equipo').select('*').order('nombre')).data || [];
       salidas = (await sb.from('salidas').select('*')).data || [];
       recepciones = (await sb.from('recepciones').select('*')).data || [];
+      const { data: cfg } = await sb.from('calendario_config').select('*').eq('id', 1).maybeSingle();
+      if (cfg) calColores = { salida: cfg.color_salida, devolucion: cfg.color_devolucion, recepcion: cfg.color_recepcion, evento: cfg.color_evento, participo: cfg.color_participo };
       const misIds = new Set(personasEquipo.filter(p => (p.email || '').toLowerCase() === (usuarioActual || '').toLowerCase()).map(p => p.id));
       misSalidasConv = new Set(eventoPersonas.filter(ep => ep.persona_id && misIds.has(ep.persona_id) && ep.salida_id).map(ep => ep.salida_id));
       misEventosConv = new Set(eventoPersonas.filter(ep => ep.persona_id && misIds.has(ep.persona_id) && ep.evento_id).map(ep => ep.evento_id));
@@ -7566,15 +7645,7 @@
       cont.innerHTML = '<div class="loading">Cargando...</div>';
       await cargarDatosCalendario();
       const h = new Date();
-      cont.innerHTML = `
-        <div class="cal-leyenda">
-          <span><i style="background:#3b82f6"></i>Salida</span>
-          <span><i style="background:#22c55e"></i>Devolución</span>
-          <span><i style="background:#a855f7"></i>Recepción</span>
-          <span><i style="background:#06b6d4"></i>Evento</span>
-          <span><i style="background:var(--warning)"></i>Participas</span>
-        </div>
-        ${pintarCuadricula(h.getMonth(), h.getFullYear(), 'irACalendarioDia')}`;
+      cont.innerHTML = `${calLeyendaHtml(false)}${pintarCuadricula(h.getMonth(), h.getFullYear(), 'irACalendarioDia')}`;
     }
 
     function irACalendarioDia(f) {
@@ -7598,9 +7669,10 @@
         const items = calItems[f] || [];
         const participo = items.some(it => it.participo);
         const esHoy = f === hoyStr;
-        let pills = items.slice(0, 3).map(it => `<span class="cal-pill ${it.tipo}${it.apagado ? ' apagado' : ''}">${it.texto}</span>`).join('');
+        let pills = items.slice(0, 3).map(it => `<span class="cal-pill${it.apagado ? ' apagado' : ''}" style="background:${calColorItem(it)}">${calPillTexto(it)}</span>`).join('');
         if (items.length > 3) pills += `<span class="cal-mas">+${items.length - 3} más</span>`;
-        celdas += `<div class="cal-dia ${otroMes ? 'otro-mes' : ''} ${esHoy ? 'hoy' : ''} ${participo ? 'participo' : ''}" onclick="${onclickName}('${f}')">
+        const estiloParticipo = participo ? `background:${hexToRgba(calColores.participo, 0.14)}; border-color:${calColores.participo};` : '';
+        celdas += `<div class="cal-dia ${otroMes ? 'otro-mes' : ''} ${esHoy ? 'hoy' : ''}" style="${estiloParticipo}" onclick="${onclickName}('${f}')">
           <span class="cal-dia-num">${fechaObj.getDate()}</span>${pills}</div>`;
       }
       return `<div class="cal-grid">${CAL_DOW.map(d => `<div class="cal-dow">${d}</div>`).join('')}${celdas}</div>`;
@@ -7622,7 +7694,7 @@
         const dfin = new Date((e.fecha_fin || e.fecha_inicio) + 'T00:00:00');
         let guard = 0;
         while (d <= dfin && guard < 400) {
-          add(calFechaStr(d), { tipo: 'evento', texto: e.nombre, participo: !e.completado && misEventosConv.has(e.id), apagado: !!e.completado });
+          add(calFechaStr(d), { tipo: 'evento', texto: e.nombre, hora: e.hora_inicio || null, etiqueta: e.etiqueta || null, color_etiqueta: e.color_etiqueta || null, participo: !e.completado && misEventosConv.has(e.id), apagado: !!e.completado });
           d.setDate(d.getDate() + 1); guard++;
         }
       });
@@ -7639,13 +7711,7 @@
           </div>
           <button class="btn btn-secondary btn-sm" onclick="calHoy()">Hoy</button>
         </div>
-        <div class="cal-leyenda">
-          <span><i style="background:#3b82f6"></i>Salida</span>
-          <span><i style="background:#22c55e"></i>Devolución</span>
-          <span><i style="background:#a855f7"></i>Recepción</span>
-          <span><i style="background:#06b6d4"></i>Evento</span>
-          <span><i style="background:var(--warning)"></i>Participas</span>
-        </div>
+        ${calLeyendaHtml(true)}
         ${pintarCuadricula(calMes, calAnio, 'calAbrirDia')}
         <div id="cal-detalle" class="cal-detalle"></div>`;
       if (calDiaSel) calAbrirDia(calDiaSel);
@@ -7670,7 +7736,7 @@
       calDiaSel = f;
       const det = document.getElementById('cal-detalle');
       if (!det) return;
-      const items = calItems[f] || [];
+      const items = (calItems[f] || []).slice().sort((a, b) => (a.hora || '99:99').localeCompare(b.hora || '99:99'));
       const titulo = new Date(f + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
       if (!items.length) {
         det.innerHTML = `<div class="card"><h3 style="text-transform:capitalize; margin-top:0;">${titulo}</h3><p style="color:var(--muted);">Nada programado este día.</p></div>`;
@@ -7678,9 +7744,10 @@
       }
       det.innerHTML = `<div class="card">
         <h3 style="text-transform:capitalize; margin-top:0;">${titulo}</h3>
-        ${items.map(it => `<div style="display:flex; align-items:center; gap:10px; padding:8px; border-bottom:1px solid var(--border); ${it.participo ? 'background:rgba(255,152,0,0.14); border-radius:6px;' : ''}">
-          <span class="cal-pill ${it.tipo}${it.apagado ? ' apagado' : ''}" style="flex-shrink:0;">${CAL_TIPO_NOMBRE[it.tipo]}</span>
-          <span style="font-size:14px;">${it.texto}${it.apagado ? ' <span style="color:var(--muted);">(completado)</span>' : ''}${it.participo ? ' <strong style="color:var(--warning);">· tú participas</strong>' : ''}</span>
+        ${items.map(it => `<div style="display:flex; align-items:center; gap:10px; padding:8px; border-bottom:1px solid var(--border); ${it.participo ? `background:${hexToRgba(calColores.participo, 0.14)}; border-radius:6px;` : ''}">
+          ${it.hora ? `<span style="font-size:12px; color:var(--muted); min-width:40px;">${it.hora.slice(0,5)}</span>` : ''}
+          <span class="cal-pill${it.apagado ? ' apagado' : ''}" style="flex-shrink:0; background:${calColorItem(it)}">${it.tipo === 'evento' && it.etiqueta ? it.etiqueta : CAL_TIPO_NOMBRE[it.tipo]}</span>
+          <span style="font-size:14px;">${it.texto}${it.apagado ? ' <span style="color:var(--muted);">(completado)</span>' : ''}${it.participo ? ` <strong style="color:${calColores.participo};">· tú participas</strong>` : ''}</span>
         </div>`).join('')}
       </div>`;
     }
@@ -7702,8 +7769,8 @@
       return `<div class="card" style="margin-bottom:12px; ${e.completado ? 'opacity:0.6;' : ''}">
         <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;">
           <div>
-            <h3 style="margin:0;">${e.nombre}${e.completado ? ' <span class="badge">✓ Completado</span>' : ''}</h3>
-            <p style="font-size:13px; color:var(--muted); margin:4px 0;">📅 ${fechas}${e.lugar ? ' · 📍 ' + e.lugar : ''}</p>
+            <h3 style="margin:0;">${e.nombre}${e.completado ? ' <span class="badge">✓ Completado</span>' : ''}${e.etiqueta ? ` <span class="cal-pill" style="background:${e.color_etiqueta || '#06b6d4'};">${e.etiqueta}</span>` : ''}</h3>
+            <p style="font-size:13px; color:var(--muted); margin:4px 0;">📅 ${fechas}${e.hora_inicio ? ' · 🕐 ' + e.hora_inicio.slice(0,5) : ''}${e.lugar ? ' · 📍 ' + e.lugar : ''}</p>
             ${e.notas ? `<p style="font-size:13px; margin:4px 0;">📝 ${e.notas}</p>` : ''}
           </div>
           <div style="display:flex; gap:6px; flex-wrap:wrap;">
@@ -7754,6 +7821,30 @@
       await cargarCalendario();
     }
 
+    function mostrarModalColoresCalendario() { if (!exigeCap('cli')) return;
+      document.getElementById('colorCalSalida').value = calColores.salida;
+      document.getElementById('colorCalDevolucion').value = calColores.devolucion;
+      document.getElementById('colorCalRecepcion').value = calColores.recepcion;
+      document.getElementById('colorCalEvento').value = calColores.evento;
+      document.getElementById('colorCalParticipo').value = calColores.participo;
+      abrirModalAdmin('modalColoresCalendario');
+    }
+
+    async function guardarColoresCalendario() { if (!exigeCap('cli')) return;
+      const datos = {
+        color_salida: document.getElementById('colorCalSalida').value,
+        color_devolucion: document.getElementById('colorCalDevolucion').value,
+        color_recepcion: document.getElementById('colorCalRecepcion').value,
+        color_evento: document.getElementById('colorCalEvento').value,
+        color_participo: document.getElementById('colorCalParticipo').value
+      };
+      const { error } = await sb.from('calendario_config').update(datos).eq('id', 1);
+      if (error) { alert('❌ ' + error.message); return; }
+      cerrarModalAdmin('modalColoresCalendario');
+      toast('✅ Colores actualizados');
+      await cargarCalendario();
+    }
+
     function mostrarModalEvento(id = null) {
       if (id) {
         const e = eventos.find(x => x.id === id);
@@ -7762,7 +7853,10 @@
         document.getElementById('eventoNombre').value = e?.nombre || '';
         document.getElementById('eventoFechaInicio').value = e?.fecha_inicio || '';
         document.getElementById('eventoFechaFin').value = (e?.fecha_fin && e.fecha_fin !== e.fecha_inicio) ? e.fecha_fin : '';
+        document.getElementById('eventoHoraInicio').value = e?.hora_inicio ? e.hora_inicio.slice(0, 5) : '';
         document.getElementById('eventoLugar').value = e?.lugar || '';
+        document.getElementById('eventoEtiqueta').value = e?.etiqueta || '';
+        document.getElementById('eventoColorEtiqueta').value = e?.color_etiqueta || '#06b6d4';
         document.getElementById('eventoNotas').value = e?.notas || '';
       } else {
         document.getElementById('tituloModalEvento').textContent = 'Nuevo evento';
@@ -7770,7 +7864,10 @@
         document.getElementById('eventoNombre').value = '';
         document.getElementById('eventoFechaInicio').value = '';
         document.getElementById('eventoFechaFin').value = '';
+        document.getElementById('eventoHoraInicio').value = '';
         document.getElementById('eventoLugar').value = '';
+        document.getElementById('eventoEtiqueta').value = '';
+        document.getElementById('eventoColorEtiqueta').value = '#06b6d4';
         document.getElementById('eventoNotas').value = '';
       }
       abrirModalAdmin('modalEvento');
@@ -7783,10 +7880,13 @@
       if (!fechaInicio) { alert('Indica la fecha de inicio'); return; }
       let fechaFin = document.getElementById('eventoFechaFin').value || fechaInicio;
       if (fechaFin < fechaInicio) { alert('La fecha de fin no puede ser anterior a la de inicio'); return; }
+      const horaInicio = document.getElementById('eventoHoraInicio').value || null;
       const lugar = document.getElementById('eventoLugar').value.trim() || null;
+      const etiqueta = document.getElementById('eventoEtiqueta').value.trim() || null;
+      const colorEtiqueta = etiqueta ? document.getElementById('eventoColorEtiqueta').value : null;
       const notas = document.getElementById('eventoNotas').value.trim() || null;
       const idStr = document.getElementById('eventoId').value;
-      const datos = { nombre, fecha_inicio: fechaInicio, fecha_fin: fechaFin, lugar, notas };
+      const datos = { nombre, fecha_inicio: fechaInicio, fecha_fin: fechaFin, hora_inicio: horaInicio, lugar, etiqueta, color_etiqueta: colorEtiqueta, notas };
       if (idStr) {
         const { error } = await sb.from('eventos').update(datos).eq('id', parseInt(idStr));
         if (error) { alert('❌ ' + error.message); return; }
