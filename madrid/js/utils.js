@@ -257,31 +257,6 @@ function ordenar(array, clave, ascending = true) {
   });
 }
 
-// ── AUTENTICACIÓN SIMPLE (PASSWORD) ─────────
-const PASSWORD_ALMACEN = localStorage.getItem('almacen-pass') || null;
-
-function requiereAutenticacion() {
-  if (!PASSWORD_ALMACEN) {
-    const pass = prompt('🔐 Contraseña del almacén:');
-    if (!pass) {
-      location.reload();
-      return false;
-    }
-    // Aquí va la contraseña (la configuras en admin)
-    const PASS_CORRECTA = 'E47almacen2024'; // ⚠️ Cambiar en producción
-    if (pass !== PASS_CORRECTA) {
-      alert('❌ Contraseña incorrecta');
-      return false;
-    }
-    localStorage.setItem('almacen-pass', pass);
-  }
-  return true;
-}
-
-function cerrarSesion() {
-  localStorage.removeItem('almacen-pass');
-  location.reload();
-}
 
 // ── DEBUG ───────────────────────────────────
 function debug(msg, data = null) {

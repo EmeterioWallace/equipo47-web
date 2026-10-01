@@ -1,0 +1,52 @@
+# ============================================================
+# .gitignore — App Inventario Almacén (Equipo 47 Madrid)
+# BLOQUE 0 — baseline seguro. Conservador a propósito.
+# ============================================================
+
+# ── Credenciales y configuración local ──────────────────────
+.env
+.env.local
+.env.*.local
+*.local.js
+config.local.js
+js/config.local.js
+secrets/
+credentials/
+
+# ── Bases de datos locales (por si aparecen en el futuro) ───
+*.sqlite
+*.sqlite3
+*.db
+
+# ── Logs ──────────────────────────────────────────────────────
+*.log
+logs/
+npm-debug.log*
+
+# ── Exports y backups ─────────────────────────────────────────
+# (informes, CSV exportados, volcados de Supabase, etc. —
+# nada de esto debe versionarse: puede contener datos reales
+# del almacén, del equipo o de clientes)
+*.csv
+*.sql.bak
+*.dump
+/exports/
+/backups/
+/informes/
+
+# ── Archivos propios del sistema operativo ───────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Editores e IDEs ───────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── Archivos temporales ───────────────────────────────────────
+*.tmp
+*.temp
+.cache/
