@@ -1367,23 +1367,23 @@
       </div>
 
       <div class="grid">
-        <div class="card" onclick="exportarCSV('productos')" style="cursor: pointer;">
+        <div class="card" onclick="exportarTablaCSV('productos')" style="cursor: pointer;">
           <h3>📦 Productos</h3>
           <p>Exportar lista de productos</p>
         </div>
-        <div class="card" onclick="exportarCSV('variantes')" style="cursor: pointer;">
+        <div class="card" onclick="exportarTablaCSV('variantes')" style="cursor: pointer;">
           <h3>🎨 Variantes</h3>
           <p>Exportar variantes (tallas, colores, etc)</p>
         </div>
-        <div class="card" onclick="exportarCSV('cajas')" style="cursor: pointer;">
+        <div class="card" onclick="exportarTablaCSV('cajas')" style="cursor: pointer;">
           <h3>📫 Cajas</h3>
           <p>Exportar cajas y su ubicación</p>
         </div>
-        <div class="card" onclick="exportarCSV('pales')" style="cursor: pointer;">
+        <div class="card" onclick="exportarTablaCSV('pales')" style="cursor: pointer;">
           <h3>🏛️ Palés</h3>
           <p>Exportar palés</p>
         </div>
-        <div class="card" onclick="exportarCSV('salidas')" style="cursor: pointer;">
+        <div class="card" onclick="exportarTablaCSV('salidas')" style="cursor: pointer;">
           <h3>📤 Salidas</h3>
           <p>Exportar historial de salidas</p>
         </div>
@@ -3043,7 +3043,7 @@
     }
 
     // ── EXPORTAR CSV ────────────────────────
-    async function exportarCSV(tabla) {
+    async function exportarTablaCSV(tabla) {
       let datos = [];
       switch(tabla) {
         case 'productos': datos = await obtenerProductos(); break;
