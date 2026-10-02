@@ -12,6 +12,40 @@
   auditoría en el futuro sin tener que reconstruir las consultas desde
   cero.
 
+- **`1B-01_nucleo_migracion.sql`**, **`1B-02_nucleo_rollback.sql`** y
+  **`1B-03_nucleo_verificacion.sql`** — migración, rollback y verificación del
+  núcleo del Bloque 1B (mínimo privilegio y endurecimiento de funciones
+  `SECURITY DEFINER`). Ver la sección siguiente.
+
+## Bloque 1B (núcleo): migración, rollback y verificación
+
+**Estado: aplicado y verificado en producción** (octubre 2026). El detalle de
+lo que cambió y de lo que no está en `docs/SEGURIDAD.md`.
+
+| Archivo | Para qué sirve |
+|---|---|
+| `1B-01_nucleo_migracion.sql` | Instantánea (PASO 0), `search_path` de 11 funciones (D1), 8 policies a `authenticated` (D2), `recepcion_lineas_select` alineada con su padre (D2b) y grants de tabla (D3). Cada paso es una transacción propia con guardas; se ejecutó **un paso cada vez**, con el rol `postgres`. Es exactamente el SQL ejecutado en producción |
+| `1B-02_nucleo_rollback.sql` | Revierte la migración (R3 → R2 → R1) restaurando lo guardado en el esquema `_hardening_1b`. **No ejecutar ni eliminar** mientras se conserve la red de seguridad; solo se usaría para revertir el bloque |
+| `1B-03_nucleo_verificacion.sql` | Consultas de **solo lectura** (V1–V5) que comparan el estado real con la instantánea. Seguro de repetir en cualquier momento |
+
+Notas importantes:
+
+- **Dependen de la instantánea.** El rollback y las comparaciones de V2, V4 y V5
+  leen el esquema privado `_hardening_1b`, creado por el PASO 0. Ese esquema
+  **debe conservarse por ahora**; eliminarlo (`drop schema _hardening_1b
+  cascade`, comentado al final del rollback) es una decisión posterior y
+  explícita.
+- **Guardas con cifras exactas** (29 tablas, 102 policies, 8 `{public}`, 11
+  funciones...). Si el esquema cambia, el PASO 0 aborta a propósito: hay que
+  volver a auditar antes de reutilizar estos scripts.
+- **Fuera de alcance, y no incluido en ninguno de los tres archivos:**
+  `EXECUTE` de funciones y privilegio de `PUBLIC` (previsto como Bloque
+  **1B-bis**), recorte fino de DML de `authenticated`, emails hardcodeados de
+  `mi_rol()`, `FORCE RLS`, *default privileges* y secuencias. Las ACL de
+  funciones se guardan en la instantánea solo como evidencia para 1B-bis.
+- **No contienen datos reales** (solo estructura y privilegios), igual que el
+  resto de este directorio.
+
 ## Qué es exactamente `extraer_esquema_real.sql`, y qué NO es
 
 Es un **auditor de metadatos**, reproducible: se ejecuta contra Supabase y

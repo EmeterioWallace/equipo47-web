@@ -33,10 +33,10 @@
 
 Ver `docs/DEUDA-TECNICA.md` para el detalle completo. Lo más relevante:
 
-- Bug confirmado en `exportarCSV` (recursión infinita) — **no corregido todavía**, fuera del alcance del Bloque 0.
+- ~~Bug confirmado en `exportarCSV` (recursión infinita)~~ — **corregido** en el commit `39db3e2`; estaba fuera del alcance del Bloque 0.
 - Código legacy sin uso en `js/supabase.js` y `js/utils.js`, de una versión anterior del proyecto.
 - Una tabla (`historial`) en el esquema real de Supabase sin ningún punto de acceso en el código actual — todo apunta a que es la predecesora de `actividad`.
-- 8 políticas RLS (de 102) con el rol aplicado como `{public}` en vez de `{authenticated}` — ver `docs/SEGURIDAD.md`.
+- ~~8 políticas RLS (de 102) con el rol aplicado como `{public}`~~ — **resuelto en el núcleo del Bloque 1B** (octubre 2026), junto con el `search_path` de 11 funciones y el recorte de privilegios de tabla de `anon` y `authenticated`. Pendiente para 1B-bis: `EXECUTE`/`PUBLIC` de las funciones. Ver `docs/SEGURIDAD.md` y `docs/DEUDA-TECNICA.md`.
 
 ## El repositorio Git ya existe — el Bloque 0 no lo crea
 

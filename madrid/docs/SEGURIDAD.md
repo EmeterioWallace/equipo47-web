@@ -1,8 +1,11 @@
 # Seguridad
 
-> Basado en la extracción real de Supabase (octubre 2026). Todo lo descrito
-> aquí es **registro para auditoría posterior** — nada se ha modificado en
-> RLS, grants ni funciones durante el Bloque 0, tal como se pidió.
+> Basado en la extracción real de Supabase (octubre 2026). Las secciones
+> descriptivas reflejan el estado auditado en el **Bloque 0** (donde no se
+> modificó nada en RLS, grants ni funciones). El **núcleo del Bloque 1B** se
+> aplicó después en producción: su resultado está en la sección
+> [Bloque 1B — núcleo aplicado](#bloque-1b--núcleo-aplicado-y-verificado-en-producción)
+> y, donde procede, cada sección antigua lleva una nota de estado.
 
 ## Row Level Security (RLS)
 
@@ -22,6 +25,11 @@ política de `INSERT` para `authenticated`.
   rol de conexión, incluido `anon`, el anónimo sin login).
 
 ## Las 8 políticas con rol `{public}` — análisis, no alarma
+
+> **Estado (Bloque 1B): resuelto.** Las 8 políticas pasaron a `{authenticated}`
+> conservando sus condiciones, y `recepcion_lineas_select` además dejó de ser
+> `USING (true)` y se alineó con su tabla padre. Lo que sigue es el análisis
+> original del Bloque 0, conservado como registro.
 
 Todas pertenecen a tablas construidas este año (`calendario_config`,
 `fichajes`, `recepcion_lineas`, `solicitudes_correccion`) y comparten un
@@ -62,6 +70,14 @@ bloque): añadir `TO authenticated` a estas 8 políticas, y revisar si
 `recepcion_lineas_select` debería requerir sesión.
 
 ## Grants de PostgreSQL — por qué no entran en contradicción con RLS
+
+> **Estado (Bloque 1B): parcialmente resuelto.** `anon` ya no tiene ningún
+> privilegio sobre las tablas de `public`, y `authenticated` perdió
+> `TRUNCATE`, `TRIGGER` y `REFERENCES`. `authenticated` conserva
+> `SELECT/INSERT/UPDATE/DELETE` en las 29 tablas **de forma deliberada en esta
+> fase**; su recorte fino está pendiente. Los grants de **funciones**
+> (`EXECUTE`) no se han tocado (ver 1B-bis). Lo que sigue es el análisis
+> original del Bloque 0.
 
 Los grants muestran privilegios amplios (`SELECT`, `INSERT`, `UPDATE`,
 `DELETE`, `REFERENCES`, `TRIGGER`, `TRUNCATE`) concedidos a los tres roles
@@ -115,12 +131,12 @@ revisar función por función.
 
 | Función | Argumentos | Devuelve | `search_path` fijado |
 |---|---|---|---|
-| `mi_rol()` | — | text | ❌ No |
-| `mi_nivel()` | — | integer | ❌ No |
-| `es_admin()` | — | boolean | ❌ No |
-| `es_min_gestor()` | — | boolean | ❌ No |
-| `es_min_responsable()` | — | boolean | ❌ No |
-| `es_min_operario()` | — | boolean | ❌ No |
+| `mi_rol()` | — | text | ✅ Sí (`public, pg_temp`, desde 1B) |
+| `mi_nivel()` | — | integer | ✅ Sí (`public, pg_temp`, desde 1B) |
+| `es_admin()` | — | boolean | ✅ Sí (`public, pg_temp`, desde 1B) |
+| `es_min_gestor()` | — | boolean | ✅ Sí (`public, pg_temp`, desde 1B) |
+| `es_min_responsable()` | — | boolean | ✅ Sí (`public, pg_temp`, desde 1B) |
+| `es_min_operario()` | — | boolean | ✅ Sí (`public, pg_temp`, desde 1B) |
 
 Confirman, por fin con certeza y no por suposición, los nombres que se
 asumieron en cada script SQL entregado a lo largo del proyecto — **todas
@@ -130,11 +146,11 @@ existían y existen con esos nombres exactos**.
 
 | Función | Argumentos | Devuelve | `search_path` fijado |
 |---|---|---|---|
-| `fichaje_mi_persona()` | — | personas_equipo | ❌ No |
-| `fichar()` | tipo, modalidad | fichajes | ❌ No |
-| `solicitar_correccion_fichaje()` | modalidad, hora_solicitada, motivo, solicitud_tipo, tipo, fichaje_original_id | solicitudes_correccion | ❌ No |
-| `aprobar_correccion_fichaje()` | solicitud_id, hora_final, motivo_ajuste | fichajes | ❌ No |
-| `rechazar_correccion_fichaje()` | solicitud_id, motivo_rechazo | solicitudes_correccion | ❌ No |
+| `fichaje_mi_persona()` | — | personas_equipo | ✅ Sí (`public, pg_temp`, desde 1B) |
+| `fichar()` | tipo, modalidad | fichajes | ✅ Sí (`public, pg_temp`, desde 1B) |
+| `solicitar_correccion_fichaje()` | modalidad, hora_solicitada, motivo, solicitud_tipo, tipo, fichaje_original_id | solicitudes_correccion | ✅ Sí (`public, pg_temp`, desde 1B) |
+| `aprobar_correccion_fichaje()` | solicitud_id, hora_final, motivo_ajuste | fichajes | ✅ Sí (`public, pg_temp`, desde 1B) |
+| `rechazar_correccion_fichaje()` | solicitud_id, motivo_rechazo | solicitudes_correccion | ✅ Sí (`public, pg_temp`, desde 1B) |
 
 ### Funciones del portal de clientes
 
@@ -161,6 +177,12 @@ compara el email del JWT contra `clientes.email` con `activo = true`.
 
 ## El hallazgo real sobre `search_path`
 
+> **Estado (Bloque 1B): resuelto.** Las 11 funciones quedaron con
+> `search_path = public, pg_temp` (no `public` a secas: `pg_temp` va el último
+> para que una tabla temporal no pueda tapar a una real). Hoy hay 0 funciones
+> `SECURITY DEFINER` de `public` sin `search_path`. No se cambió la lógica de
+> ninguna. Lo que sigue es el análisis original del Bloque 0.
+
 **11 de las 19 funciones no fijan `search_path` explícitamente.** Son,
 exactamente, las 6 funciones de roles y las 5 del fichaje — es decir, las
 que yo mismo escribí a lo largo de este proyecto. Las 8 funciones del
@@ -183,6 +205,75 @@ explícitamente excluido). Queda registrado como el punto de seguridad más
 concreto y accionable para una auditoría posterior, con una corrección
 conocida y de bajo riesgo cuando se decida abordarla: añadir `SET
 search_path = public` (o `= ''`) a esas 11 funciones.
+
+## Bloque 1B — núcleo aplicado y verificado en producción
+
+Aplicado en Supabase (octubre 2026) con los scripts versionados en
+`docs/sql/` (`1B-01_nucleo_migracion.sql`, tal cual están en el repositorio,
+sin modificaciones manuales). Cada paso fue una transacción independiente con
+guardas de seguridad.
+
+| Paso | Cambio | Resultado verificado |
+|---|---|---|
+| 0 (D0b) | Instantánea en el esquema privado `_hardening_1b` | `acl_snapshot` 1023 filas, `policy_snapshot` 102, `funcconf_snapshot` 19. Las 11 funciones objetivo estaban sin `search_path` |
+| 1 (D1) | `search_path = public, pg_temp` en las 11 `SECURITY DEFINER` | 0 funciones `SECURITY DEFINER` de `public` sin `search_path`; las otras 8 conservan `public` |
+| 2 (D2) | 8 policies `{public}` → `{authenticated}`, sin tocar `USING` / `WITH CHECK` | 0 policies `{public}`; 102 en total; 8 diferencias respecto a la instantánea, `cambia_with_check = false` en todas |
+| 3 (D2b) | `recepcion_lineas_select`: `USING (NOT es_cliente())` (antes `true`) | Idéntica a `recepciones_ver`: `{authenticated}`, `USING (NOT es_cliente())`. Solo `recepcion_lineas_select` cambia `USING` |
+| 4 (D3) | `anon`: se retiran todos los privilegios de las 29 tablas; `authenticated`: se retiran `TRUNCATE`, `TRIGGER`, `REFERENCES` | Ver abajo |
+
+**Grants de tabla (V3 / V4).** `anon` sin ningún privilegio; `authenticated`
+conserva `SELECT/INSERT/UPDATE/DELETE` en las 29 tablas y no tiene
+`TRUNCATE/TRIGGER/REFERENCES`; `service_role` intacto en las 29. La diferencia
+exacta frente a la instantánea fue de **319 privilegios retirados** y ninguno
+añadido: `anon` 8 × 29 = 232 (los 7 clásicos más `MAINTAIN`, privilegio de
+PostgreSQL 17+) y `authenticated` 3 × 29 = 87. El comentario original del
+script esperaba 290 por no contar `MAINTAIN`; el resultado es coherente con
+`REVOKE ALL ... FROM anon` y no requirió rollback (el comentario se corrigió).
+
+**Funciones (V5).** Las ACL de las funciones no cambiaron (0 retiradas, 0
+añadidas). `ALTER FUNCTION ... SET search_path` no modifica privilegios.
+
+**Precondición de D1.** Antes de fijar `search_path`, el script comprueba que
+`anon`, `authenticated` y `PUBLIC` no tienen `CREATE` sobre el esquema `public`
+(si lo tuvieran, podrían plantar objetos que una función resolvería antes que
+los reales). Estado auditado del esquema: `PUBLIC`, `postgres`, `anon`,
+`authenticated` y `service_role` solo con `USAGE`; únicamente
+`pg_database_owner` tiene `CREATE`.
+
+**Prueba funcional registrada en producción.** Login, dashboard y carga de
+datos, lectura de inventario, y un `UPDATE` real (descripción de un producto
+modificada y restaurada después), todo correcto. Aquí no consta como
+ejecutada ninguna prueba específica de portal de clientes, fichajes ni
+recepciones con distintos roles, ni de las peticiones negativas con la clave
+`anon`.
+
+### Qué NO se ha hecho en este bloque (a propósito)
+
+- **No se ha tocado `EXECUTE` de las funciones ni el privilegio de `PUBLIC`
+  (D4).** Queda para el **Bloque 1B-bis**: `PUBLIC` tiene `EXECUTE` en las 19
+  funciones, `anon` también (directo), y varios roles internos de Supabase
+  (`authenticator`, `pgbouncer`, `supabase_auth_admin`, `dashboard_user`,
+  `supabase_etl_admin`, `supabase_privileged_role`...) lo heredan aparentemente
+  de `PUBLIC`; retirarlo podría afectarles y requiere evidencia previa.
+- No se recortó el DML de `authenticated`: conservar `SELECT/INSERT/UPDATE/DELETE`
+  en las 29 tablas es **deliberado en esta fase**, no el modelo final de mínimo
+  privilegio. Hoy la separación equipo / clientes del portal descansa en RLS.
+- No se habilitó `FORCE ROW LEVEL SECURITY`.
+- No se modificaron los *default privileges*.
+- No se modificaron permisos de secuencias.
+- No se tocaron los emails de administrador hardcodeados (deuda separada, ver
+  `docs/DEUDA-TECNICA.md`).
+
+### Red de seguridad: instantánea y rollback
+
+- El esquema `_hardening_1b` **debe conservarse por ahora**. Es lo que permite
+  el rollback exacto.
+- `docs/sql/1B-02_nucleo_rollback.sql` **no debe ejecutarse ni eliminarse**
+  mientras se conserve esta red de seguridad. Solo se ejecutaría si fuera
+  necesario revertir el bloque, paso a paso (R3 → R2 → R1).
+- La eliminación del esquema (`drop schema _hardening_1b cascade`, al final
+  de ese script, comentada) es una decisión explícita posterior, no parte de
+  este bloque.
 
 ## Elementos sensibles — resultado de la auditoría pre-Git
 
