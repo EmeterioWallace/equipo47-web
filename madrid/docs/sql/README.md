@@ -46,6 +46,25 @@ Notas importantes:
 - **No contienen datos reales** (solo estructura y privilegios), igual que el
   resto de este directorio.
 
+## Bloque 1B-bis (D4): `EXECUTE` de las 19 funciones — D4a APLICADO, D4b NO EJECUTADO
+
+**Estado: D4-0 y D4a ejecutados en producción (D4a el 2026-10-02) y verificados (V6.1–V6.6 y prueba negativa
+con `anon`). D4b (opcional) no se ha ejecutado y permanece aplazado.** Los scripts
+`1B-05` (D4b) y `1B-06` (rollback) siguen sin ejecutar. Diseño, evidencia y resultado en
+`docs/SEGURIDAD.md`, sección "1B-bis".
+
+| Archivo | Para qué sirve |
+|---|---|
+| `1B-04_d4a_execute_migracion.sql` | PASO D4-0 (instantánea `acl_snapshot_d4` + tabla `d4_control`) y **D4a**: `REVOKE EXECUTE ... FROM PUBLIC, anon` en las 19 |
+| `1B-05_d4b_execute_migracion.sql` | **D4b** (opcional, independiente): `REVOKE EXECUTE ... FROM authenticated` en `mi_rol`, `mi_nivel`, `fichaje_mi_persona`, `mi_cliente_id`. Paso D4b-0 (marcador manual) y D4b-1 (cambio) |
+| `1B-06_d4_execute_rollback.sql` | R4b (solo D4b) y R4a (restaura las 19 a la instantánea, con diferencia 0) |
+| `1B-07_d4_verificacion.sql` | Consultas de solo lectura (V6.1–V6.6) y lista de pruebas manuales |
+
+Reglas de ejecución: rol `postgres`, **un paso cada vez**; D4b exige haber aplicado D4a,
+el marcador `D4a_verificado` (D4b-0) y que hayan pasado 5 minutos antes de D4b-1, de modo
+que D4a y D4b no puedan ejecutarse accidentalmente juntos. Tras D4, la consulta V5 de
+`1B-03` deja de ser válida (las ACL cambian a propósito); usar V6.
+
 ## Qué es exactamente `extraer_esquema_real.sql`, y qué NO es
 
 Es un **auditor de metadatos**, reproducible: se ejecuta contra Supabase y

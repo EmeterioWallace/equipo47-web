@@ -275,6 +275,76 @@ recepciones con distintos roles, ni de las peticiones negativas con la clave
   de ese script, comentada) es una decisión explícita posterior, no parte de
   este bloque.
 
+## Bloque 1B-bis — `EXECUTE` de las 19 funciones (D4): D4a APLICADO y verificado; D4b NO ejecutado
+
+> **Estado:** **D4a aplicado en producción el 2026-10-02 y verificado** (ver "Resultado de D4a").
+> **D4b (opcional) NO se ha ejecutado** y permanece aplazado. Scripts en
+> `docs/sql/1B-04` a `1B-07`.
+
+### Evidencia (auditoría de solo lectura en producción)
+
+| Ref. | Resultado |
+|---|---|
+| A1 | 19 `SECURITY DEFINER` en `public`, owner `postgres`, una sobrecarga por nombre |
+| A3/A3b, M1 | Solo `es_admin`, `es_cliente`, `es_min_gestor`, `es_min_operario` y `es_min_responsable` tienen dependencias registradas, y todas son `pg_policy`. Ninguna dependencia de tipo `pg_attrdef`, `pg_constraint`, `pg_rewrite`, `pg_trigger`, `pg_proc` u otro |
+| A4/A4b | Sin triggers normales; los 6 event triggers son de infraestructura y ninguno usa nuestras funciones |
+| A5/M3c | ACL idéntica en las 19: `EXECUTE` a `PUBLIC`, `anon`, `authenticated`, `postgres`, `service_role`; sin grant option |
+| A7/A8 | Sin `pgrst.*` específico; sin Auth Hooks |
+| M2a | Los 4 helpers solo los nombran funciones `SECURITY DEFINER` con owner `postgres`: `fichaje_mi_persona` ← `fichar` y las 3 de corrección; `mi_cliente_id` ← las 6 RPC del portal; `mi_nivel` ← `es_admin` y los 3 `es_min_*`; `mi_rol` ← `mi_nivel`. Ninguna `SECURITY INVOKER`, ninguna de otro esquema |
+| M2b/M2c/M2d | Sin vistas; `pg_cron` no instalado; ninguna policy (todos los esquemas) nombra los 4 helpers |
+| M3a/M3b | `authenticator` es `NOINHERIT` (`set_option = true`, `inherit_option = false` hacia `anon`, `authenticated`, `service_role`); `anon` y `authenticated` heredan; `postgres` hereda de todos |
+| M3d | Excluyendo `PUBLIC`: `anon`, `authenticated` y `service_role` 19/19 (grants directos); `authenticator`, `dashboard_user`, `pgbouncer`, `supabase_auth_admin`, `supabase_etl_admin`, `supabase_privileged_role` y `supabase_storage_admin` 0/19: hoy solo tienen `EXECUTE` por `PUBLIC` |
+| Repo | 10 `.rpc(...)` en Madrid (4 en `admin.html`, 6 en `portal.html`); ningún helper se llama desde el navegador; sin storage, realtime, Edge Functions ni `fetch` directo; los demás proyectos del repo usan otros proyectos Supabase |
+
+### Semántica en la que se apoya el diseño
+
+- Una función usada en una policy se ejecuta **como el rol que consulta**: `authenticated` necesita `EXECUTE` en las 5 `es_*()`. *(Semántica estándar de Postgres; los scripts la comprueban con sondas.)*
+- Una llamada anidada desde una `SECURITY DEFINER` se comprueba contra el **owner** (`postgres`, que conserva su grant): los helpers internos no necesitan `EXECUTE` para `authenticated`.
+- Las 102 policies son `{authenticated}` y `anon` no tiene privilegios de tabla: `anon` no necesita `EXECUTE` en ninguna.
+- PostgREST hace `SET ROLE anon/authenticated`: `authenticator` no ejecuta las funciones de aplicación, y con `NOINHERIT` ya no hereda nada de esos roles. Tras un `SET ROLE` mandan los privilegios del rol destino, no los de `authenticator`. `SET` está permitido y `INHERIT` no, que es lo que PostgREST necesita y nada más.
+
+### Modelo propuesto
+
+- **D4a** — `REVOKE EXECUTE FROM PUBLIC, anon` en las 19. `authenticated`, `service_role` y `postgres` no cambian. Efecto: 38 filas de ACL menos (19 PUBLIC + 19 anon).
+- **D4b (opcional)** — `REVOKE EXECUTE FROM authenticated` en `mi_rol`, `mi_nivel`, `fichaje_mi_persona` y `mi_cliente_id`. Efecto: 4 filas más (42 en total). Se mantiene como paso separado: su ganancia es menor (esos helpers solo devuelven datos del propio llamante) y su fallo, si lo hubiera, sería de alto impacto (RLS). Se aplica tras D4a verificado, con pruebas reales y reversible con un `GRANT`.
+- **No se tocan:** `service_role`, `postgres`, *default privileges*, tablas, policies, `search_path`.
+
+### Resultado de D4a (aplicado y verificado)
+
+- **D4-0:** instantánea `_hardening_1b.acl_snapshot_d4` de 95 filas.
+- **D4a (aplicado el 2026-10-02, según el marcador `D4a_aplicado` de V6.6):**
+  `REVOKE EXECUTE ... FROM PUBLIC, anon` en las 19 funciones. Según V6.2 se
+  retiraron únicamente 19 `EXECUTE` de `PUBLIC` y 19 de `anon`; `authenticated`,
+  `service_role` y `postgres` no cambiaron.
+- **Verificaciones SQL V6.1–V6.6:** todas superadas.
+- **Prueba negativa con la clave `anon`, sin sesión, contra la API real:**
+  `mi_catalogo` → HTTP 401, `42501`, `permission denied for function mi_catalogo`;
+  `es_admin` → HTTP 401, `42501`, `permission denied for function es_admin`.
+  Se usó solo la clave pública, sin `service_role`, y las llamadas no modifican datos.
+- **`fichar` no se probó a propósito** con `anon`, para evitar cualquier posibilidad de
+  escritura en producción (es la única de las tres que escribe). Se considera redundante:
+  las 19 funciones comparten la misma ACL y V6.2/V6.5 confirman que `anon` y `PUBLIC`
+  ya no tienen `EXECUTE` en ninguna.
+- **Pruebas funcionales con usuario autenticado:** login, dashboard y lectura de
+  inventario correctos; `UPDATE` controlado (descripción de "Agua Zero Sodio" modificada
+  y restaurada a vacío) sin errores; portal de cliente: login y carga básica sin errores
+  de permisos (el portal sigue en desarrollo funcional).
+- **No probado todavía** (no necesario para cerrar D4a, `authenticated` no cambió):
+  fichajes (fichar, solicitar/aprobar/rechazar corrección), crear/editar/cancelar
+  solicitudes del portal y comprobar disponibilidad, y pruebas por cada nivel de
+  usuario. Pasan a ser **requisito previo de D4b**.
+- **D4b:** no ejecutado, opcional y aplazado. No hay marcador `D4a_verificado` ni
+  `D4b_aplicado` en `d4_control`.
+- Mientras D4b no se aplique, V5 de `1B-03` no es válida; usar V6 (`1B-07`).
+
+### Riesgos residuales y desconocidos
+
+- **Consumidores externos** no versionados que usen la clave `anon` contra las 19 funciones: el repo no permite descartarlos. Tras D4a quedarían rechazados (prueba negativa verificada con `mi_catalogo` y `es_admin`); si existiera alguno, habría dejado de funcionar.
+- Los **cuerpos** de las funciones no están versionados: A2/M2a son búsquedas textuales y no detectan SQL dinámico construido por concatenación. D4b lleva sondas dentro de la transacción, pero pueden fallar antes de llegar al helper; la prueba real es la de usuarios de cada nivel.
+- **Deriva futura:** un `DROP` + `CREATE` de una función en `public` volvería a darle `EXECUTE` a `anon` y `authenticated` por los *default privileges* de Supabase. D4 no lo previene; `1B-07` (V6.5) lo detecta.
+- El **linter de Supabase** seguirá avisando de las funciones `SECURITY DEFINER` que conservan `EXECUTE` para `authenticated` (esperado).
+- Efecto en PostgREST de la pérdida del `EXECUTE` que `authenticator` obtenía vía `PUBLIC`: no se ha observado ningún problema tras D4a (la API responde, el login y las lecturas funcionan). `authenticator` no ejecuta estas funciones.
+
 ## Elementos sensibles — resultado de la auditoría pre-Git
 
 | Elemento | Dónde | Gravedad | Estado |

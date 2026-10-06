@@ -122,7 +122,14 @@ Las 11 quedaron con `search_path = public, pg_temp`, sin cambiar su lógica.
 Hoy no queda ninguna función `SECURITY DEFINER` de `public` sin `search_path`.
 Ver `docs/SEGURIDAD.md`.
 
-## 🟡 Pendiente (Bloque 1B-bis): `EXECUTE` de las 19 funciones y privilegio de `PUBLIC`
+## 🟡 Parcialmente resuelto (Bloque 1B-bis): `EXECUTE` de las 19 funciones y privilegio de `PUBLIC`
+
+> **Actualización:** **D4a aplicado el 2026-10-02 y verificado** (retirado `EXECUTE` de `PUBLIC` y `anon`
+> en las 19 funciones; prueba negativa con `anon` rechazada con `42501`). **D4b**
+> (opcional: retirar `authenticated` de 4 helpers internos) **no se ha ejecutado** y sigue
+> aplazado; antes de D4b habría que probar fichajes y el portal completo. Scripts en
+> `docs/sql/1B-04` a `1B-07`. Ver `docs/SEGURIDAD.md`, sección "1B-bis". El texto de
+> abajo es el planteamiento original (previo a D4a).
 
 **No se ha tocado en el núcleo del Bloque 1B** (las ACL de funciones no
 cambiaron). Hoy `PUBLIC` y `anon` tienen `EXECUTE` sobre las 19 funciones.

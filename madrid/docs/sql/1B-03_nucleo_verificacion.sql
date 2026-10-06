@@ -103,6 +103,8 @@ select 'añadido', grantee, priv, count(*)
 
 -- ── V5 (al terminar): las ACL de funciones NO han cambiado (D4 / EXECUTE excluido) ──
 -- Esperado: retirado = 0 y añadido = 0.
+-- VÁLIDO SOLO HASTA QUE SE APLIQUE D4 (1B-bis): tras D4a/D4b las ACL de las 19 cambian a
+-- propósito y esta consulta dejará de dar 0. Entonces usar V6 de 1B-07_d4_verificacion.sql.
 with actual as (
   select p.oid::regprocedure::text as obj,
          case a.grantee when 0 then 'PUBLIC' else a.grantee::regrole::text end as grantee,
