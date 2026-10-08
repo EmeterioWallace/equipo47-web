@@ -4,8 +4,10 @@
 > descriptivas reflejan el estado auditado en el **Bloque 0** (donde no se
 > modificó nada en RLS, grants ni funciones). El **núcleo del Bloque 1B** se
 > aplicó después en producción: su resultado está en la sección
-> [Bloque 1B — núcleo aplicado](#bloque-1b--núcleo-aplicado-y-verificado-en-producción)
-> y, donde procede, cada sección antigua lleva una nota de estado.
+> [Bloque 1B — núcleo aplicado](#bloque-1b--núcleo-aplicado-y-verificado-en-producción),
+> en la de [1B-bis](#bloque-1b-bis--execute-de-las-19-funciones-d4-d4a-aplicado-y-verificado-d4b-no-ejecutado)
+> y en la de [eliminación del admin bypass](#bloque-1b--eliminación-del-admin-bypass-aplicado-con-pruebas-manuales-pendientes);
+> donde procede, cada sección antigua lleva una nota de estado.
 
 ## Row Level Security (RLS)
 
@@ -76,7 +78,8 @@ bloque): añadir `TO authenticated` a estas 8 políticas, y revisar si
 > `TRUNCATE`, `TRIGGER` y `REFERENCES`. `authenticated` conserva
 > `SELECT/INSERT/UPDATE/DELETE` en las 29 tablas **de forma deliberada en esta
 > fase**; su recorte fino está pendiente. Los grants de **funciones**
-> (`EXECUTE`) no se han tocado (ver 1B-bis). Lo que sigue es el análisis
+> (`EXECUTE`) no se tocaron en el núcleo; D4a (1B-bis) retiró después `PUBLIC` y
+> `anon`, y D4b sigue aplazado. Lo que sigue es el análisis
 > original del Bloque 0.
 
 Los grants muestran privilegios amplios (`SELECT`, `INSERT`, `UPDATE`,
@@ -131,7 +134,7 @@ revisar función por función.
 
 | Función | Argumentos | Devuelve | `search_path` fijado |
 |---|---|---|---|
-| `mi_rol()` | — | text | ✅ Sí (`public, pg_temp`, desde 1B) |
+| `mi_rol()` | — | text | ✅ Sí (`public, pg_temp`, desde 1B). Desde 2026-10-07 ya no contiene emails hardcodeados: el rol sale solo de `personas_equipo` |
 | `mi_nivel()` | — | integer | ✅ Sí (`public, pg_temp`, desde 1B) |
 | `es_admin()` | — | boolean | ✅ Sí (`public, pg_temp`, desde 1B) |
 | `es_min_gestor()` | — | boolean | ✅ Sí (`public, pg_temp`, desde 1B) |
@@ -250,7 +253,9 @@ recepciones con distintos roles, ni de las peticiones negativas con la clave
 ### Qué NO se ha hecho en este bloque (a propósito)
 
 - **No se ha tocado `EXECUTE` de las funciones ni el privilegio de `PUBLIC`
-  (D4).** Queda para el **Bloque 1B-bis**: `PUBLIC` tiene `EXECUTE` en las 19
+  (D4) en el núcleo.** *(Actualización: D4a se aplicó después en 1B-bis, el
+  2026-10-02; D4b sigue aplazado. Lo que sigue describe la situación al cierre del
+  núcleo.)* Quedaba para el **Bloque 1B-bis**: `PUBLIC` tenía `EXECUTE` en las 19
   funciones, `anon` también (directo), y varios roles internos de Supabase
   (`authenticator`, `pgbouncer`, `supabase_auth_admin`, `dashboard_user`,
   `supabase_etl_admin`, `supabase_privileged_role`...) lo heredan aparentemente
@@ -261,8 +266,9 @@ recepciones con distintos roles, ni de las peticiones negativas con la clave
 - No se habilitó `FORCE ROW LEVEL SECURITY`.
 - No se modificaron los *default privileges*.
 - No se modificaron permisos de secuencias.
-- No se tocaron los emails de administrador hardcodeados (deuda separada, ver
-  `docs/DEUDA-TECNICA.md`).
+- No se tocaron los emails de administrador hardcodeados dentro de este
+  bloque. Se abordaron después como bloque propio; ver
+  [Eliminación del admin bypass](#bloque-1b--eliminación-del-admin-bypass-aplicado-con-pruebas-manuales-pendientes).
 
 ### Red de seguridad: instantánea y rollback
 
@@ -345,6 +351,118 @@ recepciones con distintos roles, ni de las peticiones negativas con la clave
 - El **linter de Supabase** seguirá avisando de las funciones `SECURITY DEFINER` que conservan `EXECUTE` para `authenticated` (esperado).
 - Efecto en PostgREST de la pérdida del `EXECUTE` que `authenticator` obtenía vía `PUBLIC`: no se ha observado ningún problema tras D4a (la API responde, el login y las lecturas funcionan). `authenticator` no ejecuta estas funciones.
 
+## Bloque 1B — Eliminación del admin bypass: aplicado, con pruebas manuales pendientes
+
+> **Estado:** scripts A y B **aplicados en producción** y verificados por SQL
+> (V8.2–V8.7). **Pendientes de prueba manual:** inicio de sesión de la segunda
+> cuenta administradora y prueba con una cuenta de rol inferior. Scripts en
+> `docs/sql/1B-08` a `1B-11`. Las cabeceras de `1B-08`, `1B-09` y `1B-10` siguen
+> diciendo "PREPARADO, NO APLICADO / NO EJECUTADO" porque los scripts no se
+> modificaron; **el estado real es el de esta sección**.
+
+### Qué había y qué cambió
+
+Antes, `mi_rol()` devolvía `'admin'` por email para dos cuentas "blindadas" **antes**
+de consultar `personas_equipo` (donde ambas figuraban como `consulta`), y
+`admin.html` repetía esa lista (`ADMINS_BLINDADOS`). Ahora el rol de todas las
+cuentas, esas dos incluidas, sale únicamente de `personas_equipo`.
+
+### Orden de aplicación y registros (hora de Madrid)
+
+| Paso | Qué hizo | Fecha / marcador |
+|---|---|---|
+| A (`1B-08`) | Las 2 cuentas pasan a `rol='admin'`, `activo=true` en `personas_equipo`; respaldo en `_hardening_1b` | `A_aplicado`: 2026-10-06 13:50:39 |
+| Frontend | `admin.html` sin `ADMINS_BLINDADOS`, desplegado y verificado. Commit `5c535a960148beea89d5c588b060a86e5e3a9774` | — |
+| B-0 (`1B-09`) | Marcador manual de frontend verificado | `frontend_verificado`: 2026-10-07 10:33:08 |
+| B-1 (`1B-09`) | `DRY_RUN` superado (guardas, comparación diferencial y aserciones; rollback verificado); después `COMMIT` | `B_aplicado`: 2026-10-07 13:40:55 |
+| Scripts SQL versionados | Commit `d4e059b925de3f4302a5e6cf491f81e0101536e6` | — |
+
+B se ejecutó antes que cualquier D4b, como exigía su procedimiento (D4b cambiaría
+el ACL de `mi_rol()` y B abortaría por deriva).
+
+### Verificaciones (`1B-11`, solo lectura)
+
+| Ref. | Resultado confirmado |
+|---|---|
+| V8.2 | `mi_rol()` sin emails en el cuerpo; `SECURITY DEFINER`, owner `postgres`, `STABLE`, `search_path=public, pg_temp`, ACL intacta |
+| V8.3 | Cuerpo nuevo distinto del respaldo; respaldo original conservado |
+| V8.4 | Las 5 funciones dependientes (`mi_nivel`, `es_admin`, `es_min_gestor`, `es_min_responsable`, `es_min_operario`) presentes |
+| V8.5 | Marcadores `A_aplicado`, `frontend_verificado` y `B_aplicado` registrados |
+| V8.6 | 19 funciones `SECURITY DEFINER`; ninguna ejecutable por `PUBLIC`/`anon`; `authenticated` conserva `EXECUTE` sobre `mi_rol()` (D4b sin ejecutar) |
+| V8.7a | Ninguna función de `public` contiene emails literales detectados |
+| V8.7b | Cero políticas, vistas o vistas materializadas con emails literales detectados |
+
+**Alcance de V8.7 (no es una garantía absoluta).** Son búsquedas por patrón
+(forma de email y el texto `equipo47`) sobre el cuerpo de las funciones de `public`
+y sobre las definiciones de políticas, vistas y vistas materializadas. No cubren
+otros esquemas, ni datos en tablas, ni SQL construido dinámicamente por
+concatenación. Se lee como "no se detectó ninguno con estas búsquedas".
+
+### Pruebas manuales
+
+| Prueba | Estado |
+|---|---|
+| Primera cuenta administradora en producción | ✅ Funciona con normalidad (2026-10-08) |
+| Inicio de sesión de la **segunda** cuenta administradora | ⏳ **PENDIENTE — no realizada** |
+| Cuenta de **rol inferior** (si está disponible) | ⏳ **PENDIENTE — no realizada** |
+
+Hasta que se hagan, el bloque no debe darse por plenamente validado desde el punto
+de vista del usuario final.
+
+### Rollback (scripts `1B-10`)
+
+Orden de ejecución: **C1 → frontend → C2**. C2 solo corresponde a una reversión
+completa; para revertir únicamente la lógica basta C1.
+
+1. **C1 — restaurar `mi_rol()`** (lógica). Recupera la definición original, con el
+   bypass, desde `_hardening_1b.admin_bypass_mi_rol_backup`. Es seguro hacerlo primero
+   porque las 2 cuentas ya son `admin` en la tabla: nadie pierde acceso. Aborta si B
+   no consta aplicado, si el estado es inesperado, o si tras restaurar el cuerpo,
+   las propiedades o el ACL no coinciden con el respaldo.
+2. **Frontend** — restaurar el `admin.html` anterior (el commit de retirada es
+   `5c535a9`). Sin SQL. **Antes**, revisar el diff y el estado de Git (cambios sin
+   confirmar, commits posteriores que toquen `admin.html`); no ejecutar un `git
+   revert` automáticamente sin comprobar sus efectos. Es **imprescindible antes de
+   C2** y debe quedar restaurado, desplegado y verificado: el frontend lee el rol de
+   `personas_equipo`, y sin él las 2 cuentas verían el menú de `consulta` aunque
+   `mi_rol()` siga dándoles admin. Si solo se revierte la lógica (C1), no es
+   necesario.
+3. **C2 — devolver las 2 cuentas a su rol previo (`consulta`)**, **solo si se
+   requiere una reversión completa**, con el frontend anterior ya verificado, y si
+   se cumplen sus guardas (el script no comprueba el frontend): ejecutar como
+   `postgres`; `mi_rol()` debe ser ya la definición con bypass (si no, aborta con
+   "ORDEN INCORRECTO"); `A` debe constar aplicado; el respaldo debe tener 2 filas;
+   las 2 cuentas deben seguir como `admin` (si alguien las cambió, aborta y exige
+   revisar a mano).
+
+**Precauciones.**
+- **Nunca C2 con el bypass retirado de `mi_rol()`**: las 2 cuentas quedarían como
+  `consulta` y nadie podría reasignar roles.
+- Cada paso es una transacción independiente: un paso cada vez, como `postgres`.
+- Tras un rollback completo, A **no** es reaplicable tal cual (las tablas
+  `admin_bypass_*` conservan sus filas y A aborta por "estado inconsistente"): es un
+  fallo seguro deliberado.
+- Recuperación de emergencia si se perdiera todo acceso admin: desde el SQL Editor
+  (`postgres`, no sujeto a RLS), un `update` de `personas_equipo.rol = 'admin'` sobre
+  la cuenta afectada.
+
+### Red de seguridad conservada
+
+El esquema `_hardening_1b` **se conserva**, con `admin_bypass_control` (marcadores),
+`admin_bypass_mi_rol_backup` (definición y propiedades originales de `mi_rol()` y
+huellas de las dependientes) y `admin_bypass_personas_backup` (estado previo de las 2
+filas). No se ha ejecutado ninguna limpieza. Borrarlas es una decisión explícita
+posterior, que además eliminaría la base del rollback.
+
+### Pendiente y deuda abierta (no resuelto por este bloque)
+
+- **Pérdida del último administrador:** sin el bypass, no hay red de seguridad si la
+  tabla se queda sin admins activos. Sin protección automática (ver
+  `docs/DEUDA-TECNICA.md`).
+- **Semántica de `activo=false`:** `mi_rol()` **no consulta `activo`**. Sin definir; se
+  abordará por separado (ver `docs/DEUDA-TECNICA.md`).
+- **D4b** sigue **sin ejecutar** (ver sección 1B-bis).
+
 ## Elementos sensibles — resultado de la auditoría pre-Git
 
 | Elemento | Dónde | Gravedad | Estado |
@@ -352,7 +470,7 @@ recepciones con distintos roles, ni de las peticiones negativas con la clave
 | `SUPABASE_ANON_KEY` | `js/supabase.js` | Baja — es una clave pública por diseño, protegida por RLS, no un secreto que deba ocultarse | Identificada, **no movida** (fuera del alcance de este bloque, tal como se pidió) |
 | `SUPABASE_URL` | `js/supabase.js` | Ninguna por sí sola — es pública por diseño | Identificada, no movida |
 | `PASS_CORRECTA` (contraseña real) | `js/utils.js` | Media — contraseña real en texto plano, de un sistema sin uso | ✅ **Retirada en este bloque** |
-| Emails de `ADMINS_BLINDADOS` | `admin.html` | Baja-media — datos personales (emails reales) publicados en el código fuente que llega a cualquier navegador, sin necesidad técnica de que sean públicos | Identificada, no modificada (es código funcional, fuera del alcance de "solo preparar el baseline") |
+| Emails de `ADMINS_BLINDADOS` | `admin.html` | Baja-media — datos personales (emails reales) publicados en el código fuente que llega a cualquier navegador, sin necesidad técnica de que sean públicos | ✅ **Retirados del frontend** (commit `5c535a9`, desplegado y verificado; marcador `frontend_verificado` 2026-10-07) y del cuerpo de `mi_rol()` (`B_aplicado` 2026-10-07). Los emails siguen en el historial de git. Ver la sección "Eliminación del admin bypass" |
 
 **No se ha encontrado**: ninguna `service_role key`, ningún token de API de
 terceros, ninguna clave privada, ningún archivo `.env` ni de configuración

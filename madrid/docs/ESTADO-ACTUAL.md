@@ -12,7 +12,7 @@
 - **Fichaje de jornada**: registro de entrada/salida/pausas, solo-añadir (nunca se edita ni se borra un fichaje), corrección de olvidos y de datos incorrectos vía solicitudes aprobables, calendario mensual, vista de equipo con filtros y exportar CSV. **Construido pero deliberadamente desactivado para el equipo** — pendiente de consulta con la asesoría laboral (RGPD, si los admins también fichan, formalización de correcciones).
 - **Calendario de eventos**: hora de inicio opcional, colores de los 5 tipos (Salida/Devolución/Recepción/Evento/Participas) editables desde la propia app por gestor+, etiqueta y color sueltos por evento (ej. "ASICS") como alternativa ligera a un sistema de categorías completo.
 - **Clientes y portal externo**: ficha de cliente, visibilidad de catálogo por cliente con tope de unidades, solicitudes de material con comprobación de disponibilidad por rango de fechas — todo vía funciones RPC `SECURITY DEFINER`, nunca acceso directo a tablas desde `portal.html`.
-- **Roles**: 5 niveles (consulta/operario/responsable/gestor/admin), aplicados en 3 capas (menú oculto, botones ocultos por clase CSS, RLS en Supabase).
+- **Roles**: 5 niveles (consulta/operario/responsable/gestor/admin), aplicados en 3 capas (menú oculto, botones ocultos por clase CSS, RLS en Supabase). El rol de cada cuenta, administradores incluidos, se lee de `personas_equipo` a través de `mi_rol()`; ya no hay cuentas admin por email.
 
 ## Desactivado a propósito (no es un fallo)
 
@@ -36,7 +36,8 @@ Ver `docs/DEUDA-TECNICA.md` para el detalle completo. Lo más relevante:
 - ~~Bug confirmado en `exportarCSV` (recursión infinita)~~ — **corregido** en el commit `39db3e2`; estaba fuera del alcance del Bloque 0.
 - Código legacy sin uso en `js/supabase.js` y `js/utils.js`, de una versión anterior del proyecto.
 - Una tabla (`historial`) en el esquema real de Supabase sin ningún punto de acceso en el código actual — todo apunta a que es la predecesora de `actividad`.
-- ~~8 políticas RLS (de 102) con el rol aplicado como `{public}`~~ — **resuelto en el núcleo del Bloque 1B** (octubre 2026), junto con el `search_path` de 11 funciones y el recorte de privilegios de tabla de `anon` y `authenticated`. Pendiente para 1B-bis: `EXECUTE`/`PUBLIC` de las funciones. Ver `docs/SEGURIDAD.md` y `docs/DEUDA-TECNICA.md`.
+- ~~8 políticas RLS (de 102) con el rol aplicado como `{public}`~~ — **resuelto en el núcleo del Bloque 1B** (octubre 2026), junto con el `search_path` de 11 funciones y el recorte de privilegios de tabla de `anon` y `authenticated`. `EXECUTE`/`PUBLIC` de las funciones: **D4a aplicado el 2026-10-02** (1B-bis); D4b sigue aplazado. Ver `docs/SEGURIDAD.md` y `docs/DEUDA-TECNICA.md`.
+- ~~Emails de administrador hardcodeados (`mi_rol()` y `ADMINS_BLINDADOS`)~~ — **retirados** (bloque admin bypass, 2026-10-06 a 2026-10-07). El rol sale solo de `personas_equipo`. **Pruebas manuales pendientes**: segunda cuenta administradora y cuenta de rol inferior. Deuda abierta: protección frente a la pérdida del último administrador y semántica de `activo=false`.
 
 ## El repositorio Git ya existe — el Bloque 0 no lo crea
 

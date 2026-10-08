@@ -17,6 +17,9 @@
   núcleo del Bloque 1B (mínimo privilegio y endurecimiento de funciones
   `SECURITY DEFINER`). Ver la sección siguiente.
 
+- **`1B-04` a `1B-07`** (1B-bis, `EXECUTE`) y **`1B-08` a `1B-11`** (eliminación
+  del admin bypass): ver sus secciones más abajo.
+
 ## Bloque 1B (núcleo): migración, rollback y verificación
 
 **Estado: aplicado y verificado en producción** (octubre 2026). El detalle de
@@ -40,9 +43,10 @@ Notas importantes:
   volver a auditar antes de reutilizar estos scripts.
 - **Fuera de alcance, y no incluido en ninguno de los tres archivos:**
   `EXECUTE` de funciones y privilegio de `PUBLIC` (previsto como Bloque
-  **1B-bis**), recorte fino de DML de `authenticated`, emails hardcodeados de
-  `mi_rol()`, `FORCE RLS`, *default privileges* y secuencias. Las ACL de
-  funciones se guardan en la instantánea solo como evidencia para 1B-bis.
+  **1B-bis**, aplicado después), recorte fino de DML de `authenticated`, `FORCE
+  RLS`, *default privileges* y secuencias. Los emails hardcodeados de `mi_rol()` se
+  trataron después en el bloque admin bypass (abajo). Las ACL de funciones se guardan
+  en la instantánea solo como evidencia para 1B-bis.
 - **No contienen datos reales** (solo estructura y privilegios), igual que el
   resto de este directorio.
 
@@ -64,6 +68,44 @@ Reglas de ejecución: rol `postgres`, **un paso cada vez**; D4b exige haber apli
 el marcador `D4a_verificado` (D4b-0) y que hayan pasado 5 minutos antes de D4b-1, de modo
 que D4a y D4b no puedan ejecutarse accidentalmente juntos. Tras D4, la consulta V5 de
 `1B-03` deja de ser válida (las ACL cambian a propósito); usar V6.
+
+## Bloque 1B — Eliminación del admin bypass: A y B APLICADOS, pruebas manuales pendientes
+
+**Estado real:** A aplicado (`A_aplicado`, 2026-10-06 13:50:39 Madrid), frontend
+verificado (`frontend_verificado`, 2026-10-07 10:33:08) y B aplicado (`B_aplicado`,
+2026-10-07 13:40:55). Verificado con `1B-11` (V8.2–V8.7). C **no se ha ejecutado**.
+**Las cabeceras de `1B-08` y `1B-09` siguen diciendo "NO APLICADO" y la de `1B-10`
+"NO EJECUTADO"**: los scripts no se modificaron; este README y `docs/SEGURIDAD.md`
+recogen el estado real. Commits: frontend `5c535a960148beea89d5c588b060a86e5e3a9774`,
+scripts `d4e059b925de3f4302a5e6cf491f81e0101536e6`.
+
+| Archivo | Para qué sirve |
+|---|---|
+| `1B-08_admin_bypass_A_datos.sql` | **A** (aplicado): las 2 cuentas blindadas pasan a `rol='admin'`, `activo=true` en `personas_equipo`; crea las tablas `admin_bypass_*` en `_hardening_1b` con el respaldo |
+| `1B-09_admin_bypass_B_logica.sql` | **B-0** (marcador `frontend_verificado`, aplicado) y **B-1** (aplicado): `mi_rol()` sin la rama por email. `DRY_RUN` por defecto |
+| `1B-10_admin_bypass_C_rollback.sql` | **C1** (restaura `mi_rol()`) y **C2** (devuelve las 2 cuentas a su rol previo). **No ejecutado** |
+| `1B-11_admin_bypass_D_verificacion.sql` | Consultas de solo lectura V8.1–V8.7. Seguro de repetir; V8.1, V8.3–V8.5 requieren las tablas de A |
+
+Orden de aplicación (seguido): A (`DRY_RUN` y `COMMIT`) → frontend → B-0 → esperar 5
+min → B-1 `DRY_RUN` → B-1 `COMMIT`. Un paso cada vez, como `postgres`.
+
+**Orden de rollback: C1 → frontend → C2.** C1 restaura `mi_rol()` y es seguro
+primero (las cuentas ya son admin en la tabla). Después se restaura el `admin.html`
+anterior (commit de retirada `5c535a9`): **antes revisar el diff y el estado de Git,
+sin ejecutar un `git revert` automáticamente**; debe quedar desplegado y verificado.
+C2 solo corresponde a una reversión completa, con el frontend anterior ya verificado
+(el script no lo comprueba) y con `mi_rol()` ya con el bypass; nunca con el bypass
+retirado. Para revertir solo la lógica basta C1.
+
+Notas:
+
+- **No reejecutables tal cual.** Tras B, A falla a propósito en el guard de identidad
+  de `mi_rol()`; tras un rollback completo, A aborta por estado inconsistente.
+- **Conservar** el esquema `_hardening_1b` y sus tablas `admin_bypass_*`; no hay
+  limpieza prevista todavía.
+- La verificación V8 coexiste con V6 (1B-bis); D4b sigue sin ejecutar.
+- **Pendiente (no es de este bloque):** protección frente a la pérdida del último
+  administrador y semántica de `activo=false` (ver `docs/DEUDA-TECNICA.md`).
 
 ## Qué es exactamente `extraer_esquema_real.sql`, y qué NO es
 

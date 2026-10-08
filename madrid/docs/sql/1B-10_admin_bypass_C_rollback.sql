@@ -3,10 +3,15 @@
 -- ============================================================
 -- ESTADO: PREPARADO, NO EJECUTADO. Solo para revertir el bloque.
 --
--- ORDEN OBLIGATORIO (inverso al de aplicación)
---   1. FRONTEND:  revertir el commit de admin.html (git revert). Sin SQL.
---   2. C1 (LÓGICA): restaura mi_rol() desde _hardening_1b.admin_bypass_mi_rol_backup.
---   3. C2 (DATOS):  devuelve las 2 cuentas a su rol previo ('consulta').
+-- ORDEN OBLIGATORIO (inverso al de aplicación: A -> frontend -> B)
+--   1. C1 (LÓGICA): restaura mi_rol() desde _hardening_1b.admin_bypass_mi_rol_backup.
+--   2. FRONTEND:    restaurar el admin.html anterior (sin SQL). Antes de tocar nada, revisar
+--                   el diff y el estado de Git; no ejecutar un git revert a ciegas. Debe quedar
+--                   restaurado, desplegado y verificado antes de C2.
+--   3. C2 (DATOS):  devuelve las 2 cuentas a su rol previo ('consulta'). Solo para una
+--                   reversión completa, y solo con el frontend anterior ya desplegado: el
+--                   frontend lee el rol de personas_equipo, así que sin él el menú de esas
+--                   cuentas se vería como 'consulta' aunque mi_rol() siga dándoles admin.
 --
 --   NUNCA ejecutar C2 con el bypass ya retirado de mi_rol(): las 2 cuentas quedarían
 --   como 'consulta' y nadie podría reasignar roles. C2 lo comprueba y aborta.
@@ -84,7 +89,8 @@ commit;
 
 -- ============================================================
 -- C2 — restaurar los roles previos de las 2 cuentas (datos)
--- SOLO tras C1 (el bypass debe estar de vuelta).
+-- SOLO tras C1 (el bypass debe estar de vuelta) Y tras restaurar, desplegar y verificar
+-- el frontend anterior (el script no puede comprobarlo). Solo para reversión completa.
 -- ============================================================
 begin;
 

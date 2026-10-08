@@ -131,8 +131,9 @@ Ver `docs/SEGURIDAD.md`.
 > `docs/sql/1B-04` a `1B-07`. Ver `docs/SEGURIDAD.md`, sección "1B-bis". El texto de
 > abajo es el planteamiento original (previo a D4a).
 
-**No se ha tocado en el núcleo del Bloque 1B** (las ACL de funciones no
-cambiaron). Hoy `PUBLIC` y `anon` tienen `EXECUTE` sobre las 19 funciones.
+**Texto original, previo a D4a** (D4a ya está aplicado; solo D4b sigue pendiente).
+No se tocó en el núcleo del Bloque 1B (las ACL de funciones no cambiaron). Entonces
+`PUBLIC` y `anon` tenían `EXECUTE` sobre las 19 funciones.
 Retirar el de `PUBLIC` afectaría indirectamente a varios roles internos de
 Supabase (`authenticator`, `pgbouncer`, `supabase_auth_admin`,
 `dashboard_user`, `supabase_etl_admin`, `supabase_privileged_role`...), que
@@ -151,12 +152,39 @@ comparten el rol `authenticated`, de modo que la separación descansa solo en
 RLS (94 políticas). Revisar tabla por tabla qué operaciones necesita de
 verdad el rol, apoyándose en la matriz de uso del frontend.
 
-## 🟡 Deuda separada: emails de administrador hardcodeados
+## ✅ Resuelto (bloque propio, 2026-10-06 a 2026-10-07): emails de administrador hardcodeados
 
-`mi_rol()` (función `SECURITY DEFINER`) contiene emails de administrador
-escritos en el código de la función, y `ADMINS_BLINDADOS` en `admin.html`
-publica emails reales en el código que llega al navegador. No se ha tocado
-ninguno y **no debe resolverse dentro del Bloque 1B**; es una tarea propia.
+`mi_rol()` devolvía `'admin'` por email para dos cuentas, y `ADMINS_BLINDADOS` en
+`admin.html` publicaba esos emails en el navegador. Ambos bypass están retirados:
+frontend (commit `5c535a9`) y lógica (`B_aplicado`, 2026-10-07 13:40:55). Las 2
+cuentas son ahora `admin` activas en `personas_equipo`. Detalle, verificaciones,
+rollback y pruebas en `docs/SEGURIDAD.md` ("Eliminación del admin bypass").
+
+Alcance de lo verificado: V8.7a/b son búsquedas por patrón sobre funciones de
+`public` y sobre políticas, vistas y vistas materializadas; no son una garantía
+absoluta de ausencia de hardcodes (no cubren otros esquemas ni SQL dinámico). Los
+emails siguen en el historial de git.
+
+## 🟡 Pendiente: pruebas manuales del bloque admin bypass
+
+- Inicio de sesión de la **segunda cuenta administradora**: no realizado.
+- Prueba con una **cuenta de rol inferior**: no realizada.
+
+La primera cuenta administradora funciona con normalidad (2026-10-08).
+
+## 🟡 Nueva deuda: pérdida del último administrador
+
+Sin el bypass por email, si `personas_equipo` se queda sin ningún admin activo (por
+error, baja o cambio de rol), nadie puede reasignar roles desde la aplicación. La
+recuperación solo es posible desde el SQL Editor como `postgres`. No hay protección
+automática (por ejemplo una guarda de "último admin"). Se abordará por separado.
+
+## 🟡 Nueva deuda: semántica de `activo=false`
+
+`mi_rol()` **no consulta `activo`**: una fila con `activo=false` sigue devolviendo su
+rol. Falta definir qué significa desactivar a una persona (¿pierde el acceso?, ¿solo
+se oculta?) y, en su caso, aplicarlo en `mi_rol()` y el frontend. Se abordará por
+separado; no se ha cambiado nada.
 
 ## 🟡 Endurecimientos de seguridad no abordados
 
@@ -166,7 +194,8 @@ ninguno y **no debe resolverse dentro del Bloque 1B**; es una tarea propia.
 - Permisos de secuencias: sin auditar ni modificar.
 - Consumidores externos del proyecto: el repositorio no permite descartar
   scripts o integraciones no versionadas que usen la clave `anon`.
-- Instantánea `_hardening_1b` y `1B-02_nucleo_rollback.sql`: conservar por
+- Instantánea `_hardening_1b` (incluidas las tablas `admin_bypass_*`),
+  `1B-02_nucleo_rollback.sql` y `1B-10_admin_bypass_C_rollback.sql`: conservar por
   ahora. Eliminar el esquema es una decisión explícita posterior.
 
 ## Qué NO es deuda técnica (para que no se confunda)

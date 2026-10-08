@@ -51,9 +51,11 @@ NIVEL_PAGINA = {
 }
 ```
 
-Dos cuentas "blindadas" de fábrica están hardcodeadas por email directamente
-en `admin.html` (`ADMINS_BLINDADOS`) y siempre son admin, pase lo que pase en
-la tabla `personas_equipo`.
+Antes existían dos cuentas "blindadas" hardcodeadas por email en `admin.html`
+(`ADMINS_BLINDADOS`) y en `mi_rol()`, siempre admin con independencia de
+`personas_equipo`. **Ese bypass se retiró** (frontend 2026-10-07, commit `5c535a9`;
+`mi_rol()` 2026-10-07): ahora el rol de todas las cuentas sale de la tabla
+`personas_equipo`. Ver `docs/SEGURIDAD.md`.
 
 ## Páginas de `admin.html`
 

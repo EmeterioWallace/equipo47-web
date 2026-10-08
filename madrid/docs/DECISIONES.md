@@ -92,3 +92,18 @@ baseline — incluido el bug ya conocido de `exportarCSV`. Motivo: la app está
 en producción con operativa real del equipo, y mezclar "ordenar el proyecto"
 con "cambiar cómo funciona" dificulta saber, si algo se rompe, cuál de las
 dos cosas lo causó.
+
+## Admin bypass por email sustituido por el sistema normal de roles
+
+Dos cuentas estaban "blindadas" por email, en `mi_rol()` y en `admin.html`
+(`ADMINS_BLINDADOS`), y eran admin con independencia de `personas_equipo`.
+Se sustituyó por el mecanismo normal: las dos cuentas son `admin` activas en
+`personas_equipo` y el rol de todo el mundo sale de esa tabla. Motivos: una
+única fuente de verdad para los roles, y sacar emails reales del código que
+llega al navegador y del cuerpo de una función. Se aplicó en orden (datos →
+frontend → lógica), cada paso con respaldo y rollback, de modo que nadie
+perdiera acceso en ningún momento. Coste asumido: ya no hay red de seguridad
+por email, así que perder al último administrador solo se arregla desde el SQL
+Editor; ese riesgo y la semántica de `activo=false` quedan como deuda
+registrada (`docs/DEUDA-TECNICA.md`), no resueltos. Detalle en
+`docs/SEGURIDAD.md`.
