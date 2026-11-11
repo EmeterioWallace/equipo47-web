@@ -29,6 +29,7 @@ const SUPABASE_URL = 'https://ciszgyorsveumnrtcejn.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpc3pneW9yc3ZldW1ucnRjZWpuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3ODk0MDYsImV4cCI6MjA5NzM2NTQwNn0.O56WDFFdtZMc1mXpgCEkgQF8ZTT5tnCpzg8xN4H_qK8';
 
 const RUTA_IMAGENES_BASE = 'images/products/';
+const RUTA_PLACEHOLDER = 'images/placeholder-proximamente.svg';
 const RUTA_MOCK_LOCAL = 'prototipo-catalogo/data/catalogo-web-mock.json';
 const RUTA_MANIFIESTO_IMAGENES = 'images/products/manifest.json';
 
@@ -39,9 +40,8 @@ const RUTA_MANIFIESTO_IMAGENES = 'images/products/manifest.json';
 // -> "images/products/subcarpeta/nombre_de_archivo.jpg", generado a partir
 // de lo que de verdad existe en el repo.
 //
-// IMPORTANTE: si se añaden imágenes nuevas al repo, hay que regenerar
-// images/products/manifest.json (script de generación en el repo, ver
-// commit "Resolver imágenes de catalogo_web por nombre de archivo").
+// El manifiesto se regenera solo en cada deploy de Netlify
+// (scripts/generate-manifest.js, ver netlify.toml).
 let manifiestoImagenes = null;
 
 async function cargarManifiestoImagenes() {
@@ -56,7 +56,8 @@ async function cargarManifiestoImagenes() {
 }
 
 function resolverRutaImagen(nombreArchivo) {
-    if (!nombreArchivo) return '';
+    // Sin imagen (la publicación ya no la exige): placeholder "próximamente".
+    if (!nombreArchivo) return RUTA_PLACEHOLDER;
     // Si ya viene con subcarpeta incluida (ej. "running/foto.jpg"), respetarlo tal cual.
     if (nombreArchivo.includes('/')) return RUTA_IMAGENES_BASE + nombreArchivo;
 
@@ -64,8 +65,10 @@ function resolverRutaImagen(nombreArchivo) {
     const rutaReal = manifiestoImagenes ? manifiestoImagenes[clave] : null;
     if (rutaReal) return rutaReal;
 
-    console.warn(`⚠️ Imagen no encontrada en el manifiesto: "${nombreArchivo}". Comprobar que el archivo existe en /images/products/ y que el manifiesto está actualizado.`);
-    return RUTA_IMAGENES_BASE + nombreArchivo; // fallback: se mostrará rota, pero visible en consola por qué
+    // Archivo que no existe en el repo: se avisa en consola y se muestra el placeholder
+    // en vez de una imagen rota.
+    console.warn(`⚠️ Imagen no encontrada en el manifiesto: "${nombreArchivo}". Comprobar que el archivo existe en /images/products/.`);
+    return RUTA_PLACEHOLDER;
 }
 
 // Convierte el precio numérico (o null) al formato que ya usa la web:
