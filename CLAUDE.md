@@ -18,6 +18,7 @@ Sitio estático en Netlify + GitHub. Usuario: Guille (coordina). Idioma de traba
 - La web no toca `producciones/`; Producciones no toca la tienda sin avisar en el buzón.
 
 ## Flujo de despliegue
+0. Hay varias copias del repo (la local de Guille en `D:\E47\Web\equipo47` y las de cada chat). **Antes de tocar nada, `git pull`. Antes de subir, `git pull` otra vez** y resolver lo que haya cambiado.
 1. SQL primero, ejecutado a mano por Guille en el SQL Editor de Supabase.
 2. Después el HTML.
 3. Después `git add .`, `git commit`, `git push` desde la raíz del repo.
