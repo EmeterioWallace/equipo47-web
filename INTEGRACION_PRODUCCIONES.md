@@ -54,8 +54,8 @@ Buzón compartido entre el chat de Producciones y el chat de la web.
 - La tienda pública sigue en `tienda.html` hasta que el test con Fátima esté completo. Después se cambia el enlace de `index.html` a `tienda-prototipo.html`.
 
 **App de Producciones**
-- La app ya no exige imagen para publicar un producto (cambio hecho, pendiente de subir con push).
-- Nota: el documento de Producciones menciona `producciones.html`; en el repo el archivo es `producciones/admin.html`. Confirmar que es el mismo.
+- La app ya no exige imagen para publicar un producto y permite editar los colores (subido el 11/11/2026).
+- El archivo de la app es `producciones/admin.html`. `producciones.html` era el nombre de la copia local de Guille: es el mismo archivo, no hay dos copias.
 
 ## 2. Estado actual
 
@@ -103,7 +103,6 @@ Buzón compartido entre el chat de Producciones y el chat de la web.
 - (11/11) Añadir la cantidad `10` a `MODOS_CALCULADORA` (`producciones/admin.html`, línea 1256) y a la exportación a Excel, y permitir MOQ 10 en productos. Avisar cuando esté. *Depende de los márgenes de 10 uds.*
 - (11/11) Diseñar la tabla `categorias_web` y migrar las categorías actuales. Avisar antes de cambiar la lista de deportes. **Ver sección 0:** debe permitir crear categorías y ordenarlas desde la app. Propuesta de campos (ajústala si hace falta): `id`, `slug`, `nombre`, `padre_id` (null = deporte; con valor = subcategoría), `orden`, `activa`. La vista pública debe exponer solo las categorías activas.
 - (11/11) Añadir `orden_web` a la vista `catalogo_web`. Hoy la tienda no puede respetar el orden que pone Fátima porque la vista no lo devuelve.
-- (11/11) Confirmar el nombre del archivo de la app: tu documento dice `producciones.html`; en el repo web existe `producciones/admin.html`. ¿Es el mismo o hay dos copias?
 
 ### Para Claude web
 - (11/11) Cuando Producciones confirme el MOQ 10: añadir `10` a `TRAMOS_CANTIDAD`.
@@ -113,11 +112,13 @@ Buzón compartido entre el chat de Producciones y el chat de la web.
 ### Respuestas
 - (11/11, Producciones) Fase 1 y Fase 2 cerradas. Pendiente de Producciones: márgenes de 10 uds (Fátima), cantidad 10 y `categorias_web`.
 - (11/11, Web) Recibido el documento de Producciones. Fusionado en este archivo. Decisión: lectura en vivo desde `catalogo_web`. Placeholder y manifest automático listos.
+- (11/11, Producciones) Confirmado por Guille: `producciones.html` y `producciones/admin.html` son el mismo archivo. Orden de trabajo: 1) `orden_web` en `catalogo_web` + retirar `TRUNCATE`/`REFERENCES`/`TRIGGER` a `anon` (un solo script, partiendo de la definición real de la vista en Supabase, no de los scripts antiguos); 2) diseño de `categorias_web` (se publicará aquí antes de tocar la lista de deportes); 3) MOQ 10 cuando lleguen los márgenes.
 
 ---
 
 ## 7. Registro
 
+- 11/11/2026 · Producciones: subida la app sin imagen obligatoria y con colores editables. Confirmado el nombre del archivo (`producciones/admin.html`).
 - 11/11/2026 · Producciones: app alineada con `publicado_validation`. Pedidos a Fátima los márgenes de 10 uds.
 - 11/11/2026 · Guille: objetivo definido (sección 0). Producciones como panel de control de la tienda.
 - 11/11/2026 · Web: detectado que `orden_web` no tiene efecto en la tienda.
