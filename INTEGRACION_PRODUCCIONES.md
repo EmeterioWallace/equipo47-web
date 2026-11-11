@@ -213,7 +213,8 @@ Scripts, en `producciones/sql/`: `34_categorias_web.sql` (tabla, migración y `c
   - **Colores:** cada color usa sus propias vistas si su imagen sigue la convención (p. ej. `MER002-ROJO_1`, `MER002-ROJO_2`). Si no, se ve su foto sola. Al cambiar de color se vuelve a la primera vista.
   - Solo en la ficha ("Ver detalles"); las tarjetas de la lista siguen con una foto.
   - Flechas, miniaturas, contador, teclado (← →) y deslizar con el dedo en móvil.
-  - **Aviso:** a 11/11 no hay ningún archivo `MER001_*` en el repo. El producto que usa `MER001_1.jpg` sale con "Imagen próximamente" hasta que se suban las fotos. Comprobar que en Producciones la extensión esté bien escrita (`.jpg`).
+  - `MER001_1.jpg` (bolsa estanca) ya está en el repo. Para que tenga carrusel basta con subir `MER001_2`, `MER001_3`… a cualquier subcarpeta de `images/products/`.
+  - Nota: `images/products/manifest.json` del repo puede ir por detrás de las imágenes, porque se regenera en cada deploy de Netlify. Para comprobar si una imagen existe, mirar la carpeta, no el manifiesto del repo.
 - (11/11, Web) **Fase 2 de categorías hecha y verificada por Guille** en `tienda-prototipo` con datos reales (97 productos, 45 categorías, ninguno sin categoría; un cambio de orden en Producciones se ve en la tienda al recargar):
   - Deportes, tipos y subcategorías se pintan desde `categorias_web_publica` en orden de `nivel`, `orden` y `nombre`. Ya no hay listas fijas: el HTML no tiene botones de deporte y `subcategoriesBySport` ha desaparecido.
   - `proximamente = true` → botón deshabilitado con "(Próximamente)".
