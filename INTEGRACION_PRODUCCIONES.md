@@ -8,7 +8,7 @@
 
 | Componente | Estado | Notas |
 |-----------|--------|-------|
-| RLS Producciones | ⏳ Pendiente | Nunca auditado, riesgo de seguridad |
+| RLS Producciones | ✅ Auditado 11/11/2026 | Seguro. Registro abierto detectado y cerrado el mismo día |
 | CHECK Constraints | ⏳ Pendiente | Validación de servidor en Supabase |
 | Script Validación Imágenes | ⏳ Pendiente | Verificar que archivos existan |
 | Manifest.json | ⏳ Pendiente | Regeneración automática |
@@ -45,17 +45,12 @@
 
 ---
 
-### 3. 🔒 RLS DE PRODUCCIONES NUNCA AUDITADO (Seguridad)
+### 3. ✅ RLS DE PRODUCCIONES AUDITADA (resuelto 11/11/2026)
 
-**Problema:**
-- Proyecto Supabase `ciszgyorsveumnrtcejn` tiene políticas RLS no verificadas
-- `producciones/admin.html` lee/escribe directamente (no vía RPC)
-- Anon key está visible en GitHub (repo público)
-- Si las políticas están mal: acceso a clientes, cobros, pagos, presupuestos
+**Resultado:** seguro. Detalle en la sección "RLS AUDIT RESULTS" más abajo.
 
-**Impacto:** Exposición de datos sensibles
-
-**Solución:** Auditoría RLS como se hizo en Madrid (Bloque 1B)
+- La anon key visible en el repo público no tiene ningún permiso sobre las tablas sensibles.
+- Incidencia real encontrada y corregida el 11/11: el registro de usuarios estaba abierto. Desactivado; hay 4 cuentas, todas internas, sin acceso no autorizado.
 
 ---
 
@@ -90,13 +85,12 @@ tienda-prototipo.js busca en productImages.js → images/products/manifest.json
 ## 📋 PRÓXIMAS ACCIONES
 
 ### Fase 1: Seguridad (BLOQUEADOR)
-- [ ] **Claude Producciones:** Auditar RLS de tablas (productos, clientes, cobros, pagos, presupuestos)
-  - Usar mismo método que Bloque 1B
-  - Verificar que anon key no puede leer datos sensibles
-  - Documento: Actualizar sección "RLS Audit" abajo
+- [x] **Claude Producciones:** Auditar RLS de tablas — hecho 11/11/2026
+- [ ] **Claude Producciones (no urgente):** Quitar `TRUNCATE`, `REFERENCES` y `TRIGGER` al rol `anon`
+- [ ] **Claude Producciones (futuro):** Afinar permisos por persona si entran cuentas externas
 
 ### Fase 2: Validaciones en Servidor
-- [ ] **Claude Producciones:** Añadir CHECK constraint en `productos`
+- [ ] **Claude Producciones:** Añadir CHECK constraint en `productos` (todavía no confirmado en su respuesta)
   ```sql
   ALTER TABLE productos ADD CONSTRAINT publicado_validation
     CHECK (
@@ -130,15 +124,16 @@ tienda-prototipo.js busca en productImages.js → images/products/manifest.json
 
 ## 🔐 RLS AUDIT RESULTS
 
-**Status:** ⏳ Pendiente
+**Status:** ✅ SEGURO (auditoría de producciones, `ciszgyorsveumnrtcejn`, 11/11/2026)
 
-Cuando el Claude de Producciones haga la auditoría:
-- [ ] Política de `productos`: ✓ Solo autenticados, no expone coste/margen
-- [ ] Política de `clientes`: ✓ Segura
-- [ ] Política de `cobros`: ✓ Segura
-- [ ] Política de `pagos`: ✓ Segura
-- [ ] Política de `presupuestos`: ✓ Segura
-- [ ] Conclusión general: ✓ SEGURO o ⚠️ RIESGO
+- Registro de usuarios nuevos e inicios de sesión anónimos: **desactivados**. Solo existen 4 cuentas internas.
+- RLS activado en las 10 tablas: productos, clientes, cobros, pagos, presupuestos, presupuesto_lineas, lineas_negocio, producto_variantes, producto_colores_web, producto_precios_referencia.
+- Política en todas: acceso total solo para `authenticated`.
+- Rol `anon` (la clave pública del repo): sin SELECT/INSERT/UPDATE/DELETE en esas tablas.
+- Vista `catalogo_web`: solo campos públicos; sin coste_proveedor, transporte ni margen. Filtra `publicado = true AND activo = true`.
+- `calcular_precio_publico`: SECURITY DEFINER con `search_path` fijado; solo devuelve precio final de productos publicados y activos.
+- Incidencia corregida: registro abierto (cualquiera podía crear una cuenta con acceso total). Revisadas las cuentas: sin acceso no autorizado.
+- Nota operativa: las cuentas nuevas ya no se crean por registro. Se crean en Supabase → Authentication → Users → "Invite user" / "Add user".
 
 ---
 
@@ -185,4 +180,4 @@ Ambos Claudes deben:
 ---
 
 **Creado por:** Claude (equipo47-web)  
-**Última revisión:** 2026-11-10 13:12
+**Última revisión:** 2026-11-11 (auditoría RLS incorporada)
