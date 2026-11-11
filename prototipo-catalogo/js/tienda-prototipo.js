@@ -68,94 +68,230 @@ if (navToggle && navMenu) {
 let products = []; // se rellena de forma asíncrona desde catalogo-web.js, ver INITIALIZATION al final
 
 // ===== PRODUCT DISPLAY & FILTERING =====
+// Las categorías NO están escritas aquí: vienen de la vista
+// categorias_web_publica, que Fátima gestiona desde Producciones
+// (crear, renombrar, ordenar, "Próximamente"). Ver INTEGRACION_PRODUCCIONES.md.
 const productsGrid = document.querySelector('.products-grid');
-const sportFilters = document.querySelectorAll('.sport-filter');
 const genderFilters = document.querySelectorAll('.gender-filter');
 const searchInput = document.getElementById('product-search');
+const sportFiltersContainer = document.querySelector('.sport-filters-section .filters');
 const subcategoryFiltersSection = document.getElementById('subcategory-filters');
-let currentSport = 'running'; // Por defecto mostrar Running
 let currentGender = 'todos'; // Por defecto todos los géneros
-let currentSubcategory = 'todas'; // Por defecto todas las subcategorías
 let currentSearchTerm = ''; // Término de búsqueda
 
-// Definir subcategorías por deporte
-const subcategoriesBySport = {
-    running: [
-        { id: 'todas', label: 'Todas' },
-        { id: 'camisetas', label: 'Camisetas' },
-        { id: 'chaquetas', label: 'Chaquetas' },
-        { id: 'accesorios-running', label: 'Accesorios' },
-        { id: 'hidratacion', label: 'Hidratación' },
-        { id: 'bolsas-running', label: 'Bolsas' }
-    ],
-    merchandising: [
-        { id: 'todas', label: 'Todas' },
-        { id: 'merchandising-bolsas', label: 'Bolsas & Totes' },
-        { id: 'merchandising-pulseras', label: 'Pulseras' },
-        { id: 'merchandising-eventos', label: 'Eventos' }
-    ],
-    urban: [
-        { id: 'todas', label: 'Todas' }
-    ],
-    lucha: [
-        { id: 'todas', label: 'Todas' }
-    ]
-};
+// Ruta de categorías seleccionada: [deporte, tipo?, subcategoría?] (ids).
+// Mostrar una categoría incluye todos los productos de sus descendientes.
+let rutaSeleccionada = [];
 
-// Función para renderizar filtros de subcategoría
-function renderSubcategoryFilters(sport) {
-    if (!subcategoryFiltersSection) return;
-    
-    const subcategories = subcategoriesBySport[sport] || [];
-    
-    // Si solo hay "Todas", ocultar la sección
-    if (subcategories.length <= 1) {
-        subcategoryFiltersSection.style.display = 'none';
-        return;
-    }
-    
-    // Mostrar y renderizar subcategorías
-    subcategoryFiltersSection.style.display = 'block';
-    const filtersContainer = subcategoryFiltersSection.querySelector('.filters');
-    filtersContainer.innerHTML = '';
-    
-    subcategories.forEach(subcat => {
-        const button = document.createElement('button');
-        button.className = 'subcategory-filter' + (subcat.id === 'todas' ? ' active' : '');
-        button.dataset.subcategory = subcat.id;
-        button.textContent = subcat.label;
-        button.style.cssText = `
-            padding: 10px 22px;
-            background: ${subcat.id === 'todas' ? '#FF4B1F' : '#f5f5f5'};
-            color: ${subcat.id === 'todas' ? 'white' : '#666'};
-            border: none;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        `;
-        
-        button.addEventListener('click', () => {
-            currentSubcategory = subcat.id;
-            
-            // Actualizar botones activos
-            filtersContainer.querySelectorAll('.subcategory-filter').forEach(btn => {
-                btn.classList.remove('active');
-                btn.style.background = '#f5f5f5';
-                btn.style.color = '#666';
-            });
-            
-            button.classList.add('active');
-            button.style.background = '#FF4B1F';
-            button.style.color = 'white';
-            
-            // Renderizar productos
-            renderProducts(currentSport, currentGender, currentSubcategory, currentSearchTerm);
-        });
-        
-        filtersContainer.appendChild(button);
+// Árbol de categorías (se rellena en la inicialización)
+let categorias = [];                 // ordenadas por nivel, orden, nombre
+const categoriaPorId = new Map();    // id -> categoría
+const hijosPorId = new Map();        // id (o 'raiz') -> [categorías hijas, en orden]
+const rangoPorId = new Map();        // id -> posición global (para ordenar productos)
+
+function prepararArbolCategorias(lista) {
+    categorias = lista.slice().sort((a, b) =>
+        (a.nivel - b.nivel) || ((a.orden ?? 0) - (b.orden ?? 0)) || String(a.nombre).localeCompare(String(b.nombre), 'es')
+    );
+    categoriaPorId.clear();
+    hijosPorId.clear();
+    rangoPorId.clear();
+    categorias.forEach((c, i) => {
+        categoriaPorId.set(c.id, c);
+        rangoPorId.set(c.id, i);
+        const clavePadre = c.padre_id || 'raiz';
+        if (!hijosPorId.has(clavePadre)) hijosPorId.set(clavePadre, []);
+        hijosPorId.get(clavePadre).push(c);
     });
+}
+
+// Respaldo: si categorias_web_publica no responde (o se usan datos de prueba),
+// se deduce un árbol de dos niveles a partir de sport/subcategory de los productos,
+// en el orden en que aparecen. No hay "Próximamente" en este modo.
+function construirCategoriasDesdeProductos(lista) {
+    const resultado = [];
+    const vistos = new Set();
+    lista.forEach(p => {
+        if (!p.sport) return;
+        const idDeporte = 'deporte:' + p.sport;
+        if (!vistos.has(idDeporte)) {
+            vistos.add(idDeporte);
+            resultado.push({ id: idDeporte, slug: p.sport, nombre: capitalizar(p.sport), padre_id: null, nivel: 1, orden: resultado.length, proximamente: false });
+        }
+        if (p.subcategory) {
+            const idSub = idDeporte + '/' + p.subcategory;
+            if (!vistos.has(idSub)) {
+                vistos.add(idSub);
+                resultado.push({ id: idSub, slug: p.subcategory, nombre: capitalizar(p.subcategory.replace(/-/g, ' ')), padre_id: idDeporte, nivel: 2, orden: resultado.length, proximamente: false });
+            }
+        }
+    });
+    return resultado;
+}
+
+function capitalizar(texto) {
+    return texto ? texto.charAt(0).toUpperCase() + texto.slice(1) : '';
+}
+
+// Categoría del producto dentro del árbol cargado. Usa categoria_id y, si el
+// producto no lo tiene, intenta encontrarla por los slugs de compatibilidad.
+function categoriaDeProducto(p) {
+    if (p.categoriaId && categoriaPorId.has(p.categoriaId)) return p.categoriaId;
+    const deporte = (hijosPorId.get('raiz') || []).find(c => c.slug === p.sport);
+    if (!deporte) return null;
+    if (!p.subcategory) return deporte.id;
+    const buscarEn = (padreId, profundidad) => {
+        for (const hijo of hijosPorId.get(padreId) || []) {
+            if (hijo.slug === p.subcategory) return hijo.id;
+            if (profundidad < 2) {
+                const encontrado = buscarEn(hijo.id, profundidad + 1);
+                if (encontrado) return encontrado;
+            }
+        }
+        return null;
+    };
+    return buscarEn(deporte.id, 1) || deporte.id;
+}
+
+// Ids de la categoría y de todos sus antepasados, de la raíz hacia abajo.
+function rutaDeCategoria(id) {
+    const ruta = [];
+    let actual = categoriaPorId.get(id);
+    while (actual) {
+        ruta.unshift(actual.id);
+        actual = actual.padre_id ? categoriaPorId.get(actual.padre_id) : null;
+    }
+    return ruta;
+}
+
+// Se calcula una vez tras cargar: ruta de categorías de cada producto.
+function asignarRutasAProductos() {
+    products.forEach(p => {
+        const id = categoriaDeProducto(p);
+        p._ruta = id ? rutaDeCategoria(id) : [];
+    });
+}
+
+function productosDeCategoria(id) {
+    return products.filter(p => p._ruta.includes(id));
+}
+
+// Una categoría se muestra si está en "Próximamente" (botón deshabilitado)
+// o si tiene productos. Así una categoría recién creada aparece en la tienda
+// en cuanto Fátima le publica el primer producto, y no antes.
+function categoriaVisible(c) {
+    return c.proximamente || productosDeCategoria(c.id).length > 0;
+}
+
+// Orden: primero por la posición de cada categoría de la ruta (orden de
+// Fátima, de deporte a subcategoría), después por orden_web y por último
+// por título.
+function compararProductos(a, b) {
+    const largo = Math.max(a._ruta.length, b._ruta.length);
+    for (let i = 0; i < largo; i++) {
+        const ra = a._ruta[i] === undefined ? -1 : rangoPorId.get(a._ruta[i]);
+        const rb = b._ruta[i] === undefined ? -1 : rangoPorId.get(b._ruta[i]);
+        if (ra !== rb) return ra - rb;
+    }
+    const oa = a.ordenWeb === null ? Infinity : a.ordenWeb;
+    const ob = b.ordenWeb === null ? Infinity : b.ordenWeb;
+    if (oa !== ob) return oa - ob;
+    return String(a.title).localeCompare(String(b.title), 'es');
+}
+
+const ESTILO_DEPORTE = 'padding: 12px 28px; border: none; border-radius: 25px; font-size: 0.95rem; font-weight: 600; transition: all 0.3s ease;';
+const ESTILO_SUBCATEGORIA = 'padding: 10px 22px; border: none; border-radius: 20px; font-size: 0.9rem; font-weight: 500; cursor: pointer; transition: all 0.3s ease;';
+
+// Botones de deporte (nivel 1), en el orden de Producciones.
+function renderSportFilters() {
+    if (!sportFiltersContainer) return;
+    sportFiltersContainer.innerHTML = '';
+
+    (hijosPorId.get('raiz') || []).filter(categoriaVisible).forEach(deporte => {
+        const button = document.createElement('button');
+        button.className = 'sport-filter';
+        button.dataset.categoriaId = deporte.id;
+        button.dataset.sport = deporte.slug;
+
+        if (deporte.proximamente) {
+            button.disabled = true;
+            button.classList.add('coming-soon');
+            button.style.cssText = ESTILO_DEPORTE + 'background: #e0e0e0; color: #999; cursor: not-allowed; opacity: 0.6;';
+            button.textContent = deporte.nombre + ' ';
+            const aviso = document.createElement('span');
+            aviso.style.fontSize = '0.8rem';
+            aviso.textContent = '(Próximamente)';
+            button.appendChild(aviso);
+        } else {
+            const activo = rutaSeleccionada[0] === deporte.id;
+            button.classList.toggle('active', activo);
+            button.style.cssText = ESTILO_DEPORTE + `cursor: pointer; background: ${activo ? '#FF4B1F' : '#f0f0f0'}; color: ${activo ? 'white' : '#333'};`;
+            button.textContent = deporte.nombre;
+            button.addEventListener('click', () => seleccionarCategoria([deporte.id]));
+        }
+        sportFiltersContainer.appendChild(button);
+    });
+}
+
+// Filas de subcategorías: una por cada nivel bajo el deporte seleccionado
+// (tipo y, si el tipo elegido se subdivide, subcategoría).
+function renderSubcategoryFilters() {
+    if (!subcategoryFiltersSection) return;
+    const contenedor = subcategoryFiltersSection.querySelector('.filters');
+    contenedor.innerHTML = '';
+    contenedor.style.flexDirection = 'column';
+    contenedor.style.alignItems = 'center';
+
+    let hayFilas = false;
+    for (let nivel = 0; nivel < rutaSeleccionada.length && nivel < 2; nivel++) {
+        const padreId = rutaSeleccionada[nivel];
+        const hijos = (hijosPorId.get(padreId) || []).filter(categoriaVisible);
+        if (hijos.length === 0) break;
+
+        hayFilas = true;
+        const fila = document.createElement('div');
+        fila.style.cssText = 'display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;';
+        const seleccionadoEnFila = rutaSeleccionada[nivel + 1];
+
+        const crearBoton = (texto, activo, onClick, deshabilitado) => {
+            const b = document.createElement('button');
+            b.className = 'subcategory-filter' + (activo ? ' active' : '');
+            b.textContent = texto;
+            if (deshabilitado) {
+                b.disabled = true;
+                b.style.cssText = ESTILO_SUBCATEGORIA + 'background: #eee; color: #aaa; cursor: not-allowed;';
+            } else {
+                b.style.cssText = ESTILO_SUBCATEGORIA + `background: ${activo ? '#FF4B1F' : '#f5f5f5'}; color: ${activo ? 'white' : '#666'};`;
+                b.addEventListener('click', onClick);
+            }
+            return b;
+        };
+
+        const rutaHastaPadre = rutaSeleccionada.slice(0, nivel + 1);
+        fila.appendChild(crearBoton('Todas', !seleccionadoEnFila, () => seleccionarCategoria(rutaHastaPadre)));
+        hijos.forEach(hijo => {
+            const texto = hijo.proximamente ? `${hijo.nombre} (Próximamente)` : hijo.nombre;
+            fila.appendChild(crearBoton(texto, seleccionadoEnFila === hijo.id,
+                () => seleccionarCategoria([...rutaHastaPadre, hijo.id]), hijo.proximamente));
+        });
+        contenedor.appendChild(fila);
+    }
+
+    subcategoryFiltersSection.style.display = hayFilas ? 'block' : 'none';
+}
+
+function seleccionarCategoria(ruta) {
+    rutaSeleccionada = ruta;
+    renderSportFilters();
+    renderSubcategoryFilters();
+    renderProducts();
+}
+
+// Primer deporte en el orden de Producciones que no esté en "Próximamente"
+// y tenga productos.
+function deportePorDefecto() {
+    const deporte = (hijosPorId.get('raiz') || []).find(c => !c.proximamente && productosDeCategoria(c.id).length > 0);
+    return deporte ? deporte.id : null;
 }
 
 // ===== SELECTOR DE CANTIDADES (precio por tramo, bajo demanda) =====
@@ -211,36 +347,43 @@ async function consultarPrecioPorCantidad(productId, cantidad, botonEl) {
 
     const claveCache = `${productId}:${cantidad}`;
     if (cachePreciosPorTramo[claveCache] !== undefined) {
-        pintarResultadoTramo(resultadoEl, cachePreciosPorTramo[claveCache], cantidad);
+        pintarResultadoTramo(card, resultadoEl, cachePreciosPorTramo[claveCache], cantidad);
         return;
     }
 
     resultadoEl.textContent = 'Calculando...';
 
     try {
-        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        const { data, error } = await sb.rpc('calcular_precio_publico', {
+        const { data, error } = await clienteSupabase().rpc('calcular_precio_publico', {
             p_producto_id: productId,
             p_cantidad: cantidad
         });
         if (error) throw error;
         const resultado = (data && data[0]) ? data[0] : null; // {precio, aproximado} | null
         cachePreciosPorTramo[claveCache] = resultado;
-        pintarResultadoTramo(resultadoEl, resultado, cantidad);
+        pintarResultadoTramo(card, resultadoEl, resultado, cantidad);
     } catch (err) {
         console.error('❌ Error consultando precio por cantidad:', err);
         resultadoEl.textContent = 'No se pudo calcular el precio ahora mismo.';
     }
 }
 
-function pintarResultadoTramo(resultadoEl, resultado, cantidad) {
+// El precio grande de la tarjeta pasa a ser el de la cantidad elegida.
+// La línea de debajo solo indica a qué cantidad corresponde.
+function pintarResultadoTramo(card, resultadoEl, resultado, cantidad) {
+    const etiquetaEl = card.querySelector('.product-price .price-from');
+    const precioEl = card.querySelector('.product-price .price-amount');
+
     if (!resultado || resultado.precio === null || resultado.precio === undefined) {
+        if (etiquetaEl) etiquetaEl.textContent = 'Precio:';
+        if (precioEl) precioEl.textContent = 'A CONSULTAR';
         resultadoEl.innerHTML = `<span style="color:#999;">Consultar disponibilidad para ${cantidad} uds</span>`;
         return;
     }
     const precioTexto = Number(resultado.precio).toFixed(2).replace('.', ',') + ' €';
-    const etiqueta = resultado.aproximado ? 'Precio orientativo' : 'Precio';
-    resultadoEl.innerHTML = `<strong>${etiqueta} para ${cantidad} uds: ${precioTexto}</strong> <span style="color:#999;">/ unidad, sin IVA</span>`;
+    if (etiquetaEl) etiquetaEl.textContent = resultado.aproximado ? 'Precio orientativo:' : 'Precio:';
+    if (precioEl) precioEl.textContent = precioTexto;
+    resultadoEl.innerHTML = `<span style="color:#666;">Precio para <strong>${cantidad} uds</strong></span>`;
 }
 
 function createProductCard(product) {
@@ -336,19 +479,19 @@ function createProductCard(product) {
     return card;
 }
 
-function renderProducts(sport = 'running', gender = 'todos', subcategory = 'todas', searchTerm = '') {
+// Pinta los productos según el estado actual (categoría, género y búsqueda).
+function renderProducts() {
     if (!productsGrid) return;
-    
+
+    const gender = currentGender;
+    const searchTerm = currentSearchTerm;
+
     productsGrid.innerHTML = '';
-    
-    // Filtrar por deporte
-    let filteredProducts = products.filter(p => p.sport === sport);
-    
-    // Filtrar por subcategoría
-    if (subcategory !== 'todas') {
-        filteredProducts = filteredProducts.filter(p => p.subcategory === subcategory);
-    }
-    
+
+    // Filtrar por la categoría seleccionada (incluye sus subcategorías)
+    const categoriaActual = rutaSeleccionada[rutaSeleccionada.length - 1];
+    let filteredProducts = categoriaActual ? productosDeCategoria(categoriaActual) : [];
+
     // Filtrar por género
     if (gender !== 'todos') {
         filteredProducts = filteredProducts.filter(p => {
@@ -379,9 +522,11 @@ function renderProducts(sport = 'running', gender = 'todos', subcategory = 'toda
     if (searchTerm) {
         const term = searchTerm.toLowerCase();
         filteredProducts = filteredProducts.filter(p => {
+            const nombresCategorias = p._ruta.map(id => (categoriaPorId.get(id) || {}).nombre || '').join(' ').toLowerCase();
             return p.title.toLowerCase().includes(term) ||
-                   p.description.toLowerCase().includes(term) ||
-                   p.category.toLowerCase().includes(term) ||
+                   (p.description || '').toLowerCase().includes(term) ||
+                   (p.category || '').toLowerCase().includes(term) ||
+                   nombresCategorias.includes(term) ||
                    (p.options && p.options.some(opt => opt.toLowerCase().includes(term)));
         });
     }
@@ -392,7 +537,7 @@ function renderProducts(sport = 'running', gender = 'todos', subcategory = 'toda
         return;
     }
     
-    filteredProducts.forEach(product => {
+    filteredProducts.slice().sort(compararProductos).forEach(product => {
         const card = createProductCard(product);
         productsGrid.appendChild(card);
     });
@@ -452,46 +597,19 @@ if (genderFilters.length > 0) {
             button.classList.add('active');
             
             currentGender = button.dataset.gender;
-            renderProducts(currentSport, currentGender, currentSubcategory, currentSearchTerm);
+            renderProducts();
         });
     });
 }
 
-// Filtros de deporte (Running, Urban, Lucha, etc.)
-if (sportFilters.length > 0) {
-    sportFilters.forEach(button => {
-        button.addEventListener('click', () => {
-            if (button.disabled) return;
-            
-            // Actualizar estilos de botones
-            sportFilters.forEach(btn => {
-                if (!btn.disabled) {
-                    btn.style.background = '#f0f0f0';
-                    btn.style.color = '#333';
-                    btn.classList.remove('active');
-                }
-            });
-            button.style.background = '#FF4B1F';
-            button.style.color = 'white';
-            button.classList.add('active');
-            
-            currentSport = button.dataset.sport;
-            currentSubcategory = 'todas'; // Reset subcategoría al cambiar deporte
-            
-            // Renderizar subcategorías para el deporte seleccionado
-            renderSubcategoryFilters(currentSport);
-            
-            // Renderizar productos
-            renderProducts(currentSport, currentGender, currentSubcategory, currentSearchTerm);
-        });
-    });
-}
+// Filtros de deporte y subcategoría: se pintan desde categorias_web_publica
+// (renderSportFilters / renderSubcategoryFilters, más arriba).
 
 // Buscador de productos
 if (searchInput) {
     searchInput.addEventListener('input', (e) => {
         currentSearchTerm = e.target.value.trim();
-        renderProducts(currentSport, currentGender, currentSubcategory, currentSearchTerm);
+        renderProducts();
     });
     
     // Focus styles
@@ -501,21 +619,6 @@ if (searchInput) {
     
     searchInput.addEventListener('blur', () => {
         searchInput.style.borderColor = '#e0e0e0';
-    });
-}
-
-// Mantener compatibilidad con filtros antiguos
-const filterButtons = document.querySelectorAll('.filter-btn');
-if (filterButtons.length > 0) {
-    filterButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            filterButtons.forEach(btn => btn.classList.remove('active'));
-            button.classList.add('active');
-            
-            const filter = button.dataset.filter;
-            currentCategory = filter;
-            renderProducts(currentSport, filter);
-        });
     });
 }
 
@@ -796,26 +899,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     const grid = document.querySelector('.products-grid');
     if (grid) grid.innerHTML = '<p style="text-align:center; padding:60px 20px; color:#999;">Cargando catálogo...</p>';
 
-    products = await cargarCatalogoWeb();
+    const [catalogo, listaCategorias] = await Promise.all([cargarCatalogoWeb(), cargarCategoriasWeb()]);
+    products = catalogo;
 
     if (products.length === 0) {
         if (grid) grid.innerHTML = '<p style="text-align:center; padding:60px 20px; color:#999;">No se pudo cargar el catálogo. Inténtalo de nuevo más tarde.</p>';
+        if (sportFiltersContainer) sportFiltersContainer.innerHTML = '';
         console.error('❌ El catálogo llegó vacío o falló la carga.');
         return;
     }
 
-    // Renderizar subcategorías para running (deporte por defecto)
-    renderSubcategoryFilters('running');
+    prepararArbolCategorias(listaCategorias.length > 0 ? listaCategorias : construirCategoriasDesdeProductos(products));
+    asignarRutasAProductos();
 
-    // Renderizar productos iniciales
-    renderProducts('running', 'todos', 'todas', ''); // Iniciar con Running, todos los géneros, todas las subcategorías
+    const inicial = deportePorDefecto();
+    seleccionarCategoria(inicial ? [inicial] : []);
 
-    console.log('✅ Equipo 47 - Tienda (prototipo catalogo_web) loaded! 🎨🏃');
-    console.log('📦 Products loaded:', products.length);
-    console.log('🎨 Products with color variants:', products.filter(p => p.colors && p.colors.length > 0).length);
-    console.log('🏃 Running products:', products.filter(p => p.sport === 'running').length);
-    console.log('🛍️ Merchandising products:', products.filter(p => p.sport === 'merchandising').length);
-    console.log('⚠️ Products con precio aproximado (tramo más bajo disponible):', products.filter(p => p.approxPrice).length);
+    const sinCategoria = products.filter(p => p._ruta.length === 0);
+    console.log('✅ Equipo 47 - Tienda (prototipo catalogo_web) cargada');
+    console.log('📦 Productos:', products.length, '· Categorías:', categorias.length, listaCategorias.length ? '(Supabase)' : '(deducidas de los productos)');
+    console.log('⚠️ Productos con precio aproximado:', products.filter(p => p.approxPrice).length);
+    if (sinCategoria.length) {
+        console.warn(`⚠️ ${sinCategoria.length} productos sin categoría visible (no se muestran):`, sinCategoria.map(p => p.title));
+    }
 });
 
 

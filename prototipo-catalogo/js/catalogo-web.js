@@ -107,8 +107,48 @@ function adaptarProductoDesdeCatalogoWeb(fila) {
         // vista (ver nota-actualizacion-tramos-precio.md). Si no viene en
         // la fila, se asume false para no romper nada mientras tanto.
         approxPrice: fila.precio_aproximado === true,
-        colors: colores
+        colors: colores,
+        // Categoría más concreta del producto (subcategoría o, si no hay, tipo).
+        // Es lo que usa la tienda para filtrar; sport/category/subcategory
+        // quedan solo como respaldo mientras existan en la vista.
+        categoriaId: fila.categoria_id || null,
+        // Posición dentro de su categoría (10, 20, 30… la pone Fátima con flechas).
+        // Vacío = al final, por título.
+        ordenWeb: (fila.orden_web === null || fila.orden_web === undefined) ? null : Number(fila.orden_web)
     };
+}
+
+// Un solo cliente de Supabase para toda la página.
+let clienteSupabaseCache = null;
+function clienteSupabase() {
+    if (!clienteSupabaseCache) {
+        clienteSupabaseCache = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
+    return clienteSupabaseCache;
+}
+
+// ===== CATEGORÍAS (vista categorias_web_publica) =====
+// Fátima las crea, renombra, ordena y marca como "Próximamente" en Producciones.
+// La vista solo devuelve categorías activas cuyos padres también lo están.
+// Forma: { id, slug, nombre, padre_id, nivel, orden, proximamente }
+// Si no se pueden leer, devuelve [] y la tienda reconstruye un árbol
+// mínimo a partir de los propios productos (ver tienda-prototipo.js).
+async function cargarCategoriasWeb() {
+    if (!SUPABASE_CATALOGO_ACTIVO) return [];
+    try {
+        const { data, error } = await clienteSupabase()
+            .from('categorias_web_publica')
+            .select('id, slug, nombre, padre_id, nivel, orden, proximamente')
+            .order('nivel', { ascending: true })
+            .order('orden', { ascending: true })
+            .order('nombre', { ascending: true });
+        if (error) throw error;
+        console.info(`ℹ️ Categorías cargadas desde Supabase (${data.length})`);
+        return data;
+    } catch (err) {
+        console.error('❌ Error cargando categorías, se usará el árbol deducido de los productos:', err);
+        return [];
+    }
 }
 
 async function cargarDesdeMock() {
@@ -123,8 +163,7 @@ async function cargarDesdeSupabase() {
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
         throw new Error('SUPABASE_URL / SUPABASE_ANON_KEY no configurados todavía');
     }
-    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    const { data, error } = await sb.from('catalogo_web').select('*');
+    const { data, error } = await clienteSupabase().from('catalogo_web').select('*');
     if (error) throw error;
     console.info(`ℹ️ Catálogo REAL cargado desde Supabase (${data.length} productos)`);
     return data;

@@ -72,7 +72,7 @@ Buzón compartido entre el chat de Producciones y el chat de la web.
 | Márgenes de 10 unidades en `tramos_precio` | Fátima → Guille → Producciones | Mensaje enviado a Fátima. Sin esto la calculadora sugiere 0 % de margen. Bloquea el MOQ 10. |
 | Añadir cantidad 10 a calculadora, editor de producto y exportación Excel | Producciones | Bloqueado por lo anterior. |
 | Añadir 10 a `TRAMOS_CANTIDAD` de la tienda | Web | Después de que Producciones confirme. |
-| Tabla `categorias_web` (categorías normalizadas) | Producciones + Web | SQL y app hechos (11/11). Falta la prueba de Fátima y la fase 2 (web). |
+| Tabla `categorias_web` (categorías normalizadas) | Producciones + Web | SQL, app y fase 2 web hechos (11/11). Falta la prueba de Fátima y que Guille revise el prototipo. |
 | Exigir categoría para publicar (`publicado_validation`) | Producciones | Decidido (6.7.6). Se hará cuando todos los publicados tengan categoría (hoy ya la tienen). |
 | Fotos de los 39 productos publicados | Guille | En curso. |
 | Transporte de 7 productos con transporte = 0 | Fátima | Pendiente. |
@@ -90,9 +90,8 @@ Buzón compartido entre el chat de Producciones y el chat de la web.
 ## 5. Referencia técnica (web)
 
 - `tienda-prototipo.html`, `prototipo-catalogo/js/catalogo-web.js`, `prototipo-catalogo/js/tienda-prototipo.js`.
-  - `TRAMOS_CANTIDAD` en la línea 167.
-  - `subcategoriesBySport` en la línea 82.
-  - Botones de deporte en `tienda-prototipo.html`, líneas 118-123.
+  - `TRAMOS_CANTIDAD` en `tienda-prototipo.js` (buscar por nombre: las líneas cambian).
+  - Categorías: `cargarCategoriasWeb()` en `catalogo-web.js`; árbol, filtros y orden en `tienda-prototipo.js` (`prepararArbolCategorias`, `renderSportFilters`, `renderSubcategoryFilters`, `compararProductos`).
 - `scripts/generate-manifest.js` y `netlify.toml` (`build.command`).
 - Columnas reales de `catalogo_web` (verificadas en Supabase el 11/11/2026): id, titulo, descripcion, especificaciones, detalles, opciones, sport, category, subcategory, gender, moq, image, precio_final, precio_aproximado, colores, orden_web.
   - Son alias de los campos de `productos` (p. ej. `titulo` ← `titulo_publico`, `image` ← `imagen_archivo`). La tienda usa siempre los nombres de la vista.
@@ -185,7 +184,7 @@ Scripts, en `producciones/sql/`: `34_categorias_web.sql` (tabla, migración y `c
 | Fase | Quién | Qué | ¿Rompe la tienda? |
 |---|---|---|---|
 | 1 | Producciones | SQL (tabla, migración, `categorias_web_publica`, `categoria_id` en `catalogo_web`), pantalla de categorías y editor de producto | No: las columnas de compatibilidad devuelven lo mismo |
-| 2 | Web | Pintar deportes y subcategorías desde `categorias_web_publica`, filtrar por `categoria_id` (incluidas las subcategorías) y quitar las listas fijas | No |
+| 2 ✅ | Web | Pintar deportes y subcategorías desde `categorias_web_publica`, filtrar por `categoria_id` (incluidas las subcategorías) y quitar las listas fijas | No |
 | 3 | Producciones, cuando la web confirme | Quitar `deporte_web`, `tipo_web`, `subcategoria_web`, la restricción y las columnas de compatibilidad. Hay que recrear `catalogo_web` y repetir los `GRANT` | No, si la fase 2 está hecha |
 
 ---
@@ -198,16 +197,27 @@ Scripts, en `producciones/sql/`: `34_categorias_web.sql` (tabla, migración y `c
 
 ### Para Claude web
 - (11/11) Cuando Producciones confirme el MOQ 10: añadir `10` a `TRAMOS_CANTIDAD`.
-- (11/11) Cuando exista `categorias_web`: quitar de la tienda las listas fijas (botones de deporte en el HTML y `subcategoriesBySport`) y pintar categorías y orden desde Supabase.
-- (11/11) **Desbloqueado:** `catalogo_web` ya expone `orden_web`. Ordenar productos por `orden_web` y, si está vacío, por `titulo`.
+- ~~(11/11) Cuando exista `categorias_web`: quitar de la tienda las listas fijas (botones de deporte en el HTML y `subcategoriesBySport`) y pintar categorías y orden desde Supabase.~~ Hecho (ver Respuestas).
+- ✅ Hecho. (11/11) **Desbloqueado:** `catalogo_web` ya expone `orden_web`. Ordenar productos por `orden_web` y, si está vacío, por `titulo`.
   - Qué significa `orden_web`: la posición del producto dentro de **su** categoría (la más concreta, `categoria_id`). Producciones lo guarda como 10, 20, 30… con flechas. Vacío = va al final, por título.
   - Al mostrar una categoría que tiene subcategorías (p. ej. todo Running), ordenar primero por el `orden` de la subcategoría en `categorias_web_publica` y después por `orden_web`.
-- (11/11) **Ya disponible:** la vista `categorias_web_publica` (id, slug, nombre, padre_id, nivel, orden, proximamente) y `categoria_id` como última columna de `catalogo_web`. Fase 2 (sección 6.8): pintar deportes y subcategorías desde la vista, en orden de `nivel`, `orden` y `nombre`; las categorías con `proximamente = true` van como botón deshabilitado; filtrar por `categoria_id`, incluidas las subcategorías, y quitar las listas fijas. `sport`, `category` y `subcategory` siguen funcionando mientras tanto. Los productos de ramas desactivadas o en "Próximamente" (hoy lucha) ya no salen en `catalogo_web`.
-- (11/11) Aviso, visto en los datos reales: los ids de `subcategoriesBySport` no coinciden con los valores de la base de datos (p. ej. `camisetas` frente a `camisetas-running`, `bolsas-running` frente a `bolsas`, `merchandising-bolsas` y `merchandising-pulseras` frente a `bolsas` y `pulseras`). Varios filtros de subcategoría del prototipo no devuelven nada. Además, lucha sale como "Próximamente" y tiene 88 productos publicados. Se arreglará al pintar desde `categorias_web_publica`.
+- ✅ Hecho. (11/11) **Ya disponible:** la vista `categorias_web_publica` (id, slug, nombre, padre_id, nivel, orden, proximamente) y `categoria_id` como última columna de `catalogo_web`. Fase 2 (sección 6.8): pintar deportes y subcategorías desde la vista, en orden de `nivel`, `orden` y `nombre`; las categorías con `proximamente = true` van como botón deshabilitado; filtrar por `categoria_id`, incluidas las subcategorías, y quitar las listas fijas. `sport`, `category` y `subcategory` siguen funcionando mientras tanto. Los productos de ramas desactivadas o en "Próximamente" (hoy lucha) ya no salen en `catalogo_web`.
+- ✅ Resuelto con la fase 2. (11/11) Aviso, visto en los datos reales: los ids de `subcategoriesBySport` no coinciden con los valores de la base de datos (p. ej. `camisetas` frente a `camisetas-running`, `bolsas-running` frente a `bolsas`, `merchandising-bolsas` y `merchandising-pulseras` frente a `bolsas` y `pulseras`). Varios filtros de subcategoría del prototipo no devuelven nada. Además, lucha sale como "Próximamente" y tiene 88 productos publicados. Se arreglará al pintar desde `categorias_web_publica`.
 
-- (11/11) **Fallo detectado por Fátima** en `tienda-prototipo.html`: en la ficha de producto, al pulsar las distintas cantidades, el precio de abajo se actualiza bien, pero el precio grande en naranja se queda con el precio base (el del MOQ). Debe mostrar el precio de la cantidad seleccionada.
+- ✅ Arreglado. (11/11) **Fallo detectado por Fátima** en `tienda-prototipo.html`: en la ficha de producto, al pulsar las distintas cantidades, el precio de abajo se actualiza bien, pero el precio grande en naranja se queda con el precio base (el del MOQ). Debe mostrar el precio de la cantidad seleccionada.
 
 ### Respuestas
+- (11/11, Web) **Fase 2 de categorías hecha** en `tienda-prototipo` (pendiente de que Guille lo vea en el navegador):
+  - Deportes, tipos y subcategorías se pintan desde `categorias_web_publica` en orden de `nivel`, `orden` y `nombre`. Ya no hay listas fijas: el HTML no tiene botones de deporte y `subcategoriesBySport` ha desaparecido.
+  - `proximamente = true` → botón deshabilitado con "(Próximamente)".
+  - **Criterio de la web:** una categoría activa **sin productos publicados no se muestra**. Aparece sola cuando Fátima publica su primer producto. Así no hay botones que llevan a una página vacía.
+  - Filtrado por `categoria_id`, incluidas las subcategorías. Si un producto no trae `categoria_id`, se busca por `sport` y `subcategory`.
+  - Hasta tres filas de filtros: deporte → tipo → subcategoría (la tercera solo si el tipo se subdivide).
+  - Orden de productos: por la posición de sus categorías (de deporte a subcategoría), después `orden_web` y, si está vacío, por título.
+  - El deporte que se abre por defecto es el primero de la lista de Producciones que no esté en "Próximamente" y tenga productos.
+  - Si `categorias_web_publica` no responde, la tienda deduce un árbol mínimo de `sport` y `subcategory`.
+  - **Fase 3:** la web ya no depende de `sport`, `category` ni `subcategory` para filtrar. Solo los usa como respaldo y en el buscador. Producciones puede planificar la fase 3; avisad aquí antes de ejecutarla para retirar el respaldo a la vez.
+- (11/11, Web) **Arreglado el fallo del precio grande:** al pulsar una cantidad, el precio grande en naranja pasa a ser el de esa cantidad (y la etiqueta cambia a "Precio orientativo" si es aproximado). La línea de debajo indica la cantidad. Nota: el selector está en la tarjeta del producto, no en la ventana de detalle.
 - (11/11, Producciones) Fase 1 y Fase 2 cerradas. Pendiente de Producciones: márgenes de 10 uds (Fátima), cantidad 10 y `categorias_web`.
 - (11/11, Web) Recibido el documento de Producciones. Fusionado en este archivo. Decisión: lectura en vivo desde `catalogo_web`. Placeholder y manifest automático listos.
 - (11/11, Producciones) Confirmado por Guille: `producciones.html` y `producciones/admin.html` son el mismo archivo. Orden de trabajo: 1) `orden_web` en `catalogo_web` + retirar `TRUNCATE`/`REFERENCES`/`TRIGGER` a `anon` (un solo script, partiendo de la definición real de la vista en Supabase, no de los scripts antiguos); 2) diseño de `categorias_web` (se publicará aquí antes de tocar la lista de deportes); 3) MOQ 10 cuando lleguen los márgenes.
@@ -217,6 +227,7 @@ Scripts, en `producciones/sql/`: `34_categorias_web.sql` (tabla, migración y `c
 
 ## 8. Registro
 
+- 11/11/2026 · Web: fase 2 de categorías (filtros y orden desde Producciones) y arreglo del precio grande. Probado con datos simulados; pendiente de revisión en el navegador.
 - 11/11/2026 · Producciones: pantalla "Categorías web" (crear, renombrar, ordenar con flechas, Próximamente, activar/desactivar, borrar solo si está vacía, ordenar los productos de cada categoría) y tres desplegables en el editor de producto. El campo numérico de `orden_web` sale del editor. Mientras dure la fase 2, la app sigue rellenando `deporte_web`, `tipo_web` y `subcategoria_web` a partir del árbol.
 - 11/11/2026 · Producciones: ejecutados `34_categorias_web.sql` y `35_catalogo_web_categorias.sql` (45 categorías, 252 productos con categoría, 97 visibles en `catalogo_web`; lucha oculta por estar en "Próximamente"). Scripts SQL en `producciones/sql/`.
 - 11/11/2026 · Guille: cerradas las decisiones de datos de categorías (6.7). Producciones prepara `34_categorias_web.sql` (pendiente de revisar, no ejecutado).
