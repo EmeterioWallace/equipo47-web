@@ -11,6 +11,9 @@
 /config.php / 301
 /.git/* / 301
 
+# Scripts SQL internos de Producciones: están en el repo para tener historial, no para servirse
+/producciones/sql/* / 301!
+
 # Redirigir páginas antiguas (si las tuvieras)
 # /old-page /new-page 301
 

@@ -55,6 +55,7 @@ Buzón compartido entre el chat de Producciones y el chat de la web.
 
 **App de Producciones**
 - La app ya no exige imagen para publicar un producto y permite editar los colores (subido el 11/11/2026).
+- Los scripts SQL de Producciones se guardan en `producciones/sql/`, numerados, con su rollback al lado (decisión de Guille, 11/11/2026). Netlify no los sirve: `_redirects` redirige `/producciones/sql/*`.
 - El archivo de la app es `producciones/admin.html`. `producciones.html` era el nombre de la copia local de Guille: es el mismo archivo, no hay dos copias.
 
 ## 2. Estado actual
@@ -71,7 +72,8 @@ Buzón compartido entre el chat de Producciones y el chat de la web.
 | Márgenes de 10 unidades en `tramos_precio` | Fátima → Guille → Producciones | Mensaje enviado a Fátima. Sin esto la calculadora sugiere 0 % de margen. Bloquea el MOQ 10. |
 | Añadir cantidad 10 a calculadora, editor de producto y exportación Excel | Producciones | Bloqueado por lo anterior. |
 | Añadir 10 a `TRAMOS_CANTIDAD` de la tienda | Web | Después de que Producciones confirme. |
-| Tabla `categorias_web` (categorías normalizadas) | Producciones + Web | Diseño propuesto (sección 6). Falta la aprobación de Guille y las decisiones de la 6.7. |
+| Tabla `categorias_web` (categorías normalizadas) | Producciones + Web | SQL hecho (34 y 35). Falta la pantalla de categorías y el editor de producto (Producciones) y la fase 2 (web). |
+| Exigir categoría para publicar (`publicado_validation`) | Producciones | Decidido (6.7.6). Se hará cuando todos los publicados tengan categoría (hoy ya la tienen). |
 | Fotos de los 39 productos publicados | Guille | En curso. |
 | Transporte de 7 productos con transporte = 0 | Fátima | Pendiente. |
 | Test end-to-end: crear producto → publicar → verlo en `tienda-prototipo.html` | Guille + Fátima | Pendiente. |
@@ -99,7 +101,7 @@ Buzón compartido entre el chat de Producciones y el chat de la web.
 
 ## 6. Propuesta: categorías gestionadas desde Producciones (11/11/2026)
 
-**Estado:** propuesta de Producciones. Pendiente de que Guille la apruebe y la web la revise. Todavía no hay SQL.
+**Estado:** fase 1 de SQL hecha (scripts 34 y 35 ejecutados el 11/11/2026). Pendiente: la pantalla de categorías y el editor de producto en la app (Producciones), y la fase 2 (web).
 
 ### 6.1 Datos reales (consulta del 11/11/2026)
 
@@ -149,7 +151,7 @@ Buzón compartido entre el chat de Producciones y el chat de la web.
   - Si el producto tiene `categoria_id`, se calculan desde el árbol: el slug del nivel 1, el del nivel 2 y el del nivel 3. Si el producto cuelga del tipo, `subcategory` toma el slug del tipo, que es justo lo que había en esos casos.
   - Si no tiene `categoria_id`, se usan los textos de antes.
   - Los slugs migrados son exactamente los valores actuales, así que la tienda ve los mismos datos antes y después de la migración.
-- Un producto cuya categoría (o alguna categoría superior) esté desactivada deja de salir en `catalogo_web`.
+- Un producto cuya categoría (o alguna categoría superior) esté desactivada **o en "Próximamente"** deja de salir en `catalogo_web` (decisión de Guille, 11/11/2026). Hoy afecta a los productos de lucha. La tienda no tiene que filtrar nada: `categorias_web_publica` sigue mostrando la categoría con `proximamente = true` para pintar el botón deshabilitado, y en cuanto Fátima la active los productos vuelven a salir solos.
 
 ### 6.5 App de Producciones
 
@@ -167,14 +169,16 @@ Buzón compartido entre el chat de Producciones y el chat de la web.
 3. Asignar `categoria_id` a cada producto según sus tres textos.
 4. Comprobar dos cosas: que ningún producto con deporte queda sin `categoria_id`, y que `sport` y `subcategory` de `catalogo_web` devuelven lo mismo que antes para los 187 publicados.
 
-### 6.7 Decisiones pendientes antes de escribir el SQL (Guille / Fátima)
+### 6.7 Decisiones de datos (Guille, 11/11/2026)
 
-1. `running / (sin tipo) / "Accesorio running"` (1 producto, publicado): ¿pasa a `accesorios / accesorios-running`?
-2. Running tiene `accesorios / accesorios` (2) y `accesorios / accesorios-running` (8): ¿se fusionan en una sola subcategoría?
-3. Merchandising tiene el tipo `merchandising` con la subcategoría `merchandising-eventos` (54 productos, 39 publicados). Propuesta: un único tipo "Eventos" (slug `merchandising-eventos`) dentro de merchandising. `subcategory` no cambia; `category` cambia, pero solo se usa en el buscador.
-4. Gym: 28 productos sin deporte y 2 en merchandising, ninguno publicado. ¿Es un deporte nuevo, va dentro de merchandising o se queda sin categoría por ahora?
-5. Lucha tiene 88 productos publicados, pero `tienda-prototipo.html` la muestra como "Próximamente". ¿Empieza activa o con `proximamente = true`? Urban no tiene productos: se propone dejarla en "Próximamente".
-6. Para la fase 3: ¿exigir categoría para publicar? Cambiaría `publicado_validation`, que es una regla cerrada.
+1. `running / (sin tipo) / "Accesorio running"` (1 producto, publicado) → pasa a `accesorios / accesorios-running`.
+2. Running: `accesorios / accesorios` (2) se fusiona en `accesorios-running`.
+3. Merchandising: el tipo `merchandising` + la subcategoría `merchandising-eventos` (54 productos) pasan a ser un único tipo, de nombre "Eventos" y con el slug `merchandising-eventos`. `subcategory` no cambia; `category` pasa a `merchandising-eventos` (solo se usa en el buscador).
+4. Gym (30 productos, ninguno publicado) se queda sin categoría de momento. Lo decidirá Fátima.
+5. Lucha empieza en "Próximamente" y se activará cuando tenga fotos. A 11/11 no hay ninguna imagen de lucha en `images/products/`. Urban, Tenis y Pádel, también en "Próximamente".
+6. Exigir categoría para publicar: **sí**, pero en un paso posterior a la migración, cuando todos los publicados tengan categoría. Cambiará `publicado_validation`.
+
+Scripts, en `producciones/sql/`: `34_categorias_web.sql` (tabla, migración y `categorias_web_publica`; no toca `catalogo_web`; guarda en `_backup_categorias_34` los valores que corrige, y su rollback los restaura) y `35_catalogo_web_categorias.sql`, que parte de la definición del 33. El 35 calcula `sport`, `category` y `subcategory` desde el árbol, oculta los productos de ramas desactivadas y añade `categoria_id` al final. Los dos verifican que la tienda ve los mismos filtros que antes y, si no, abortan. **Ejecutados por Guille el 11/11/2026:** 45 categorías, 252 productos con categoría, 3 en la copia y 97 productos visibles en `catalogo_web`.
 
 ### 6.8 Fases
 
@@ -196,7 +200,7 @@ Buzón compartido entre el chat de Producciones y el chat de la web.
 - (11/11) Cuando Producciones confirme el MOQ 10: añadir `10` a `TRAMOS_CANTIDAD`.
 - (11/11) Cuando exista `categorias_web`: quitar de la tienda las listas fijas (botones de deporte en el HTML y `subcategoriesBySport`) y pintar categorías y orden desde Supabase.
 - (11/11) **Desbloqueado:** `catalogo_web` ya expone `orden_web`. Ordenar productos por `orden_web` y, si está vacío, por `titulo`.
-- (11/11) Revisar el diseño de categorías (sección 6), sobre todo la 6.4: lo que vas a leer y las columnas de compatibilidad. Si te falta algo, pídelo aquí antes de que se escriba el SQL.
+- (11/11) **Ya disponible:** la vista `categorias_web_publica` (id, slug, nombre, padre_id, nivel, orden, proximamente) y `categoria_id` como última columna de `catalogo_web`. Fase 2 (sección 6.8): pintar deportes y subcategorías desde la vista, en orden de `nivel`, `orden` y `nombre`; las categorías con `proximamente = true` van como botón deshabilitado; filtrar por `categoria_id`, incluidas las subcategorías, y quitar las listas fijas. `sport`, `category` y `subcategory` siguen funcionando mientras tanto. Los productos de ramas desactivadas o en "Próximamente" (hoy lucha) ya no salen en `catalogo_web`.
 - (11/11) Aviso, visto en los datos reales: los ids de `subcategoriesBySport` no coinciden con los valores de la base de datos (p. ej. `camisetas` frente a `camisetas-running`, `bolsas-running` frente a `bolsas`, `merchandising-bolsas` y `merchandising-pulseras` frente a `bolsas` y `pulseras`). Varios filtros de subcategoría del prototipo no devuelven nada. Además, lucha sale como "Próximamente" y tiene 88 productos publicados. Se arreglará al pintar desde `categorias_web_publica`.
 
 ### Respuestas
@@ -209,6 +213,8 @@ Buzón compartido entre el chat de Producciones y el chat de la web.
 
 ## 8. Registro
 
+- 11/11/2026 · Producciones: ejecutados `34_categorias_web.sql` y `35_catalogo_web_categorias.sql` (45 categorías, 252 productos con categoría, 97 visibles en `catalogo_web`; lucha oculta por estar en "Próximamente"). Scripts SQL en `producciones/sql/`.
+- 11/11/2026 · Guille: cerradas las decisiones de datos de categorías (6.7). Producciones prepara `34_categorias_web.sql` (pendiente de revisar, no ejecutado).
 - 11/11/2026 · Producciones: propuesto el diseño de `categorias_web` (sección 6) a partir de los valores reales de `productos`. Decisión: 3 niveles, el tercero opcional.
 - 11/11/2026 · Producciones: ejecutado `33_orden_web_en_catalogo.sql` (`orden_web` en `catalogo_web`; retirados `TRUNCATE`/`REFERENCES`/`TRIGGER` a `anon`).
 - 11/11/2026 · Producciones: subida la app sin imagen obligatoria y con colores editables. Confirmado el nombre del archivo (`producciones/admin.html`).
