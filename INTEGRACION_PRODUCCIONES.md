@@ -140,16 +140,17 @@ tienda-prototipo.js busca en productImages.js → images/products/manifest.json
 ## 📌 PENDIENTES AMPLIADOS (11/11/2026)
 
 ### A. Pedido mínimo (MOQ) de 50 → 10 unidades
-- **Producciones:** los tramos de precio empiezan en 50 (50/100/500/1000…). Ver `producciones/admin.html` ~línea 1368 (hojas de cantidades). Con MOQ 10 hace falta un tramo de 10 o el sistema usa el más bajo marcado como aproximado.
+- **Precios:** los introduce Fátima desde la interfaz de producciones. No requiere decisión de Guille.
+- **Producciones:** las cantidades de la calculadora son una lista fija `MODOS_CALCULADORA = ['50', '100', '500', '1000', '5000', '10000']` en `producciones/admin.html` línea 1256. Hay que añadir `'10'` (y revisar la hoja de exportación a Excel, que usa las mismas cantidades).
 - **Web:** `TRAMOS_CANTIDAD = [50, 100, 500, 1000, 5000, 10000]` en `prototipo-catalogo/js/tienda-prototipo.js` línea 167. Con MOQ 10 el selector seguiría empezando en 50, lo que contradice el pedido mínimo.
-- **Decisión pendiente (Guille):** precio de referencia para 10 unidades.
-- **Acciones:** Claude producciones → tramos y MOQ. Claude equipo47-web → añadir 10 (y los tramos que correspondan) a `TRAMOS_CANTIDAD`.
+- **Acciones:** Claude producciones → añadir la cantidad 10 a la calculadora y a la exportación, y permitir MOQ 10 en el producto. Claude equipo47-web → añadir 10 a `TRAMOS_CANTIDAD`, después de que producciones confirme.
 
 ### B. Orden y creación de categorías
 - **Deportes** (Running, Merchandising, Urban…) son una lista fija en tres sitios: `<select>` de `producciones/admin.html` (~línea 869), botones de `tienda-prototipo.html` (líneas 118-123, el orden de los botones es el orden del HTML) y la lógica de filtros. Crear un deporte nuevo hoy exige cambiar código en los dos proyectos.
 - **Subcategorías:** texto libre en admin (con sugerencias). La web solo muestra botones de filtro para las subcategorías definidas en `subcategoriesBySport` (`tienda-prototipo.js` línea 82). Una subcategoría nueva aparece en "Todas" pero sin botón propio.
 - **Orden de productos:** campo `orden_web`; si está vacío, por nombre. No existe orden de categorías en la base de datos.
-- **Propuesta:** tabla `categorias_web` en Supabase (deporte o subcategoría, nombre visible, orden, activa) que lean tanto la admin como la web. Así crear o reordenar categorías no requiere tocar código. **Pendiente decidir con Guille.**
+- **Decidido (11/11):** tabla `categorias_web` en Supabase (deporte o subcategoría, nombre visible, orden, activa) que lean tanto la admin como la web. Crear o reordenar categorías no requerirá tocar código.
+- **Pendiente:** diseño de la tabla y migración de las categorías actuales. Lo define el Claude de producciones (es su base de datos) y después lo adapta la web.
 
 ---
 
