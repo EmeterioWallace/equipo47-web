@@ -207,6 +207,13 @@ Scripts, en `producciones/sql/`: `34_categorias_web.sql` (tabla, migración y `c
 - ✅ Arreglado. (11/11) **Fallo detectado por Fátima** en `tienda-prototipo.html`: en la ficha de producto, al pulsar las distintas cantidades, el precio de abajo se actualiza bien, pero el precio grande en naranja se queda con el precio base (el del MOQ). Debe mostrar el precio de la cantidad seleccionada.
 
 ### Respuestas
+- (11/11, Web) **Carrusel de vistas en la ficha hecho** (petición de Producciones), sin cambios en Supabase ni en Producciones:
+  - Convención: principal `CODIGO_1`, vistas `CODIGO_2`, `CODIGO_3`… en cualquier subcarpeta de `images/products/`, cualquier extensión. Se ordenan por número (`_10` va después de `_3`). Solo cuentan los del mismo código exacto (`MER0012_1` o `MER001_EXTRA_1` no se mezclan con `MER001`).
+  - Una sola vista, o un nombre que no sigue la convención → imagen sola, sin carrusel.
+  - **Colores:** cada color usa sus propias vistas si su imagen sigue la convención (p. ej. `MER002-ROJO_1`, `MER002-ROJO_2`). Si no, se ve su foto sola. Al cambiar de color se vuelve a la primera vista.
+  - Solo en la ficha ("Ver detalles"); las tarjetas de la lista siguen con una foto.
+  - Flechas, miniaturas, contador, teclado (← →) y deslizar con el dedo en móvil.
+  - **Aviso:** a 11/11 no hay ningún archivo `MER001_*` en el repo. El producto que usa `MER001_1.jpg` sale con "Imagen próximamente" hasta que se suban las fotos. Comprobar que en Producciones la extensión esté bien escrita (`.jpg`).
 - (11/11, Web) **Fase 2 de categorías hecha y verificada por Guille** en `tienda-prototipo` con datos reales (97 productos, 45 categorías, ninguno sin categoría; un cambio de orden en Producciones se ve en la tienda al recargar):
   - Deportes, tipos y subcategorías se pintan desde `categorias_web_publica` en orden de `nivel`, `orden` y `nombre`. Ya no hay listas fijas: el HTML no tiene botones de deporte y `subcategoriesBySport` ha desaparecido.
   - `proximamente = true` → botón deshabilitado con "(Próximamente)".
@@ -227,6 +234,7 @@ Scripts, en `producciones/sql/`: `34_categorias_web.sql` (tabla, migración y `c
 
 ## 8. Registro
 
+- 11/11/2026 · Web: carrusel de vistas en la ficha (convención CODIGO_N). Probado con datos simulados.
 - 11/11/2026 · Web: fase 2 de categorías (filtros y orden desde Producciones) y arreglo del precio grande. Probado con datos simulados y verificado por Guille con datos reales.
 - 11/11/2026 · Producciones: pantalla "Categorías web" (crear, renombrar, ordenar con flechas, Próximamente, activar/desactivar, borrar solo si está vacía, ordenar los productos de cada categoría) y tres desplegables en el editor de producto. El campo numérico de `orden_web` sale del editor. Mientras dure la fase 2, la app sigue rellenando `deporte_web`, `tipo_web` y `subcategoria_web` a partir del árbol.
 - 11/11/2026 · Producciones: ejecutados `34_categorias_web.sql` y `35_catalogo_web_categorias.sql` (45 categorías, 252 productos con categoría, 97 visibles en `catalogo_web`; lucha oculta por estar en "Próximamente"). Scripts SQL en `producciones/sql/`.

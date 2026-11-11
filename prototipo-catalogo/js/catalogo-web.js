@@ -71,6 +71,36 @@ function resolverRutaImagen(nombreArchivo) {
     return RUTA_PLACEHOLDER;
 }
 
+// ===== VARIAS VISTAS POR PRODUCTO (carrusel de la ficha) =====
+// Convención (acordada con Producciones, 11/11/2026): la imagen principal
+// se llama CODIGO_1 (ej. MER001_1.jpg) y las vistas adicionales CODIGO_2,
+// CODIGO_3… en cualquier subcarpeta de images/products/. Producciones solo
+// guarda la principal; las demás se buscan aquí en el manifiesto.
+// Si el nombre no sigue la convención, o solo hay una vista, se devuelve
+// una sola imagen y la ficha no muestra carrusel.
+const PATRON_VISTA = /^(.+)_(\d+)\.(jpe?g|png|webp|gif)$/i;
+
+function resolverVistasImagen(nombreArchivo) {
+    if (!nombreArchivo) return [RUTA_PLACEHOLDER];
+    const base = nombreArchivo.split('/').pop();
+    const coincide = base.match(PATRON_VISTA);
+    if (!coincide || !manifiestoImagenes) return [resolverRutaImagen(nombreArchivo)];
+
+    const prefijo = coincide[1].toLowerCase() + '_';
+    const vistas = Object.keys(manifiestoImagenes)
+        .map(clave => {
+            if (!clave.startsWith(prefijo)) return null;
+            const m = clave.match(PATRON_VISTA);
+            // Mismo código exacto: MER001_2 sí, MER0012_1 o MER001_EXTRA_1 no.
+            return (m && m[1] + '_' === prefijo) ? { numero: Number(m[2]), ruta: manifiestoImagenes[clave] } : null;
+        })
+        .filter(Boolean)
+        .sort((a, b) => a.numero - b.numero)
+        .map(v => v.ruta);
+
+    return vistas.length > 0 ? vistas : [resolverRutaImagen(nombreArchivo)];
+}
+
 // Convierte el precio numérico (o null) al formato que ya usa la web:
 // "7,70 €" o el literal "Consultar".
 function formatearPrecio(precioFinal) {
@@ -86,7 +116,8 @@ function adaptarProductoDesdeCatalogoWeb(fila) {
     const colores = (fila.colores || []).map(c => ({
         name: c.nombre,
         hex: resolverHexDeColor(c.nombre),
-        image: resolverRutaImagen(c.imagen)
+        image: resolverRutaImagen(c.imagen),
+        views: resolverVistasImagen(c.imagen)
     }));
 
     return {
@@ -102,6 +133,7 @@ function adaptarProductoDesdeCatalogoWeb(fila) {
         gender: fila.gender,
         moq: fila.moq,
         image: resolverRutaImagen(fila.image),
+        views: resolverVistasImagen(fila.image),
         price: formatearPrecio(fila.precio_final),
         // precio_aproximado: pendiente de que Producciones lo añada a la
         // vista (ver nota-actualizacion-tramos-precio.md). Si no viene en

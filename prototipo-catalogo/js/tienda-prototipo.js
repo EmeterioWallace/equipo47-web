@@ -627,13 +627,16 @@ const modal = document.getElementById('productModal');
 const modalClose = document.querySelector('.modal-close');
 let currentModalProduct = null;
 let currentModalColor = 0;
+let currentModalViews = [];   // rutas de las vistas de la foto actual
+let currentModalView = 0;     // índice de la vista mostrada
 
 function openProductModal(productId) {
     const product = products.find(p => p.id === productId);
     if (!product) return;
-    
+
     currentModalProduct = product;
     currentModalColor = 0;
+    currentModalView = 0;
     updateModalContent();
     
     modal.classList.add('active');
@@ -648,14 +651,13 @@ function updateModalContent() {
         ? product.colors[currentModalColor] 
         : null;
     
-    const imageUrl = currentColor ? currentColor.image : product.image;
-    
-    // Update image
-    const modalImage = document.getElementById('modal-image');
-    if (modalImage) {
-        modalImage.src = imageUrl;
-        modalImage.alt = product.title;
-    }
+    // Vistas de la foto actual: las del color elegido o, si no hay color, las del producto.
+    // Si el color no tiene vistas propias, se usa su imagen sola.
+    currentModalViews = currentColor
+        ? (currentColor.views && currentColor.views.length ? currentColor.views : [currentColor.image])
+        : (product.views && product.views.length ? product.views : [product.image]);
+    if (currentModalView >= currentModalViews.length) currentModalView = 0;
+    renderModalGallery();
     
     // Update title and description
     document.getElementById('modal-title').textContent = product.title;
@@ -760,7 +762,67 @@ function updateModalContent() {
 
 function changeModalColor(colorIndex) {
     currentModalColor = colorIndex;
+    currentModalView = 0; // cada color empieza por su primera vista
     updateModalContent();
+}
+
+// ===== CARRUSEL DE VISTAS EN LA FICHA =====
+// Con una sola vista se ve la imagen tal cual, sin flechas ni miniaturas.
+function renderModalGallery() {
+    const galeria = document.querySelector('#productModal .modal-gallery');
+    const modalImage = document.getElementById('modal-image');
+    if (!galeria || !modalImage || !currentModalProduct) return;
+
+    const total = currentModalViews.length;
+    modalImage.src = currentModalViews[currentModalView];
+    modalImage.alt = total > 1
+        ? `${currentModalProduct.title} (vista ${currentModalView + 1} de ${total})`
+        : currentModalProduct.title;
+
+    galeria.querySelectorAll('.carrusel-flecha, .carrusel-miniaturas, .carrusel-contador').forEach(el => el.remove());
+    galeria.classList.toggle('con-carrusel', total > 1);
+    if (total <= 1) return;
+
+    const crearFlecha = (sentido, etiqueta, simbolo) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = `carrusel-flecha carrusel-flecha-${sentido}`;
+        b.setAttribute('aria-label', etiqueta);
+        b.textContent = simbolo;
+        b.addEventListener('click', (e) => { e.stopPropagation(); moverVistaModal(sentido === 'prev' ? -1 : 1); });
+        return b;
+    };
+    galeria.appendChild(crearFlecha('prev', 'Vista anterior', '‹'));
+    galeria.appendChild(crearFlecha('next', 'Vista siguiente', '›'));
+
+    const contador = document.createElement('div');
+    contador.className = 'carrusel-contador';
+    contador.textContent = `${currentModalView + 1} / ${total}`;
+    galeria.appendChild(contador);
+
+    const miniaturas = document.createElement('div');
+    miniaturas.className = 'carrusel-miniaturas';
+    currentModalViews.forEach((ruta, i) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'carrusel-miniatura' + (i === currentModalView ? ' active' : '');
+        b.setAttribute('aria-label', `Ver vista ${i + 1}`);
+        const img = document.createElement('img');
+        img.src = ruta;
+        img.alt = '';
+        img.loading = 'lazy';
+        b.appendChild(img);
+        b.addEventListener('click', (e) => { e.stopPropagation(); currentModalView = i; renderModalGallery(); });
+        miniaturas.appendChild(b);
+    });
+    galeria.appendChild(miniaturas);
+}
+
+function moverVistaModal(paso) {
+    const total = currentModalViews.length;
+    if (total <= 1) return;
+    currentModalView = (currentModalView + paso + total) % total;
+    renderModalGallery();
 }
 
 function closeProductModal() {
@@ -781,10 +843,25 @@ if (modal) {
     });
 }
 
+// Deslizar con el dedo para cambiar de vista (móvil)
+(function () {
+    const galeria = document.querySelector('#productModal .modal-gallery');
+    if (!galeria) return;
+    let inicioX = null;
+    galeria.addEventListener('touchstart', (e) => { inicioX = e.touches[0].clientX; }, { passive: true });
+    galeria.addEventListener('touchend', (e) => {
+        if (inicioX === null) return;
+        const dx = e.changedTouches[0].clientX - inicioX;
+        inicioX = null;
+        if (Math.abs(dx) > 40) moverVistaModal(dx < 0 ? 1 : -1);
+    });
+})();
+
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && modal.classList.contains('active')) {
-        closeProductModal();
-    }
+    if (!modal.classList.contains('active')) return;
+    if (e.key === 'Escape') closeProductModal();
+    else if (e.key === 'ArrowLeft') moverVistaModal(-1);
+    else if (e.key === 'ArrowRight') moverVistaModal(1);
 });
 
 // ===== CALCULADORA PÚBLICA =====
