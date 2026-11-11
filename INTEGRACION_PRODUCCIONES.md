@@ -9,9 +9,10 @@
 | Componente | Estado | Notas |
 |-----------|--------|-------|
 | RLS Producciones | ✅ Auditado 11/11/2026 | Seguro. Registro abierto detectado y cerrado el mismo día |
-| CHECK Constraints | ⏳ Pendiente | Validación de servidor en Supabase |
-| Script Validación Imágenes | ⏳ Pendiente | Verificar que archivos existan |
-| Manifest.json | ⏳ Pendiente | Regeneración automática |
+| CHECK Constraints | ✅ Hecho 11/11 (`publicado_validation`) | Validación de servidor. La imagen ya no es obligatoria para publicar |
+| Placeholder "imagen próximamente" | ⏳ Pendiente | Lo muestra la web cuando `image` viene null (equipo47-web) |
+| Script Validación Imágenes | ⏳ Pendiente | Avisar si el archivo no existe en `images/products/` |
+| Manifest.json | ⏳ Pendiente | Regeneración automática. Hay que decidir dónde corre (ver Fase 3) |
 | Test con Fátima | ⏳ Pendiente | Crear producto y publicarlo |
 | Cambio a Producción | ⏹️ Bloqueado | Espera todas las validaciones |
 
@@ -89,8 +90,8 @@ tienda-prototipo.js busca en productImages.js → images/products/manifest.json
 - [ ] **Claude Producciones (no urgente):** Quitar `TRUNCATE`, `REFERENCES` y `TRIGGER` al rol `anon`
 - [ ] **Claude Producciones (futuro):** Afinar permisos por persona si entran cuentas externas
 
-### Fase 2: Validaciones en Servidor
-- [ ] **Claude Producciones:** Añadir CHECK constraint en `productos` (todavía no confirmado en su respuesta)
+### Fase 2: Validaciones en Servidor — ✅ HECHA (11/11, Claude producciones)
+- [x] CHECK `publicado_validation` en `productos`, versión corregida. Un producto publicado necesita título y MOQ. **La imagen no es obligatoria** (opción 3 acordada).
   ```sql
   ALTER TABLE productos ADD CONSTRAINT publicado_validation
     CHECK (
@@ -102,11 +103,11 @@ tienda-prototipo.js busca en productImages.js → images/products/manifest.json
     );
   ```
 
-### Fase 3: Validación de Imágenes
-- [ ] **Claude Equipo47-web:** Crear script que:
-  - Verifique que archivos en `productoImagenArchivo` existen en `images/products/`
-  - Regenere `manifest.json` automáticamente
-  - Se ejecute en CI/pre-deploy
+### Fase 3: Imágenes (equipo47-web)
+Los archivos de esta fase están en el repo de equipo47-web, así que los hace este Claude, no producciones.
+- [ ] **Placeholder "imagen próximamente":** cuando `image` llega null desde `catalogo_web`, `tienda-prototipo` muestra un placeholder en vez de un `<img>` roto.
+- [ ] **Aviso de imagen inexistente:** si `imagen_archivo` no aparece en el manifest o el archivo no existe en `images/products/`, avisar (no bloquear).
+- [ ] **Regeneración de `manifest.json`:** pendiente decidir dónde corre. La web no tiene build step, así que las opciones son un script que se ejecuta antes del commit o una GitHub Action que lo regenera en cada push.
 
 ### Fase 4: Testing
 - [ ] **Guille:** Coordinar test con Fátima
