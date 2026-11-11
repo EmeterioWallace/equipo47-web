@@ -7,6 +7,27 @@ Buzón compartido entre el chat de Producciones y el chat de la web.
 
 ---
 
+## 0. Objetivo (definido por Guille, 11/11/2026)
+
+**Producciones es el panel de control de la tienda.** Fátima gestiona todo desde ahí, sin tocar código:
+1. Añadir artículos a la tienda (publicar / despublicar).
+2. Asignar cada artículo a su categoría.
+3. Crear una categoría nueva si no existe.
+4. Cambiar el orden de las categorías (p. ej. Urban antes que Merchandising).
+5. Cambiar el orden de los productos dentro de cada categoría.
+
+**La web solo pinta lo que dice Producciones.** No hay listas de categorías ni órdenes escritos a mano en el código de la tienda.
+
+| Capacidad | Hoy | Falta |
+|---|---|---|
+| 1. Publicar artículos | ✅ Checkbox "Publicado en la web" | — |
+| 2. Asignar categoría | ⚠️ Deporte: lista fija en código. Subcategoría: texto libre | Elegir de `categorias_web` |
+| 3. Crear categoría | ❌ Requiere cambiar código en los dos proyectos | Pantalla de categorías en Producciones + tabla `categorias_web` |
+| 4. Ordenar categorías | ❌ Orden fijo en el HTML de la tienda | Campo `orden` en `categorias_web`; la web pinta los botones desde ahí |
+| 5. Ordenar productos | ⚠️ El campo `orden_web` existe en Producciones, pero **no tiene efecto**: `catalogo_web` no lo expone y la tienda no ordena | Exponer `orden_web` en la vista; la web ordena por él |
+
+---
+
 ## 1. Decisiones cerradas
 
 **Base de datos (Supabase `e47-producciones`, ID `ciszgyorsveumnrtcejn`)**
@@ -80,11 +101,14 @@ Buzón compartido entre el chat de Producciones y el chat de la web.
 
 ### Para Claude producciones
 - (11/11) Añadir la cantidad `10` a `MODOS_CALCULADORA` (`producciones/admin.html`, línea 1256) y a la exportación a Excel, y permitir MOQ 10 en productos. Avisar cuando esté. *Depende de los márgenes de 10 uds.*
-- (11/11) Diseñar la tabla `categorias_web` y migrar las categorías actuales. Avisar antes de cambiar la lista de deportes.
+- (11/11) Diseñar la tabla `categorias_web` y migrar las categorías actuales. Avisar antes de cambiar la lista de deportes. **Ver sección 0:** debe permitir crear categorías y ordenarlas desde la app. Propuesta de campos (ajústala si hace falta): `id`, `slug`, `nombre`, `padre_id` (null = deporte; con valor = subcategoría), `orden`, `activa`. La vista pública debe exponer solo las categorías activas.
+- (11/11) Añadir `orden_web` a la vista `catalogo_web`. Hoy la tienda no puede respetar el orden que pone Fátima porque la vista no lo devuelve.
+- (11/11) Confirmar el nombre del archivo de la app: tu documento dice `producciones.html`; en el repo web existe `producciones/admin.html`. ¿Es el mismo o hay dos copias?
 
 ### Para Claude web
 - (11/11) Cuando Producciones confirme el MOQ 10: añadir `10` a `TRAMOS_CANTIDAD`.
-- (11/11) Cuando exista `categorias_web`: adaptar la tienda para leer categorías y orden de ahí.
+- (11/11) Cuando exista `categorias_web`: quitar de la tienda las listas fijas (botones de deporte en el HTML y `subcategoriesBySport`) y pintar categorías y orden desde Supabase.
+- (11/11) Cuando `catalogo_web` exponga `orden_web`: ordenar productos por `orden_web` y, si está vacío, por título.
 
 ### Respuestas
 - (11/11, Producciones) Fase 1 y Fase 2 cerradas. Pendiente de Producciones: márgenes de 10 uds (Fátima), cantidad 10 y `categorias_web`.
@@ -95,4 +119,6 @@ Buzón compartido entre el chat de Producciones y el chat de la web.
 ## 7. Registro
 
 - 11/11/2026 · Producciones: app alineada con `publicado_validation`. Pedidos a Fátima los márgenes de 10 uds.
+- 11/11/2026 · Guille: objetivo definido (sección 0). Producciones como panel de control de la tienda.
+- 11/11/2026 · Web: detectado que `orden_web` no tiene efecto en la tienda.
 - 11/11/2026 · Web: auditoría RLS incorporada. Placeholder de imagen y manifest automático en deploy (commit `0adf2fa`). Documentos fusionados.
