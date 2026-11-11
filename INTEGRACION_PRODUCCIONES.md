@@ -21,10 +21,10 @@ Buzón compartido entre el chat de Producciones y el chat de la web.
 | Capacidad | Hoy | Falta |
 |---|---|---|
 | 1. Publicar artículos | ✅ Checkbox "Publicado en la web" | — |
-| 2. Asignar categoría | ⚠️ Deporte: lista fija en código. Subcategoría: texto libre | Elegir de `categorias_web` |
-| 3. Crear categoría | ❌ Requiere cambiar código en los dos proyectos | Pantalla de categorías en Producciones + tabla `categorias_web` |
-| 4. Ordenar categorías | ❌ Orden fijo en el HTML de la tienda | Campo `orden` en `categorias_web`; la web pinta los botones desde ahí |
-| 5. Ordenar productos | ⚠️ `catalogo_web` ya expone `orden_web` (11/11), pero la tienda todavía no ordena por él | La web ordena por `orden_web` |
+| 2. Asignar categoría | ✅ En Producciones: tres desplegables (deporte › tipo › subcategoría) que guardan `categoria_id` (11/11) | Web: filtrar por `categoria_id` |
+| 3. Crear categoría | ✅ En Producciones: pantalla "Categorías web" (11/11) | Web: pintar desde `categorias_web_publica` |
+| 4. Ordenar categorías | ✅ En Producciones: flechas en "Categorías web" (campo `orden`) | Web: pintar los botones en ese orden |
+| 5. Ordenar productos | ✅ En Producciones: "Ordenar productos" dentro de cada categoría (campo `orden_web`) | Web: ordenar por `orden_web` |
 
 ---
 
@@ -72,7 +72,7 @@ Buzón compartido entre el chat de Producciones y el chat de la web.
 | Márgenes de 10 unidades en `tramos_precio` | Fátima → Guille → Producciones | Mensaje enviado a Fátima. Sin esto la calculadora sugiere 0 % de margen. Bloquea el MOQ 10. |
 | Añadir cantidad 10 a calculadora, editor de producto y exportación Excel | Producciones | Bloqueado por lo anterior. |
 | Añadir 10 a `TRAMOS_CANTIDAD` de la tienda | Web | Después de que Producciones confirme. |
-| Tabla `categorias_web` (categorías normalizadas) | Producciones + Web | SQL hecho (34 y 35). Falta la pantalla de categorías y el editor de producto (Producciones) y la fase 2 (web). |
+| Tabla `categorias_web` (categorías normalizadas) | Producciones + Web | SQL y app hechos (11/11). Falta la prueba de Fátima y la fase 2 (web). |
 | Exigir categoría para publicar (`publicado_validation`) | Producciones | Decidido (6.7.6). Se hará cuando todos los publicados tengan categoría (hoy ya la tienen). |
 | Fotos de los 39 productos publicados | Guille | En curso. |
 | Transporte de 7 productos con transporte = 0 | Fátima | Pendiente. |
@@ -101,7 +101,7 @@ Buzón compartido entre el chat de Producciones y el chat de la web.
 
 ## 6. Propuesta: categorías gestionadas desde Producciones (11/11/2026)
 
-**Estado:** fase 1 de SQL hecha (scripts 34 y 35 ejecutados el 11/11/2026). Pendiente: la pantalla de categorías y el editor de producto en la app (Producciones), y la fase 2 (web).
+**Estado:** fase 1 hecha (11/11/2026): scripts 34 y 35 ejecutados, pantalla "Categorías web" y desplegables en el editor de producto. Pendiente: prueba de Fátima y fase 2 (web).
 
 ### 6.1 Datos reales (consulta del 11/11/2026)
 
@@ -200,6 +200,8 @@ Scripts, en `producciones/sql/`: `34_categorias_web.sql` (tabla, migración y `c
 - (11/11) Cuando Producciones confirme el MOQ 10: añadir `10` a `TRAMOS_CANTIDAD`.
 - (11/11) Cuando exista `categorias_web`: quitar de la tienda las listas fijas (botones de deporte en el HTML y `subcategoriesBySport`) y pintar categorías y orden desde Supabase.
 - (11/11) **Desbloqueado:** `catalogo_web` ya expone `orden_web`. Ordenar productos por `orden_web` y, si está vacío, por `titulo`.
+  - Qué significa `orden_web`: la posición del producto dentro de **su** categoría (la más concreta, `categoria_id`). Producciones lo guarda como 10, 20, 30… con flechas. Vacío = va al final, por título.
+  - Al mostrar una categoría que tiene subcategorías (p. ej. todo Running), ordenar primero por el `orden` de la subcategoría en `categorias_web_publica` y después por `orden_web`.
 - (11/11) **Ya disponible:** la vista `categorias_web_publica` (id, slug, nombre, padre_id, nivel, orden, proximamente) y `categoria_id` como última columna de `catalogo_web`. Fase 2 (sección 6.8): pintar deportes y subcategorías desde la vista, en orden de `nivel`, `orden` y `nombre`; las categorías con `proximamente = true` van como botón deshabilitado; filtrar por `categoria_id`, incluidas las subcategorías, y quitar las listas fijas. `sport`, `category` y `subcategory` siguen funcionando mientras tanto. Los productos de ramas desactivadas o en "Próximamente" (hoy lucha) ya no salen en `catalogo_web`.
 - (11/11) Aviso, visto en los datos reales: los ids de `subcategoriesBySport` no coinciden con los valores de la base de datos (p. ej. `camisetas` frente a `camisetas-running`, `bolsas-running` frente a `bolsas`, `merchandising-bolsas` y `merchandising-pulseras` frente a `bolsas` y `pulseras`). Varios filtros de subcategoría del prototipo no devuelven nada. Además, lucha sale como "Próximamente" y tiene 88 productos publicados. Se arreglará al pintar desde `categorias_web_publica`.
 
@@ -213,6 +215,7 @@ Scripts, en `producciones/sql/`: `34_categorias_web.sql` (tabla, migración y `c
 
 ## 8. Registro
 
+- 11/11/2026 · Producciones: pantalla "Categorías web" (crear, renombrar, ordenar con flechas, Próximamente, activar/desactivar, borrar solo si está vacía, ordenar los productos de cada categoría) y tres desplegables en el editor de producto. El campo numérico de `orden_web` sale del editor. Mientras dure la fase 2, la app sigue rellenando `deporte_web`, `tipo_web` y `subcategoria_web` a partir del árbol.
 - 11/11/2026 · Producciones: ejecutados `34_categorias_web.sql` y `35_catalogo_web_categorias.sql` (45 categorías, 252 productos con categoría, 97 visibles en `catalogo_web`; lucha oculta por estar en "Próximamente"). Scripts SQL en `producciones/sql/`.
 - 11/11/2026 · Guille: cerradas las decisiones de datos de categorías (6.7). Producciones prepara `34_categorias_web.sql` (pendiente de revisar, no ejecutado).
 - 11/11/2026 · Producciones: propuesto el diseño de `categorias_web` (sección 6) a partir de los valores reales de `productos`. Decisión: 3 niveles, el tercero opcional.

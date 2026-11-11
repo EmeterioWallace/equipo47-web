@@ -431,6 +431,29 @@
       display: flex; justify-content: space-between; align-items: center; gap: 8px;
       font-size: 12px; padding: 6px 0; border-top: 1px solid var(--border);
     }
+    /* Categorías web */
+    .cat-bloque { border: 1px solid var(--border); border-radius: 6px; margin-bottom: 16px; overflow: hidden; }
+    .cat-fila { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+    .cat-fila:first-child { border-top: none; }
+    .cat-nivel-1 { background: var(--card); }
+    .cat-nivel-1 .cat-nombre strong { font-size: 15px; }
+    .cat-nivel-2 { padding-left: 40px; }
+    .cat-nivel-3 { padding-left: 72px; }
+    .cat-flechas { display: flex; flex-direction: column; gap: 2px; }
+    .btn-flecha { padding: 1px 7px; font-size: 10px; line-height: 1.2; }
+    .btn-flecha:disabled { opacity: 0.25; cursor: default; }
+    .cat-nombre { flex: 1; min-width: 180px; font-size: 13px; }
+    .cat-slug { font-size: 11px; color: var(--muted); margin-left: 6px; }
+    .cat-info { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .cat-apagada .cat-nombre strong { color: var(--muted); }
+    .cat-acciones { display: flex; gap: 6px; flex-wrap: wrap; }
+    .orden-fila { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--border); font-size: 13px; }
+    .orden-pos { flex: 0 0 28px; color: var(--muted); text-align: right; }
+    .ocupado { opacity: 0.6; pointer-events: none; }
+    @media (max-width: 768px) {
+      .cat-nivel-2 { padding-left: 24px; }
+      .cat-nivel-3 { padding-left: 40px; }
+    }
   </style>
 </head>
 <body>
@@ -462,6 +485,9 @@
       </div>
       <div class="nav-item" data-pagina="productos" onclick="mostrarPagina('productos')">
         <span class="icon">🏷️</span><span>Productos</span>
+      </div>
+      <div class="nav-item" data-pagina="categorias" onclick="mostrarPagina('categorias')">
+        <span class="icon">🗂️</span><span>Categorías web</span>
       </div>
       <div class="nav-item" data-pagina="configuracion" onclick="mostrarPagina('configuracion')">
         <span class="icon">⚙️</span><span>Configuración</span>
@@ -683,6 +709,27 @@
       <div id="productos-tabla" class="loading">Cargando...</div>
     </section>
 
+    <!-- CATEGORÍAS WEB -->
+    <section class="page" id="categorias-page">
+      <div class="page-header">
+        <div>
+          <h1>CATEGORÍAS WEB</h1>
+          <p>Deportes, tipos y subcategorías de la tienda de equipo47.com, y el orden en que aparecen</p>
+        </div>
+        <button class="btn btn-primary" onclick="crearCategoria(null)">➕ Nuevo deporte</button>
+      </div>
+      <div class="card" style="margin-bottom:20px;">
+        <p>
+          <strong>Flechas ▲▼:</strong> cambian el orden en la tienda (se guarda al momento).
+          <strong>Próximamente:</strong> la tienda muestra el botón desactivado y sus productos no salen.
+          <strong>Desactivar:</strong> la categoría y sus productos desaparecen de la tienda, pero no se borra nada.
+          Solo se puede borrar una categoría vacía (sin productos ni subcategorías).
+          El identificador web (en gris) se crea al dar de alta la categoría y no cambia aunque la renombres.
+        </p>
+      </div>
+      <div id="categorias-arbol" class="loading">Cargando...</div>
+    </section>
+
     <!-- CONFIGURACIÓN -->
     <section class="page" id="configuracion-page">
       <div class="page-header">
@@ -865,26 +912,21 @@
           <div class="form-row">
             <div class="form-group">
               <label>Deporte *</label>
-              <select id="productoDeporteWeb">
-                <option value="running">Running</option>
-                <option value="merchandising">Merchandising</option>
-                <option value="urban">Urban</option>
-                <option value="lucha">Lucha</option>
-                <option value="tenis">Tenis</option>
-                <option value="padel">Padel</option>
-              </select>
+              <select id="productoCatDeporte" onchange="cambiarCategoriaProducto(1)"></select>
             </div>
             <div class="form-group">
-              <label>Tipo de prenda</label>
-              <input type="text" id="productoTipoWeb" placeholder="Ej: camisetas" list="dlTipoWeb">
-              <datalist id="dlTipoWeb"></datalist>
+              <label>Tipo</label>
+              <select id="productoCatTipo" onchange="cambiarCategoriaProducto(2)"></select>
             </div>
             <div class="form-group">
               <label>Subcategoría</label>
-              <input type="text" id="productoSubcategoriaWeb" placeholder="Ej: accesorios-running" list="dlSubcategoriaWeb">
-              <datalist id="dlSubcategoriaWeb"></datalist>
+              <select id="productoCatSub"></select>
             </div>
           </div>
+          <p id="avisoCategoriaProducto" style="font-size:12px; color:var(--warning); margin:-8px 0 12px; display:none;"></p>
+          <p style="font-size:12px; color:var(--muted); margin:-8px 0 12px;">
+            Si falta una categoría, créala en <strong>Categorías web</strong> (menú lateral). El orden del producto en la tienda también se cambia allí.
+          </p>
           <div class="form-row">
             <div class="form-group">
               <label>Género *</label>
@@ -897,10 +939,6 @@
             <div class="form-group">
               <label>Archivo de imagen principal</label>
               <input type="text" id="productoImagenArchivo" placeholder="Ej: camiseta-running-h.jpg">
-            </div>
-            <div class="form-group">
-              <label>Orden dentro de su categoría (opcional)</label>
-              <input type="number" id="productoOrdenWeb" step="1" placeholder="En blanco = por nombre">
             </div>
           </div>
 
@@ -975,6 +1013,26 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-ghost" onclick="cerrarModal('modalProducto')">Cancelar</button>
         <button type="button" class="btn btn-primary" id="btnGuardarProducto" onclick="guardarProducto()">💾 Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL ORDEN DE PRODUCTOS DE UNA CATEGORÍA -->
+  <div id="modalOrdenProductos" class="modal">
+    <div class="modal-content" style="max-width:700px;">
+      <div class="modal-header">
+        <h2>Orden de productos</h2>
+        <p id="ordenProductosRuta" style="font-size:13px; color:var(--muted); margin-top:4px;"></p>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:12px; color:var(--muted); margin-bottom:12px;">
+          Productos publicados de esta categoría, en el orden en que salen en la tienda. Las flechas lo cambian y se guarda al momento.
+        </p>
+        <p id="ordenProductosAviso" style="font-size:12px; color:var(--warning); margin-bottom:12px; display:none;"></p>
+        <div id="ordenProductosLista"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="cerrarModal('modalOrdenProductos')">Cerrar</button>
       </div>
     </div>
   </div>
@@ -1213,7 +1271,7 @@
       estado.textContent = 'Preparando la copia...';
       try {
         const tablas = ['clientes', 'productos', 'producto_variantes', 'producto_precios_referencia', 'tramos_precio', 'presupuestos',
-          'presupuesto_lineas', 'lineas_negocio', 'cobros', 'pagos', 'configuracion'];
+          'presupuesto_lineas', 'lineas_negocio', 'cobros', 'pagos', 'configuracion', 'categorias_web'];
         const resultados = await Promise.all(tablas.map(t => sb.from(t).select('*')));
 
         const errorTabla = resultados.findIndex(r => r.error);
@@ -1471,6 +1529,7 @@
     let variantesEditor = [];   // variantes que se están editando en el modal
     let coloresWebEditor = [];  // colores (nombre + imagen) que se están editando en el modal
     let coloresWeb = [];        // todos los colores cargados de la base de datos
+    let categoriasWeb = [];     // árbol de categorías de la tienda (deporte > tipo > subcategoría)
     let lineasNegocio = [];  // agrupaciones de pedidos dentro de un cliente
     let cobros = [];         // dinero que entra (cliente → nosotros)
     let pagos = [];          // dinero que sale (nosotros → proveedores / transporte)
@@ -1531,6 +1590,7 @@
       if (pagina === 'presupuestos') { poblarFiltrosPresupuestos(); renderPresupuestosTabla(); }
       if (pagina === 'aprobados') { poblarFiltrosAprobados(); renderAprobadosTabla(); }
       if (pagina === 'productos') { poblarFiltrosProductos(); renderProductosTabla(); }
+      if (pagina === 'categorias') renderCategorias();
       if (pagina === 'configuracion') cargarFormularioConfig();
     }
 
@@ -1575,7 +1635,7 @@
 
     // ── CARGA INICIAL ───────────────────────
     async function cargarTodo() {
-      const [rc, rp, rpr, rl, rco, rpa, rln, rvc, rcfg, rtp, rpref, rcw] = await Promise.all([
+      const [rc, rp, rpr, rl, rco, rpa, rln, rvc, rcfg, rtp, rpref, rcw, rcat] = await Promise.all([
         sb.from('clientes').select('*').order('nombre_empresa'),
         sb.from('productos').select('*').order('nombre'),
         sb.from('presupuestos').select('*').order('fecha', { ascending: false }),
@@ -1587,9 +1647,11 @@
         sb.from('configuracion').select('*').eq('id', 1).single(),
         sb.from('tramos_precio').select('*'),
         sb.from('producto_precios_referencia').select('*'),
-        sb.from('producto_colores_web').select('*').order('orden')
+        sb.from('producto_colores_web').select('*').order('orden'),
+        sb.from('categorias_web').select('*').order('orden')
       ]);
       if (rcfg.data) config = rcfg.data;
+      categoriasWeb = rcat.data || [];
       tramosPrecio = rtp.data || [];
       preciosReferencia = rpref.data || [];
       coloresWeb = rcw.data || [];
@@ -1969,12 +2031,9 @@
         document.getElementById('productoEspecificaciones').value = (p.especificaciones_publicas || []).join('\n');
         document.getElementById('productoDetalles').value = (p.detalles_publicos || []).join('\n');
         document.getElementById('productoOpciones').value = (p.opciones_personalizacion || []).join('\n');
-        document.getElementById('productoDeporteWeb').value = p.deporte_web || 'running';
-        document.getElementById('productoTipoWeb').value = p.tipo_web || '';
-        document.getElementById('productoSubcategoriaWeb').value = p.subcategoria_web || '';
+        cargarCategoriaEnEditor(p);
         document.getElementById('productoGenero').value = p.genero || 'unisex';
         document.getElementById('productoImagenArchivo').value = p.imagen_archivo || '';
-        document.getElementById('productoOrdenWeb').value = p.orden_web != null ? p.orden_web : '';
         grupoActivo.style.display = 'block';
         variantesEditor = variantesCatalogo.filter(v => v.producto_id === p.id).map(v => ({ id: v.id, nombre: v.nombre }));
         precioReferenciaEditor = preciosReferencia.filter(r => r.producto_id === p.id)
@@ -1997,12 +2056,9 @@
         document.getElementById('productoEspecificaciones').value = '';
         document.getElementById('productoDetalles').value = '';
         document.getElementById('productoOpciones').value = '';
-        document.getElementById('productoDeporteWeb').value = 'running';
-        document.getElementById('productoTipoWeb').value = '';
-        document.getElementById('productoSubcategoriaWeb').value = '';
+        cargarCategoriaEnEditor(null);
         document.getElementById('productoGenero').value = 'unisex';
         document.getElementById('productoImagenArchivo').value = '';
-        document.getElementById('productoOrdenWeb').value = '';
         grupoActivo.style.display = 'none';
         variantesEditor = [];
         precioReferenciaEditor = [];
@@ -2018,7 +2074,6 @@
       renderCostesPorCantidad();
       actualizarCalculadoraGeneral();
       poblarSugerenciasCategorias();
-      poblarSugerenciasWeb();
       abrirModal('modalProducto');
     }
 
@@ -2111,14 +2166,97 @@
       renderColoresWebEditor();
     }
 
-    // Sugerencias de "tipo" y "subcategoría" a partir de lo que ya se haya
-    // escrito antes en otros productos, para no reescribir cada vez y evitar
-    // que "camisetas" y "Camisetas" convivan como si fueran cosas distintas.
-    function poblarSugerenciasWeb() {
-      const tipos = [...new Set(productos.map(p => p.tipo_web).filter(Boolean))].sort();
-      const subs = [...new Set(productos.map(p => p.subcategoria_web).filter(Boolean))].sort();
-      document.getElementById('dlTipoWeb').innerHTML = tipos.map(t => `<option value="${esc(t)}">`).join('');
-      document.getElementById('dlSubcategoriaWeb').innerHTML = subs.map(s => `<option value="${esc(s)}">`).join('');
+    // ── CATEGORÍA DEL PRODUCTO (tres desplegables encadenados) ──
+    // El producto guarda solo categoria_id: la categoría más concreta elegida
+    // (subcategoría, o el tipo, o el deporte). No se pueden escribir valores
+    // libres: si falta una categoría, se crea en "Categorías web".
+    function opcionesCategoria(padreId, textoVacio) {
+      return `<option value="">${textoVacio}</option>` + hijasDe(padreId).map(c => {
+        const marca = !c.activa ? ' (desactivada)' : c.proximamente ? ' (próximamente)' : '';
+        return `<option value="${c.id}">${esc(c.nombre)}${marca}</option>`;
+      }).join('');
+    }
+
+    function cambiarCategoriaProducto(nivel) {
+      const selDep = document.getElementById('productoCatDeporte');
+      const selTipo = document.getElementById('productoCatTipo');
+      const selSub = document.getElementById('productoCatSub');
+      if (nivel <= 1) {
+        const dep = selDep.value;
+        selTipo.innerHTML = dep && hijasDe(dep).length
+          ? opcionesCategoria(dep, '— Sin tipo —')
+          : `<option value="">${dep ? '— Este deporte no tiene tipos —' : '— Elige primero el deporte —'}</option>`;
+        selTipo.disabled = !dep || !hijasDe(dep).length;
+      }
+      const tipo = selTipo.value;
+      const subs = tipo ? hijasDe(tipo) : [];
+      selSub.innerHTML = subs.length
+        ? opcionesCategoria(tipo, '— Sin subcategoría —')
+        : `<option value="">${tipo ? '— Este tipo no tiene subcategorías —' : '— Elige primero el tipo —'}</option>`;
+      selSub.disabled = !subs.length;
+    }
+
+    // Para productos que todavía no tienen categoria_id: deduce la categoría
+    // a partir de los textos antiguos (deporte_web, tipo_web, subcategoria_web),
+    // con las mismas reglas que la migración del script 34.
+    function categoriaDesdeTextos(p) {
+      const dep = categoriasWeb.find(c => !c.padre_id && c.slug === p.deporte_web);
+      if (!dep) return [];
+      let tipo = p.tipo_web ? hijasDe(dep.id).find(c => c.slug === p.tipo_web) : null;
+      // Caso "merchandising / merchandising / merchandising-eventos": el tipo es la subcategoría.
+      if (!tipo && p.subcategoria_web) tipo = hijasDe(dep.id).find(c => c.slug === p.subcategoria_web);
+      if (!tipo) return [dep.id];
+      const sub = p.subcategoria_web && p.subcategoria_web !== tipo.slug
+        ? hijasDe(tipo.id).find(c => c.slug === p.subcategoria_web)
+        : null;
+      return sub ? [dep.id, tipo.id, sub.id] : [dep.id, tipo.id];
+    }
+
+    function cargarCategoriaEnEditor(p) {
+      const aviso = document.getElementById('avisoCategoriaProducto');
+      aviso.style.display = 'none';
+      let ids = [];
+      if (p && p.categoria_id) {
+        ids = rutaIdsCategoria(p.categoria_id);
+      } else if (p) {
+        ids = categoriaDesdeTextos(p);
+        const textos = [p.deporte_web, p.tipo_web, p.subcategoria_web].filter(Boolean).join(' / ');
+        if (ids.length) {
+          aviso.textContent = `Categoría deducida de los datos antiguos (${textos}). Revísala y guarda para fijarla.`;
+          aviso.style.display = 'block';
+        } else if (textos) {
+          aviso.textContent = `Este producto tenía "${textos}", que no corresponde a ninguna categoría. Elige una o déjalo en blanco.`;
+          aviso.style.display = 'block';
+        }
+      }
+      document.getElementById('productoCatDeporte').innerHTML = opcionesCategoria(null, '— Elige deporte —');
+      document.getElementById('productoCatDeporte').value = ids[0] || '';
+      cambiarCategoriaProducto(1);
+      document.getElementById('productoCatTipo').value = ids[1] || '';
+      cambiarCategoriaProducto(2);
+      document.getElementById('productoCatSub').value = ids[2] || '';
+    }
+
+    function categoriaElegidaEnEditor() {
+      return document.getElementById('productoCatSub').value
+        || document.getElementById('productoCatTipo').value
+        || document.getElementById('productoCatDeporte').value
+        || null;
+    }
+
+    // Mientras la tienda migra (fase 2), los textos antiguos se siguen
+    // rellenando a partir del árbol, con la misma regla que usa catalogo_web.
+    // deporte_web tiene una lista fija en la base de datos
+    // (productos_deporte_web_check): un deporte nuevo se guarda como null ahí.
+    // Todo esto desaparece en la fase 3.
+    const DEPORTES_TEXTO_ANTIGUO = ['running', 'merchandising', 'urban', 'lucha', 'tenis', 'padel'];
+    function textosAntiguosDeCategoria(categoriaId) {
+      const [n1, n2, n3] = rutaIdsCategoria(categoriaId).map(categoriaPorId);
+      return {
+        deporte_web: n1 && DEPORTES_TEXTO_ANTIGUO.includes(n1.slug) ? n1.slug : null,
+        tipo_web: n2 ? n2.slug : null,
+        subcategoria_web: n3 ? n3.slug : (n2 ? n2.slug : null)
+      };
     }
 
     // Envoltorio: evita que dos clics seguidos en "Guardar" (o un doble
@@ -2171,9 +2309,11 @@
       const moqStr = document.getElementById('productoMoq').value;
       const moq = moqStr === '' ? null : parseInt(moqStr);
       const imagenArchivo = document.getElementById('productoImagenArchivo').value.trim();
+      const categoriaId = categoriaElegidaEnEditor();
       if (publicado) {
         if (!tituloPublico) { alert('❌ Un producto publicado necesita un título para la web'); return; }
         if (!moq || moq <= 0) { alert('❌ Un producto publicado necesita su pedido mínimo (moq)'); return; }
+        if (!categoriaId) { alert('❌ Un producto publicado necesita al menos el deporte'); return; }
       }
       const lineasTexto = (id) => document.getElementById(id).value.split('\n').map(s => s.trim()).filter(Boolean);
 
@@ -2189,14 +2329,19 @@
         especificaciones_publicas: lineasTexto('productoEspecificaciones'),
         detalles_publicos: lineasTexto('productoDetalles'),
         opciones_personalizacion: lineasTexto('productoOpciones'),
-        deporte_web: document.getElementById('productoDeporteWeb').value,
-        tipo_web: document.getElementById('productoTipoWeb').value.trim() || null,
-        subcategoria_web: document.getElementById('productoSubcategoriaWeb').value.trim() || null,
         genero: document.getElementById('productoGenero').value,
         moq,
-        imagen_archivo: imagenArchivo || null,
-        orden_web: document.getElementById('productoOrdenWeb').value === '' ? null : parseInt(document.getElementById('productoOrdenWeb').value)
+        imagen_archivo: imagenArchivo || null
+        // orden_web no se toca aquí: se cambia con las flechas en "Categorías web".
       };
+      // Categoría: si hay una elegida, se guarda (y los textos antiguos se
+      // rellenan a juego). Si no hay ninguna, no se tocan los textos antiguos,
+      // para no perder datos de productos aún sin clasificar (p. ej. gym).
+      if (categoriaId) {
+        Object.assign(datosComunes, { categoria_id: categoriaId }, textosAntiguosDeCategoria(categoriaId));
+      } else {
+        datosComunes.categoria_id = null;
+      }
 
       if (idStr) {
         const payload = { ...datosComunes, activo: document.getElementById('productoActivo').value === 'true' };
@@ -2313,16 +2458,329 @@
     }
 
     async function recargarProductos() {
-      const [rp, rv, rpref, rcw] = await Promise.all([
+      const [rp, rv, rpref, rcw, rcat] = await Promise.all([
         sb.from('productos').select('*').order('nombre'),
         sb.from('producto_variantes').select('*').order('nombre'),
         sb.from('producto_precios_referencia').select('*'),
-        sb.from('producto_colores_web').select('*').order('orden')
+        sb.from('producto_colores_web').select('*').order('orden'),
+        sb.from('categorias_web').select('*').order('orden')
       ]);
       productos = rp.data || [];
       variantesCatalogo = rv.data || [];
       preciosReferencia = rpref.data || [];
       coloresWeb = rcw.data || [];
+      categoriasWeb = rcat.data || [];
+    }
+
+    // ════════════════════════════════════════
+    //  CATEGORÍAS WEB
+    // ════════════════════════════════════════
+    // Árbol de hasta 3 niveles (deporte > tipo > subcategoría) en la tabla
+    // categorias_web. La base de datos se encarga de: crear el identificador
+    // web (slug) a partir del nombre, impedir que cambie, impedir un 4.º
+    // nivel y no dejar borrar una categoría con productos o subcategorías.
+    // Aquí solo se ofrece lo que se puede hacer.
+
+    async function recargarCategorias() {
+      const { data, error } = await sb.from('categorias_web').select('*').order('orden');
+      if (error) { alert('❌ No se pudieron cargar las categorías: ' + error.message); return; }
+      categoriasWeb = data || [];
+    }
+
+    function categoriaPorId(id) { return categoriasWeb.find(c => c.id === id) || null; }
+
+    function hijasDe(padreId) {
+      return categoriasWeb
+        .filter(c => (c.padre_id || null) === (padreId || null))
+        .sort((a, b) => (a.orden - b.orden) || a.nombre.localeCompare(b.nombre));
+    }
+
+    // [deporte, tipo, subcategoría] desde la raíz hasta la categoría dada.
+    function rutaIdsCategoria(id) {
+      const ruta = [];
+      let c = categoriaPorId(id);
+      while (c && ruta.length < 3) { ruta.unshift(c.id); c = categoriaPorId(c.padre_id); }
+      return ruta;
+    }
+
+    function rutaNombresCategoria(id) {
+      return rutaIdsCategoria(id).map(x => categoriaPorId(x).nombre).join(' › ');
+    }
+
+    // La categoría y todas las que cuelgan de ella.
+    function idsRamaCategoria(id) {
+      const ids = [id];
+      for (const h of hijasDe(id)) ids.push(...idsRamaCategoria(h.id));
+      return ids;
+    }
+
+    // Por qué no se ve en la tienda (ella o una superior), o null si se ve.
+    function motivoOcultaCategoria(id) {
+      for (const x of rutaIdsCategoria(id)) {
+        const c = categoriaPorId(x);
+        if (!c.activa) return x === id ? 'desactivada' : `desactivada porque "${c.nombre}" está desactivada`;
+        if (c.proximamente) return x === id ? 'en Próximamente' : `en Próximamente porque "${c.nombre}" lo está`;
+      }
+      return null;
+    }
+
+    const esVisibleEnTienda = (p) => p.publicado && p.activo;
+
+    function productosDirectosCategoria(id) {
+      return productos.filter(p => p.categoria_id === id && p.publicado);
+    }
+
+    // Evita dos operaciones a la vez (doble clic en una flecha, por ejemplo).
+    let categoriasOcupado = false;
+    async function conBloqueoCategorias(contenedorId, fn) {
+      if (categoriasOcupado) return;
+      categoriasOcupado = true;
+      const cont = document.getElementById(contenedorId);
+      if (cont) cont.classList.add('ocupado');
+      try { await fn(); }
+      finally {
+        categoriasOcupado = false;
+        if (cont) cont.classList.remove('ocupado');
+      }
+    }
+
+    function renderCategorias() {
+      const cont = document.getElementById('categorias-arbol');
+      cont.classList.remove('loading');
+      const deportes = hijasDe(null);
+      if (!deportes.length) {
+        cont.innerHTML = `<div class="empty"><div class="empty-icon">🗂️</div><p>No hay categorías. Crea la primera con "Nuevo deporte".</p></div>`;
+        return;
+      }
+      cont.innerHTML = deportes.map((d, i) => {
+        let filas = filaCategoria(d, i, deportes.length);
+        hijasDe(d.id).forEach((t, j, tipos) => {
+          filas += filaCategoria(t, j, tipos.length);
+          hijasDe(t.id).forEach((s, k, subs) => { filas += filaCategoria(s, k, subs.length); });
+        });
+        return `<div class="cat-bloque">${filas}</div>`;
+      }).join('');
+    }
+
+    function filaCategoria(c, pos, total) {
+      const rama = idsRamaCategoria(c.id);
+      const enRama = productos.filter(p => rama.includes(p.categoria_id));
+      const visibles = enRama.filter(esVisibleEnTienda).length;
+      const directos = productosDirectosCategoria(c.id).length;
+      const motivo = motivoOcultaCategoria(c.id);
+      const tieneHijas = hijasDe(c.id).length > 0;
+      const nombreNivelHija = c.nivel === 1 ? 'tipo' : 'subcategoría';
+
+      const badges = [
+        !c.activa ? '<span class="badge badge-danger">Desactivada</span>' : '',
+        c.activa && c.proximamente ? '<span class="badge badge-warning">Próximamente</span>' : ''
+      ].join(' ');
+
+      let info = `${visibles} publicado(s) en la tienda · ${enRama.length} producto(s) en total`;
+      if (motivo) info += ` · <span style="color:var(--warning);">no se ve en la tienda: ${esc(motivo)}</span>`;
+
+      const acciones = [];
+      if (directos) acciones.push(`<button class="btn btn-ghost btn-sm" onclick="abrirOrdenProductos('${c.id}')">↕️ Ordenar productos (${directos})</button>`);
+      if (c.nivel < 3) acciones.push(`<button class="btn btn-ghost btn-sm" onclick="crearCategoria('${c.id}')">➕ ${nombreNivelHija}</button>`);
+      acciones.push(`<button class="btn btn-ghost btn-sm" onclick="renombrarCategoria('${c.id}')">✏️ Renombrar</button>`);
+      if (c.activa) acciones.push(`<button class="btn btn-ghost btn-sm" onclick="alternarProximamente('${c.id}')">${c.proximamente ? 'Quitar Próximamente' : 'Próximamente'}</button>`);
+      acciones.push(c.activa
+        ? `<button class="btn btn-ghost btn-sm" onclick="alternarActivaCategoria('${c.id}')">Desactivar</button>`
+        : `<button class="btn btn-success btn-sm" onclick="alternarActivaCategoria('${c.id}')">Activar</button>`);
+      if (!tieneHijas && !enRama.length) acciones.push(`<button class="btn btn-danger btn-sm" onclick="eliminarCategoria('${c.id}')" title="Borrar (está vacía)">🗑️</button>`);
+
+      return `<div class="cat-fila cat-nivel-${c.nivel}${motivo ? ' cat-apagada' : ''}">
+        <div class="cat-flechas">
+          <button class="btn btn-ghost btn-flecha" title="Subir" onclick="moverCategoria('${c.id}', -1)" ${pos === 0 ? 'disabled' : ''}>▲</button>
+          <button class="btn btn-ghost btn-flecha" title="Bajar" onclick="moverCategoria('${c.id}', 1)" ${pos === total - 1 ? 'disabled' : ''}>▼</button>
+        </div>
+        <div class="cat-nombre">
+          <strong>${esc(c.nombre)}</strong><span class="cat-slug">${esc(c.slug)}</span> ${badges}
+          <div class="cat-info">${info}</div>
+        </div>
+        <div class="cat-acciones">${acciones.join('')}</div>
+      </div>`;
+    }
+
+    // Cambia el orden entre hermanas: intercambia la posición y renumera
+    // 10, 20, 30... Solo se guardan las filas cuyo orden cambia.
+    async function moverCategoria(id, dir) {
+      await conBloqueoCategorias('categorias-arbol', async () => {
+        const c = categoriaPorId(id);
+        const hermanas = hijasDe(c.padre_id);
+        const i = hermanas.findIndex(x => x.id === id);
+        const j = i + dir;
+        if (j < 0 || j >= hermanas.length) return;
+        [hermanas[i], hermanas[j]] = [hermanas[j], hermanas[i]];
+        const cambios = hermanas
+          .map((h, k) => ({ id: h.id, orden: (k + 1) * 10, antes: h.orden }))
+          .filter(x => x.orden !== x.antes);
+        const resultados = await Promise.all(cambios.map(x =>
+          sb.from('categorias_web').update({ orden: x.orden }).eq('id', x.id)));
+        const fallo = resultados.find(r => r.error);
+        if (fallo) alert('❌ No se pudo guardar el orden: ' + fallo.error.message);
+        await recargarCategorias();
+        renderCategorias();
+      });
+    }
+
+    async function crearCategoria(padreId) {
+      const padre = padreId ? categoriaPorId(padreId) : null;
+      const queEs = !padre ? 'deporte' : padre.nivel === 1 ? 'tipo' : 'subcategoría';
+      const donde = padre ? ` dentro de "${rutaNombresCategoria(padre.id)}"` : '';
+      const nombre = prompt(`Nombre del nuevo ${queEs}${donde}:`);
+      if (nombre === null) return;
+      if (!nombre.trim()) { alert('❌ El nombre no puede estar vacío'); return; }
+      await conBloqueoCategorias('categorias-arbol', async () => {
+        const hermanas = hijasDe(padreId);
+        const orden = hermanas.length ? Math.max(...hermanas.map(h => h.orden)) + 10 : 10;
+        const { data, error } = await sb.from('categorias_web')
+          .insert({ nombre: nombre.trim(), padre_id: padreId || null, orden })
+          .select('*').single();
+        if (error) {
+          if (error.code === '23505') alert('❌ Ya existe una categoría con ese nombre en este mismo sitio.');
+          else if (error.code === '23514') alert('❌ El nombre necesita al menos una letra o un número.');
+          else alert('❌ Error al crear la categoría: ' + error.message);
+          return;
+        }
+        toast(`✓ Creada "${data.nombre}" (identificador web: ${data.slug})`);
+        await recargarCategorias();
+        renderCategorias();
+      });
+    }
+
+    async function renombrarCategoria(id) {
+      const c = categoriaPorId(id);
+      const nombre = prompt(`Nuevo nombre para "${c.nombre}".\n\nEl identificador web (${c.slug}) no cambia, así que la tienda no se rompe.`, c.nombre);
+      if (nombre === null || nombre.trim() === c.nombre) return;
+      if (!nombre.trim()) { alert('❌ El nombre no puede estar vacío'); return; }
+      await conBloqueoCategorias('categorias-arbol', async () => {
+        const { error } = await sb.from('categorias_web').update({ nombre: nombre.trim() }).eq('id', id);
+        if (error) { alert('❌ Error al renombrar: ' + error.message); return; }
+        toast('✓ Categoría renombrada');
+        await recargarCategorias();
+        renderCategorias();
+      });
+    }
+
+    async function alternarProximamente(id) {
+      const c = categoriaPorId(id);
+      const rama = idsRamaCategoria(id);
+      const n = productos.filter(p => rama.includes(p.categoria_id) && esVisibleEnTienda(p)).length;
+      const aviso = c.proximamente
+        ? `¿Quitar "Próximamente" de "${c.nombre}"?\n\nSus ${n} producto(s) publicado(s) empezarán a verse en la tienda.`
+        : `¿Poner "${c.nombre}" en Próximamente?\n\nLa tienda mostrará el botón desactivado y sus ${n} producto(s) publicado(s) dejarán de verse hasta que lo quites.`;
+      if (!confirmarAccion(aviso)) return;
+      await conBloqueoCategorias('categorias-arbol', async () => {
+        const { error } = await sb.from('categorias_web').update({ proximamente: !c.proximamente }).eq('id', id);
+        if (error) { alert('❌ Error al guardar: ' + error.message); return; }
+        toast(c.proximamente ? '✓ Ya no está en Próximamente' : '✓ Puesta en Próximamente');
+        await recargarCategorias();
+        renderCategorias();
+      });
+    }
+
+    async function alternarActivaCategoria(id) {
+      const c = categoriaPorId(id);
+      const rama = idsRamaCategoria(id);
+      const n = productos.filter(p => rama.includes(p.categoria_id) && esVisibleEnTienda(p)).length;
+      const aviso = c.activa
+        ? `¿Desactivar "${c.nombre}"?\n\nDesaparecerá de la tienda junto con sus subcategorías y sus ${n} producto(s) publicado(s). No se borra nada: puedes volver a activarla cuando quieras.`
+        : `¿Activar "${c.nombre}"?\n\nVolverá a verse en la tienda con sus ${n} producto(s) publicado(s).`;
+      if (!confirmarAccion(aviso)) return;
+      await conBloqueoCategorias('categorias-arbol', async () => {
+        const { error } = await sb.from('categorias_web').update({ activa: !c.activa }).eq('id', id);
+        if (error) { alert('❌ Error al guardar: ' + error.message); return; }
+        toast(c.activa ? '✓ Categoría desactivada' : '✓ Categoría activada');
+        await recargarCategorias();
+        renderCategorias();
+      });
+    }
+
+    async function eliminarCategoria(id) {
+      const c = categoriaPorId(id);
+      if (!confirmarAccion(`¿Borrar la categoría "${c.nombre}"?\n\nEstá vacía, así que no afecta a ningún producto.`)) return;
+      await conBloqueoCategorias('categorias-arbol', async () => {
+        const { error } = await sb.from('categorias_web').delete().eq('id', id);
+        if (error) {
+          alert(error.code === '23503'
+            ? '❌ No se puede borrar: tiene productos o subcategorías. Desactívala en su lugar.'
+            : '❌ Error al borrar: ' + error.message);
+          await recargarProductos();
+          renderCategorias();
+          return;
+        }
+        toast('✓ Categoría borrada');
+        await recargarCategorias();
+        renderCategorias();
+      });
+    }
+
+    // ── ORDEN DE LOS PRODUCTOS DENTRO DE UNA CATEGORÍA ──
+    // Se guarda en productos.orden_web (10, 20, 30...). Los que aún no
+    // tienen orden van al final, por nombre, igual que en la tienda.
+    let categoriaOrdenActual = null;
+
+    function productosOrdenados(categoriaId) {
+      const titulo = (p) => (p.titulo_publico || p.nombre || '').toLowerCase();
+      return productosDirectosCategoria(categoriaId).sort((a, b) => {
+        const oa = a.orden_web == null ? Infinity : a.orden_web;
+        const ob = b.orden_web == null ? Infinity : b.orden_web;
+        return (oa - ob) || titulo(a).localeCompare(titulo(b));
+      });
+    }
+
+    function abrirOrdenProductos(categoriaId) {
+      categoriaOrdenActual = categoriaId;
+      document.getElementById('ordenProductosRuta').textContent = rutaNombresCategoria(categoriaId);
+      const motivo = motivoOcultaCategoria(categoriaId);
+      const aviso = document.getElementById('ordenProductosAviso');
+      aviso.textContent = motivo ? `Ahora mismo esta categoría no se ve en la tienda (${motivo}). El orden se guarda igualmente.` : '';
+      aviso.style.display = motivo ? 'block' : 'none';
+      renderOrdenProductos();
+      abrirModal('modalOrdenProductos');
+    }
+
+    function renderOrdenProductos() {
+      const lista = productosOrdenados(categoriaOrdenActual);
+      const cont = document.getElementById('ordenProductosLista');
+      if (!lista.length) {
+        cont.innerHTML = '<p style="font-size:13px; color:var(--muted);">No hay productos publicados en esta categoría.</p>';
+        return;
+      }
+      cont.innerHTML = lista.map((p, i) => `
+        <div class="orden-fila">
+          <span class="orden-pos">${i + 1}</span>
+          <span class="cat-flechas">
+            <button class="btn btn-ghost btn-flecha" title="Subir" onclick="moverProducto('${p.id}', -1)" ${i === 0 ? 'disabled' : ''}>▲</button>
+            <button class="btn btn-ghost btn-flecha" title="Bajar" onclick="moverProducto('${p.id}', 1)" ${i === lista.length - 1 ? 'disabled' : ''}>▼</button>
+          </span>
+          <span style="flex:1;">${esc(p.titulo_publico || p.nombre)}</span>
+          ${p.activo ? '' : '<span class="badge badge-warning" title="Los productos inactivos no salen en la tienda">Inactivo</span>'}
+        </div>`).join('');
+    }
+
+    async function moverProducto(id, dir) {
+      await conBloqueoCategorias('ordenProductosLista', async () => {
+        const lista = productosOrdenados(categoriaOrdenActual);
+        const i = lista.findIndex(p => p.id === id);
+        const j = i + dir;
+        if (j < 0 || j >= lista.length) return;
+        [lista[i], lista[j]] = [lista[j], lista[i]];
+        const cambios = lista
+          .map((p, k) => ({ p, orden: (k + 1) * 10 }))
+          .filter(x => x.p.orden_web !== x.orden);
+        const resultados = await Promise.all(cambios.map(x =>
+          sb.from('productos').update({ orden_web: x.orden }).eq('id', x.p.id)));
+        const fallo = resultados.find(r => r.error);
+        if (fallo) {
+          alert('❌ No se pudo guardar el orden: ' + fallo.error.message);
+          await recargarProductos();
+        } else {
+          cambios.forEach(x => { x.p.orden_web = x.orden; });
+        }
+        renderOrdenProductos();
+      });
     }
 
     // ── BORRAR PRODUCTOS ────────────────────
