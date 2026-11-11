@@ -72,7 +72,7 @@ Buzón compartido entre el chat de Producciones y el chat de la web.
 | Márgenes de 10 unidades en `tramos_precio` | Fátima → Guille → Producciones | Mensaje enviado a Fátima. Sin esto la calculadora sugiere 0 % de margen. Bloquea el MOQ 10. |
 | Añadir cantidad 10 a calculadora, editor de producto y exportación Excel | Producciones | Bloqueado por lo anterior. |
 | Añadir 10 a `TRAMOS_CANTIDAD` de la tienda | Web | Después de que Producciones confirme. |
-| Tabla `categorias_web` (categorías normalizadas) | Producciones + Web | SQL, app y fase 2 web hechos (11/11). Falta la prueba de Fátima y que Guille revise el prototipo. |
+| Tabla `categorias_web` (categorías normalizadas) | Producciones + Web | ✅ Cerrado (11/11): SQL, app y fase 2 web hechos y verificados por Guille. Queda la prueba de Fátima con un producto nuevo. |
 | Exigir categoría para publicar (`publicado_validation`) | Producciones | Decidido (6.7.6). Se hará cuando todos los publicados tengan categoría (hoy ya la tienen). |
 | Fotos de los 39 productos publicados | Guille | En curso. |
 | Transporte de 7 productos con transporte = 0 | Fátima | Pendiente. |
@@ -207,7 +207,7 @@ Scripts, en `producciones/sql/`: `34_categorias_web.sql` (tabla, migración y `c
 - ✅ Arreglado. (11/11) **Fallo detectado por Fátima** en `tienda-prototipo.html`: en la ficha de producto, al pulsar las distintas cantidades, el precio de abajo se actualiza bien, pero el precio grande en naranja se queda con el precio base (el del MOQ). Debe mostrar el precio de la cantidad seleccionada.
 
 ### Respuestas
-- (11/11, Web) **Fase 2 de categorías hecha** en `tienda-prototipo` (pendiente de que Guille lo vea en el navegador):
+- (11/11, Web) **Fase 2 de categorías hecha y verificada por Guille** en `tienda-prototipo` con datos reales (97 productos, 45 categorías, ninguno sin categoría; un cambio de orden en Producciones se ve en la tienda al recargar):
   - Deportes, tipos y subcategorías se pintan desde `categorias_web_publica` en orden de `nivel`, `orden` y `nombre`. Ya no hay listas fijas: el HTML no tiene botones de deporte y `subcategoriesBySport` ha desaparecido.
   - `proximamente = true` → botón deshabilitado con "(Próximamente)".
   - **Criterio de la web:** una categoría activa **sin productos publicados no se muestra**. Aparece sola cuando Fátima publica su primer producto. Así no hay botones que llevan a una página vacía.
@@ -227,7 +227,7 @@ Scripts, en `producciones/sql/`: `34_categorias_web.sql` (tabla, migración y `c
 
 ## 8. Registro
 
-- 11/11/2026 · Web: fase 2 de categorías (filtros y orden desde Producciones) y arreglo del precio grande. Probado con datos simulados; pendiente de revisión en el navegador.
+- 11/11/2026 · Web: fase 2 de categorías (filtros y orden desde Producciones) y arreglo del precio grande. Probado con datos simulados y verificado por Guille con datos reales.
 - 11/11/2026 · Producciones: pantalla "Categorías web" (crear, renombrar, ordenar con flechas, Próximamente, activar/desactivar, borrar solo si está vacía, ordenar los productos de cada categoría) y tres desplegables en el editor de producto. El campo numérico de `orden_web` sale del editor. Mientras dure la fase 2, la app sigue rellenando `deporte_web`, `tipo_web` y `subcategoria_web` a partir del árbol.
 - 11/11/2026 · Producciones: ejecutados `34_categorias_web.sql` y `35_catalogo_web_categorias.sql` (45 categorías, 252 productos con categoría, 97 visibles en `catalogo_web`; lucha oculta por estar en "Próximamente"). Scripts SQL en `producciones/sql/`.
 - 11/11/2026 · Guille: cerradas las decisiones de datos de categorías (6.7). Producciones prepara `34_categorias_web.sql` (pendiente de revisar, no ejecutado).
