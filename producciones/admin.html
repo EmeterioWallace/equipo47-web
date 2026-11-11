@@ -895,7 +895,7 @@
               </select>
             </div>
             <div class="form-group">
-              <label>Archivo de imagen principal *</label>
+              <label>Archivo de imagen principal</label>
               <input type="text" id="productoImagenArchivo" placeholder="Ej: camiseta-running-h.jpg">
             </div>
             <div class="form-group">
@@ -974,7 +974,7 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-ghost" onclick="cerrarModal('modalProducto')">Cancelar</button>
-        <button type="button" class="btn btn-primary" onclick="guardarProducto()">💾 Guardar</button>
+        <button type="button" class="btn btn-primary" id="btnGuardarProducto" onclick="guardarProducto()">💾 Guardar</button>
       </div>
     </div>
   </div>
@@ -2073,10 +2073,20 @@
         return;
       }
       cont.innerHTML = coloresWebEditor.map((c, i) => `
-        <div class="apunte">
-          <span><strong>${esc(c.nombre_color)}</strong> <span style="color:var(--muted);">· ${esc(c.imagen_archivo)}</span></span>
+        <div style="display:flex; gap:6px; align-items:center; padding:6px 0; border-top:1px solid var(--border);">
+          <input type="text" class="mini-input" value="${esc(c.nombre_color)}" placeholder="Nombre del color" style="flex:1;" oninput="setColorWeb(${i},'nombre_color',this.value)">
+          <input type="text" class="mini-input" value="${esc(c.imagen_archivo)}" placeholder="Archivo de imagen" style="flex:1;" oninput="setColorWeb(${i},'imagen_archivo',this.value)">
           <button type="button" class="btn btn-danger btn-sm" onclick="quitarColorWeb(${i})">🗑️</button>
         </div>`).join('');
+    }
+
+    // Igual que con las líneas de un presupuesto: solo actualiza el dato en
+    // memoria, sin repintar la lista, para no perder el foco mientras se
+    // escribe. La comprobación de nombres repetidos se hace al guardar,
+    // no aquí, porque mientras se edita puede haber un instante de choque
+    // (por ejemplo, intercambiando el nombre entre dos colores).
+    function setColorWeb(i, campo, valor) {
+      coloresWebEditor[i][campo] = valor;
     }
 
     function anadirColorWeb() {
@@ -2086,7 +2096,7 @@
       const imagen = inpImagen.value.trim();
       if (!nombre) { alert('❌ Escribe el nombre del color'); return; }
       if (!imagen) { alert('❌ Escribe el archivo de imagen de ese color'); return; }
-      if (coloresWebEditor.some(c => c.nombre_color.toLowerCase() === nombre.toLowerCase())) {
+      if (coloresWebEditor.some(c => c.nombre_color.trim().toLowerCase() === nombre.toLowerCase())) {
         alert('❌ Este producto ya tiene un color con ese nombre');
         return;
       }
@@ -2111,7 +2121,21 @@
       document.getElementById('dlSubcategoriaWeb').innerHTML = subs.map(s => `<option value="${esc(s)}">`).join('');
     }
 
+    // Envoltorio: evita que dos clics seguidos en "Guardar" (o un doble
+    // clic accidental) disparen dos guardados a la vez, que podían acabar
+    // intentando crear el mismo color (u otro dato) dos veces.
     async function guardarProducto() {
+      const btn = document.getElementById('btnGuardarProducto');
+      if (btn.disabled) return; // ya hay un guardado en marcha, se ignora el clic de más
+      btn.disabled = true;
+      try {
+        await guardarProductoInterno();
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function guardarProductoInterno() {
       const nombre = document.getElementById('productoNombre').value.trim();
       if (!nombre) { alert('❌ El nombre del producto es obligatorio'); return; }
       const modoCalculo = document.getElementById('productoModoCalculo').value;
@@ -2150,7 +2174,6 @@
       if (publicado) {
         if (!tituloPublico) { alert('❌ Un producto publicado necesita un título para la web'); return; }
         if (!moq || moq <= 0) { alert('❌ Un producto publicado necesita su pedido mínimo (moq)'); return; }
-        if (!imagenArchivo) { alert('❌ Un producto publicado necesita el archivo de imagen principal'); return; }
       }
       const lineasTexto = (id) => document.getElementById(id).value.split('\n').map(s => s.trim()).filter(Boolean);
 
@@ -2220,21 +2243,66 @@
         if (error) { alert('❌ Error al borrar variantes: ' + error.message); return; }
       }
 
-      // Sincronizar los colores de la web, con el mismo patrón que las variantes.
+      // Antes de tocar la base de datos: comprobar que ningún color se ha
+      // quedado con el nombre o la imagen en blanco al editarlo, y que no
+      // hay dos colores con el mismo nombre (podría pasar si se ha editado
+      // uno para que coincida con otro que ya estaba en la lista).
+      for (const c of coloresWebEditor) {
+        c.nombre_color = (c.nombre_color || '').trim();
+        c.imagen_archivo = (c.imagen_archivo || '').trim();
+      }
+      if (coloresWebEditor.some(c => !c.nombre_color || !c.imagen_archivo)) {
+        alert('❌ Hay un color sin nombre o sin archivo de imagen. Rellénalo o bórralo antes de guardar.');
+        return;
+      }
+      const nombresColores = coloresWebEditor.map(c => c.nombre_color.toLowerCase());
+      const nombresRepetidos = nombresColores.filter((n, i) => nombresColores.indexOf(n) !== i);
+      if (nombresRepetidos.length) {
+        alert(`❌ Hay más de un color llamado "${coloresWebEditor.find(c => c.nombre_color.toLowerCase() === nombresRepetidos[0]).nombre_color}". Cambia el nombre de uno de los dos antes de guardar.`);
+        return;
+      }
+
+      // Sincronizar los colores de la web: se borran los quitados, se
+      // actualizan los que ya existían (por si se han editado en el sitio)
+      // y se crean los nuevos. Primero borrar y luego crear, porque si
+      // alguien quita un color y vuelve a añadir uno con el mismo nombre en
+      // la misma edición, crear antes de borrar chocaría con el nombre
+      // "viejo" que todavía seguiría ahí.
       const idsColoresEditor = coloresWebEditor.filter(c => c.id).map(c => c.id);
       const idsColoresBd = coloresWeb.filter(c => c.producto_id === productoId).map(c => c.id);
       const aBorrarColores = idsColoresBd.filter(x => !idsColoresEditor.includes(x));
+      const aActualizarColores = coloresWebEditor.filter(c => c.id);
       const nuevosColores = coloresWebEditor.filter(c => !c.id).map(c => ({
         producto_id: productoId, nombre_color: c.nombre_color, imagen_archivo: c.imagen_archivo
       }));
 
-      if (nuevosColores.length) {
-        const { error } = await sb.from('producto_colores_web').insert(nuevosColores);
-        if (error) { alert('❌ Error al guardar los colores: ' + error.message); return; }
-      }
       if (aBorrarColores.length) {
         const { error } = await sb.from('producto_colores_web').delete().in('id', aBorrarColores);
         if (error) { alert('❌ Error al borrar colores: ' + error.message); return; }
+      }
+      for (const c of aActualizarColores) {
+        const { error } = await sb.from('producto_colores_web')
+          .update({ nombre_color: c.nombre_color, imagen_archivo: c.imagen_archivo })
+          .eq('id', c.id);
+        if (error) {
+          if (error.code === '23505') {
+            alert('❌ Ya existe otro color con ese nombre para este producto.');
+          } else {
+            alert('❌ Error al actualizar un color: ' + error.message);
+          }
+          return;
+        }
+      }
+      if (nuevosColores.length) {
+        const { error } = await sb.from('producto_colores_web').insert(nuevosColores);
+        if (error) {
+          if (error.code === '23505') {
+            alert('❌ Uno de los colores ya existe para este producto (puede que se guardara hace un momento, quizá desde otra pestaña). Cierra este formulario y vuelve a abrir el producto para ver el estado actual.');
+          } else {
+            alert('❌ Error al guardar los colores: ' + error.message);
+          }
+          return;
+        }
       }
 
       cerrarModal('modalProducto');
