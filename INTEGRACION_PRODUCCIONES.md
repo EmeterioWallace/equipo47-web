@@ -105,9 +105,9 @@ tienda-prototipo.js busca en productImages.js → images/products/manifest.json
 
 ### Fase 3: Imágenes (equipo47-web)
 Los archivos de esta fase están en el repo de equipo47-web, así que los hace este Claude, no producciones.
-- [ ] **Placeholder "imagen próximamente":** cuando `image` llega null desde `catalogo_web`, `tienda-prototipo` muestra un placeholder en vez de un `<img>` roto.
-- [ ] **Aviso de imagen inexistente:** si `imagen_archivo` no aparece en el manifest o el archivo no existe en `images/products/`, avisar (no bloquear).
-- [ ] **Regeneración de `manifest.json`:** pendiente decidir dónde corre. La web no tiene build step, así que las opciones son un script que se ejecuta antes del commit o una GitHub Action que lo regenera en cada push.
+- [x] **Placeholder "imagen próximamente":** `resolverRutaImagen` devuelve `images/placeholder-proximamente.svg` cuando no hay imagen. Código hecho; pendiente comprobarlo en el deploy.
+- [x] **Aviso de imagen inexistente:** si el nombre no está en el manifest, avisa en consola y muestra el placeholder en vez de una imagen rota.
+- [x] **Regeneración de `manifest.json`:** `scripts/generate-manifest.js` se ejecuta en cada deploy de Netlify (`netlify.toml` → `build.command`). Decisión tomada por este Claude: no hay commits automáticos ni build paralelo, y el manifest no puede desfasarse.
 
 ### Fase 4: Testing
 - [ ] **Guille:** Coordinar test con Fátima
@@ -152,6 +152,23 @@ Los archivos de esta fase están en el repo de equipo47-web, así que los hace e
 - **Orden de productos:** campo `orden_web`; si está vacío, por nombre. No existe orden de categorías en la base de datos.
 - **Decidido (11/11):** tabla `categorias_web` en Supabase (deporte o subcategoría, nombre visible, orden, activa) que lean tanto la admin como la web. Crear o reordenar categorías no requerirá tocar código.
 - **Pendiente:** diseño de la tabla y migración de las categorías actuales. Lo define el Claude de producciones (es su base de datos) y después lo adapta la web.
+
+---
+
+## 📮 BUZÓN ENTRE CLAUDES
+
+**Cómo se usa:** cada Claude lee este documento al empezar. Lo que necesita del otro se escribe aquí, con fecha. Guille no reenvía mensajes; basta con decir "revisa el buzón".
+
+### Para Claude producciones
+- (11/11) Añadir la cantidad `10` a `MODOS_CALCULADORA` (`admin.html` ~línea 1256) y a la exportación a Excel, y permitir MOQ 10 en productos. Avisar cuando esté.
+- (11/11) Diseñar la tabla `categorias_web` (deporte o subcategoría, nombre visible, orden, activa) y migrar las categorías actuales. Avisar antes de cambiar la lista de deportes.
+
+### Para Claude equipo47-web
+- (11/11) Cuando producciones confirme el MOQ 10: añadir `10` a `TRAMOS_CANTIDAD` (`tienda-prototipo.js` línea 167).
+- (11/11) Cuando exista `categorias_web`: adaptar la tienda para leer categorías y orden de ahí.
+
+### Respuestas
+_(vacío)_
 
 ---
 

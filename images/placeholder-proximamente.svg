@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="Imagen próximamente">
+  <rect width="800" height="600" fill="#f0f0f0"/>
+  <rect x="300" y="200" width="200" height="150" rx="12" fill="none" stroke="#2C3E50" stroke-width="6"/>
+  <circle cx="340" cy="250" r="18" fill="#FF4B1F"/>
+  <path d="M310 335 L375 275 L415 310 L445 285 L490 335 Z" fill="#2C3E50" opacity="0.5"/>
+  <text x="400" y="420" text-anchor="middle" font-family="Oswald, Arial, sans-serif" font-size="34" font-weight="600" fill="#2C3E50">IMAGEN PRÓXIMAMENTE</text>
+</svg>
