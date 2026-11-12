@@ -70,6 +70,7 @@ Buzón compartido entre el chat de Producciones y el chat de la web.
 
 | Tema | Quién | Estado |
 |---|---|---|
+| **Qué precios se enseñan en la web** (nada / "Desde X €" / mezcla: orientativo en ropa de catálogo y presupuesto siempre en medallas, packaging y eventos) | Guille con Fátima y Alex | **Pendiente de decisión (12/11).** Motivo: hoy el prototipo enseña la escala completa por cantidades y la competencia puede copiarla. Mientras no se decida: no publicar `tienda-prototipo` en `index.html` y no ampliar precios públicos. Si se protege la escala, habría que limitar `calcular_precio_publico` (es pública con la anon key) y quitar el selector de cantidades. |
 | Márgenes de 10 unidades en `tramos_precio` | Fátima → Guille → Producciones | Mensaje enviado a Fátima. Sin esto la calculadora sugiere 0 % de margen. Bloquea el MOQ 10. |
 | Añadir cantidad 10 a calculadora, editor de producto y exportación Excel | Producciones | Bloqueado por lo anterior. |
 | Añadir 10 a `TRAMOS_CANTIDAD` de la tienda | Web | Después de que Producciones confirme. |
@@ -193,6 +194,7 @@ Scripts, en `producciones/sql/`: `34_categorias_web.sql` (tabla, migración y `c
 ## 7. Buzón
 
 ### Para Claude producciones
+- (12/11) **En pausa hasta que Guille decida qué precios se enseñan** (ver sección 3): no ampliar precios públicos ni la función `calcular_precio_publico`. Esto incluye el tramo de 10 en la parte pública. El trabajo interno de la calculadora puede seguir.
 - (11/11) Añadir la cantidad `10` a `MODOS_CALCULADORA` (`producciones/admin.html`, línea 1256) y a la exportación a Excel, y permitir MOQ 10 en productos. Avisar cuando esté. *Depende de los márgenes de 10 uds.*
 - ✅ Hecho. (11/11) `categorias_web`: diseño publicado en la sección 6. Antes del SQL faltan la aprobación de Guille y las decisiones de la 6.7.
 
@@ -236,6 +238,7 @@ Scripts, en `producciones/sql/`: `34_categorias_web.sql` (tabla, migración y `c
 
 ## 8. Registro
 
+- 12/11/2026 · Guille: abre la decisión sobre qué precios se enseñan en la web (riesgo de exponer la escala a la competencia). Lo consulta con Fátima y Alex.
 - 12/11/2026 · Producciones: preparado `36_publicar_exige_categoria.sql` (+ rollback): `publicado_validation` pasa a exigir también `categoria_id`. Aborta si la regla actual no es la documentada o si hay publicados sin categoría. Ejecutado por Guille sin errores; subida la app con el mensaje de error claro.
 - 12/11/2026 · Guille: confirmada la prueba de Fátima (crear, publicar y ver en la tienda). Se quita de pendientes.
 - 11/11/2026 · Web: carrusel de vistas en la ficha (convención CODIGO_N). Probado con datos simulados.
