@@ -72,11 +72,11 @@ Buzón compartido entre el chat de Producciones y el chat de la web.
 | Márgenes de 10 unidades en `tramos_precio` | Fátima → Guille → Producciones | Mensaje enviado a Fátima. Sin esto la calculadora sugiere 0 % de margen. Bloquea el MOQ 10. |
 | Añadir cantidad 10 a calculadora, editor de producto y exportación Excel | Producciones | Bloqueado por lo anterior. |
 | Añadir 10 a `TRAMOS_CANTIDAD` de la tienda | Web | Después de que Producciones confirme. |
-| Tabla `categorias_web` (categorías normalizadas) | Producciones + Web | ✅ Cerrado (11/11): SQL, app y fase 2 web hechos y verificados por Guille. Queda la prueba de Fátima con un producto nuevo. |
+| Tabla `categorias_web` (categorías normalizadas) | Producciones + Web | ✅ Cerrado (11/11): SQL, app y fase 2 web hechos y verificados por Guille. Prueba de Fátima hecha. |
 | Exigir categoría para publicar (`publicado_validation`) | Producciones | Decidido (6.7.6). Se hará cuando todos los publicados tengan categoría (hoy ya la tienen). |
 | Fotos de los 39 productos publicados | Guille | En curso. |
 | Transporte de 7 productos con transporte = 0 | Fátima | Pendiente. |
-| Test end-to-end: crear producto → publicar → verlo en `tienda-prototipo.html` | Guille + Fátima | Pendiente. |
+| Test end-to-end: crear producto → publicar → verlo en `tienda-prototipo.html` | Guille + Fátima | ✅ Hecho (confirmado por Guille, 12/11). |
 | Cambiar enlaces de `index.html` a `tienda-prototipo.html` | Web | Después del test. |
 
 ## 4. Reglas de uso
@@ -100,7 +100,7 @@ Buzón compartido entre el chat de Producciones y el chat de la web.
 
 ## 6. Propuesta: categorías gestionadas desde Producciones (11/11/2026)
 
-**Estado:** fase 1 hecha (11/11/2026): scripts 34 y 35 ejecutados, pantalla "Categorías web" y desplegables en el editor de producto. Pendiente: prueba de Fátima y fase 2 (web).
+**Estado:** fase 1 hecha (11/11/2026): scripts 34 y 35 ejecutados, pantalla "Categorías web" y desplegables en el editor de producto. Prueba de Fátima hecha y fase 2 (web) hecha y verificada (11/11).
 
 ### 6.1 Datos reales (consulta del 11/11/2026)
 
@@ -235,6 +235,7 @@ Scripts, en `producciones/sql/`: `34_categorias_web.sql` (tabla, migración y `c
 
 ## 8. Registro
 
+- 12/11/2026 · Guille: confirmada la prueba de Fátima (crear, publicar y ver en la tienda). Se quita de pendientes.
 - 11/11/2026 · Web: carrusel de vistas en la ficha (convención CODIGO_N). Probado con datos simulados.
 - 11/11/2026 · Web: fase 2 de categorías (filtros y orden desde Producciones) y arreglo del precio grande. Probado con datos simulados y verificado por Guille con datos reales.
 - 11/11/2026 · Producciones: pantalla "Categorías web" (crear, renombrar, ordenar con flechas, Próximamente, activar/desactivar, borrar solo si está vacía, ordenar los productos de cada categoría) y tres desplegables en el editor de producto. El campo numérico de `orden_web` sale del editor. Mientras dure la fase 2, la app sigue rellenando `deporte_web`, `tipo_web` y `subcategoria_web` a partir del árbol.
