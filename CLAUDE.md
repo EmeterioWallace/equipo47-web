@@ -6,7 +6,8 @@ Sitio estático en Netlify + GitHub. Usuario: Guille (coordina). Idioma de traba
 - `producciones/admin.html`: app interna de Producciones (HTML + CSS + JS vanilla en un solo archivo, Supabase). La usa Fátima.
 - `tienda.html` / `tienda-prototipo.html`: tienda pública. El prototipo lee datos reales de Supabase.
 - `INTEGRACION_PRODUCCIONES.md`: **fuente única de verdad** entre el trabajo de Producciones y el de la web. Léelo al empezar y añade ahí lo que decidas o necesites del otro lado, con fecha. Guille no reenvía mensajes entre chats.
-- `asics/` y `madrid/`: otras apps. No tocar.
+- `asics/`: otra app. No tocar.
+- `madrid/`: app del almacén de Madrid. La lleva el chat de Madrid (rediseño en curso en la rama `rediseno-madrid`). Desde el chat de la web o el de Producciones, no tocar.
 
 ## Reglas
 - Supabase proyecto `e47-producciones` (`ciszgyorsveumnrtcejn`). La clave anon va embebida en el HTML y es pública; la seguridad está en RLS. No cambiar URL ni claves sin coordinarlo en el buzón.
