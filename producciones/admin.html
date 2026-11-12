@@ -2237,6 +2237,15 @@
       document.getElementById('productoCatSub').value = ids[2] || '';
     }
 
+    // La base de datos tiene la última palabra (publicado_validation: título,
+    // moq > 0 y categoría). Si rechaza el guardado, se explica en claro.
+    function mensajeErrorProducto(error) {
+      if (error && /publicado_validation/.test(error.message || '')) {
+        return '❌ No se puede publicar: un producto publicado necesita título para la web, pedido mínimo (moq) y categoría (al menos el deporte).';
+      }
+      return '❌ Error al guardar: ' + (error ? error.message : 'desconocido');
+    }
+
     function categoriaElegidaEnEditor() {
       return document.getElementById('productoCatSub').value
         || document.getElementById('productoCatTipo').value
@@ -2346,10 +2355,10 @@
       if (idStr) {
         const payload = { ...datosComunes, activo: document.getElementById('productoActivo').value === 'true' };
         const { error } = await sb.from('productos').update(payload).eq('id', idStr);
-        if (error) { alert('❌ Error al guardar: ' + error.message); return; }
+        if (error) { alert(mensajeErrorProducto(error)); return; }
       } else {
         const { data, error } = await sb.from('productos').insert({ ...datosComunes, activo: true }).select('id').single();
-        if (error) { alert('❌ Error al guardar: ' + error.message); return; }
+        if (error) { alert(mensajeErrorProducto(error)); return; }
         productoId = data.id;
       }
 

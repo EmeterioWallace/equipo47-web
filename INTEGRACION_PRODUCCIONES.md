@@ -36,7 +36,8 @@ Buzón compartido entre el chat de Producciones y el chat de la web.
 - Auditoría de seguridad RLS hecha: la clave pública no accede a tablas sensibles.
 - Registro de usuarios y sesiones anónimas desactivados. Hay 4 cuentas internas. Las cuentas nuevas se crean en Authentication → Users → "Invite user".
 - Regla para publicar un producto, en `productos`:
-  `publicado_validation = CHECK (publicado IS NOT TRUE OR (titulo_publico IS NOT NULL AND moq IS NOT NULL AND moq > 0))`
+  `publicado_validation = CHECK (publicado IS NOT TRUE OR (titulo_publico IS NOT NULL AND moq IS NOT NULL AND moq > 0 AND categoria_id IS NOT NULL))`
+  - Desde el 12/11/2026 (script 36) exige categoría, de cualquier nivel del árbol.
   - La imagen NO es obligatoria.
   - El script `24_tienda_catalogo_completo.sql` y cualquier versión anterior de la regla están desactualizados. **No se ejecutan** sin confirmarlo aquí.
 - Imágenes: archivos estáticos en `/images/products/` del repo web. No se usa Supabase Storage. `imagen_archivo` guarda solo el nombre del archivo.
@@ -73,7 +74,7 @@ Buzón compartido entre el chat de Producciones y el chat de la web.
 | Añadir cantidad 10 a calculadora, editor de producto y exportación Excel | Producciones | Bloqueado por lo anterior. |
 | Añadir 10 a `TRAMOS_CANTIDAD` de la tienda | Web | Después de que Producciones confirme. |
 | Tabla `categorias_web` (categorías normalizadas) | Producciones + Web | ✅ Cerrado (11/11): SQL, app y fase 2 web hechos y verificados por Guille. Prueba de Fátima hecha. |
-| Exigir categoría para publicar (`publicado_validation`) | Producciones | Decidido (6.7.6). Se hará cuando todos los publicados tengan categoría (hoy ya la tienen). |
+| Exigir categoría para publicar (`publicado_validation`) | Producciones | Decidido (6.7.6). ✅ Cerrado (12/11): Guille ejecutó `36_publicar_exige_categoria.sql`. La app explica el error si la base de datos lo rechaza. |
 | Fotos de los 39 productos publicados | Guille | En curso. |
 | Transporte de 7 productos con transporte = 0 | Fátima | Pendiente. |
 | Test end-to-end: crear producto → publicar → verlo en `tienda-prototipo.html` | Guille + Fátima | ✅ Hecho (confirmado por Guille, 12/11). |
@@ -193,7 +194,7 @@ Scripts, en `producciones/sql/`: `34_categorias_web.sql` (tabla, migración y `c
 
 ### Para Claude producciones
 - (11/11) Añadir la cantidad `10` a `MODOS_CALCULADORA` (`producciones/admin.html`, línea 1256) y a la exportación a Excel, y permitir MOQ 10 en productos. Avisar cuando esté. *Depende de los márgenes de 10 uds.*
-- (11/11) `categorias_web`: diseño publicado en la sección 6. Antes del SQL faltan la aprobación de Guille y las decisiones de la 6.7.
+- ✅ Hecho. (11/11) `categorias_web`: diseño publicado en la sección 6. Antes del SQL faltan la aprobación de Guille y las decisiones de la 6.7.
 
 ### Para Claude web
 - (11/11) Cuando Producciones confirme el MOQ 10: añadir `10` a `TRAMOS_CANTIDAD`.
@@ -235,6 +236,7 @@ Scripts, en `producciones/sql/`: `34_categorias_web.sql` (tabla, migración y `c
 
 ## 8. Registro
 
+- 12/11/2026 · Producciones: preparado `36_publicar_exige_categoria.sql` (+ rollback): `publicado_validation` pasa a exigir también `categoria_id`. Aborta si la regla actual no es la documentada o si hay publicados sin categoría. Ejecutado por Guille sin errores; subida la app con el mensaje de error claro.
 - 12/11/2026 · Guille: confirmada la prueba de Fátima (crear, publicar y ver en la tienda). Se quita de pendientes.
 - 11/11/2026 · Web: carrusel de vistas en la ficha (convención CODIGO_N). Probado con datos simulados.
 - 11/11/2026 · Web: fase 2 de categorías (filtros y orden desde Producciones) y arreglo del precio grande. Probado con datos simulados y verificado por Guille con datos reales.
