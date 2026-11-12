@@ -8438,10 +8438,21 @@
       if (!email || !password) {
         errEl.textContent = 'Escribe tu email y contraseña'; errEl.style.display = 'block'; return;
       }
-      const { data, error } = await sb.auth.signInWithPassword({ email, password });
+      let data = null, error = null;
+      try {
+        ({ data, error } = await sb.auth.signInWithPassword({ email, password }));
+      } catch (e) {
+        error = e;
+      }
       if (error) {
-        errEl.textContent = '❌ Email o contraseña incorrectos';
+        // Distinguir "clave mal" de "no hay conexión / otro fallo", que antes
+        // salían con el mismo mensaje y despistaban.
+        const esCredencial = /invalid login credentials/i.test(error.message || '');
+        errEl.textContent = esCredencial
+          ? 'Email o contraseña incorrectos'
+          : 'No se pudo iniciar sesión: ' + (error.message || 'error desconocido');
         errEl.style.display = 'block';
+        console.error('Inicio de sesión:', error);
         return;
       }
       usuarioActual = data.user?.email || email;
