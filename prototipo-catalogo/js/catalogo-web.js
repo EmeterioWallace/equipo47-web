@@ -146,7 +146,10 @@ function adaptarProductoDesdeCatalogoWeb(fila) {
         categoriaId: fila.categoria_id || null,
         // Posición dentro de su categoría (10, 20, 30… la pone Fátima con flechas).
         // Vacío = al final, por título.
-        ordenWeb: (fila.orden_web === null || fila.orden_web === undefined) ? null : Number(fila.orden_web)
+        ordenWeb: (fila.orden_web === null || fila.orden_web === undefined) ? null : Number(fila.orden_web),
+        // Marcado por Fátima en Producciones para la portada (columna pedida el 16/11;
+        // mientras no exista, llega undefined y la portada usa su respaldo).
+        destacado: fila.destacado_web === true
     };
 }
 

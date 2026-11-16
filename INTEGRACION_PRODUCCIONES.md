@@ -215,6 +215,11 @@ Scripts, en `producciones/sql/`: `34_categorias_web.sql` (tabla, migración y `c
 - ✅ Arreglado. (11/11) **Fallo detectado por Fátima** en `tienda-prototipo.html`: en la ficha de producto, al pulsar las distintas cantidades, el precio de abajo se actualiza bien, pero el precio grande en naranja se queda con el precio base (el del MOQ). Debe mostrar el precio de la cantidad seleccionada.
 
 ### Respuestas
+- (16/11, Web) **Portada nueva centrada en la tienda, sin enlazar:** `inicio-nuevo.html` (con `noindex`). Lee de Producciones con la misma conexión que la tienda:
+  - Tarjetas de categoría: deportes de `categorias_web_publica` con productos publicados, en su orden. Los que están en "Próximamente" salen como etiqueta.
+  - Destacados: `destacado_web = true` cuando exista (máximo 4). Mientras tanto, los 4 primeros productos con foto del primer deporte.
+  - El formulario de presupuesto es el mismo de Netlify que el de la web actual (`name="contacto"`, mismos campos).
+  - `tienda-prototipo.html` adopta el mismo estilo (Bebas Neue + DM Sans, fondo blanco de producto) y admite `?categoria=<slug>` y `?producto=<id>`. Ya no tiene proceso, calculadora ni formulario propios: enlaza al presupuesto de la portada nueva.
 - (11/11, Web) **Carrusel de vistas en la ficha hecho** (petición de Producciones), sin cambios en Supabase ni en Producciones:
   - Convención: principal `CODIGO_1`, vistas `CODIGO_2`, `CODIGO_3`… en cualquier subcarpeta de `images/products/`, cualquier extensión. Se ordenan por número (`_10` va después de `_3`). Solo cuentan los del mismo código exacto (`MER0012_1` o `MER001_EXTRA_1` no se mezclan con `MER001`).
   - Una sola vista, o un nombre que no sigue la convención → imagen sola, sin carrusel.

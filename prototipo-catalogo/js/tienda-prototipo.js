@@ -25,10 +25,8 @@ const nav = document.querySelector('.nav');
 window.addEventListener('scroll', () => {
     const currentScroll = window.pageYOffset;
     
-    if (currentScroll > 100) {
-        nav.style.boxShadow = '0 2px 20px rgba(0,0,0,0.1)';
-    } else {
-        nav.style.boxShadow = 'none';
+    if (nav) {
+        nav.style.boxShadow = currentScroll > 100 ? '0 2px 20px rgba(0,0,0,0.1)' : 'none';
     }
     
     lastScroll = currentScroll;
@@ -285,6 +283,39 @@ function seleccionarCategoria(ruta) {
     renderSportFilters();
     renderSubcategoryFilters();
     renderProducts();
+}
+
+// Enlaces desde la portada: ?categoria=<slug> abre esa categoría;
+// ?producto=<id> abre su categoría y su ficha.
+function aplicarParametrosDeUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const slug = params.get('categoria');
+    const productoId = params.get('producto');
+    let aplicado = false;
+
+    if (productoId) {
+        const producto = products.find(p => String(p.id) === productoId);
+        if (producto && producto._ruta.length) {
+            seleccionarCategoria([producto._ruta[0]]);
+            openProductModal(producto.id);
+            aplicado = true;
+        }
+    } else if (slug) {
+        const categoria = categorias.find(c => c.slug === slug && !c.proximamente);
+        if (categoria) {
+            const ruta = rutaDeCategoria(categoria.id);
+            // Solo si la categoría (o su deporte) se ve en la tienda
+            if (ruta.every(id => categoriaVisible(categoriaPorId.get(id)))) {
+                seleccionarCategoria(ruta);
+                aplicado = true;
+            }
+        }
+    }
+
+    if (aplicado && !productoId) {
+        const catalogo = document.getElementById('catalog');
+        if (catalogo) catalogo.scrollIntoView({ behavior: 'auto', block: 'start' });
+    }
 }
 
 // Primer deporte en el orden de Producciones que no esté en "Próximamente"
@@ -991,6 +1022,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const inicial = deportePorDefecto();
     seleccionarCategoria(inicial ? [inicial] : []);
+    aplicarParametrosDeUrl();
 
     const sinCategoria = products.filter(p => p._ruta.length === 0);
     console.log('✅ Equipo 47 - Tienda (prototipo catalogo_web) cargada');
