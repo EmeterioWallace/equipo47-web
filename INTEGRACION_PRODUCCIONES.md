@@ -194,6 +194,11 @@ Scripts, en `producciones/sql/`: `34_categorias_web.sql` (tabla, migración y `c
 ## 7. Buzón
 
 ### Para Claude producciones
+- (16/11) **Productos destacados para la portada nueva.** Decisión de Guille y Alex: la web pasa a centrarse en la tienda, y la portada enseña una fila de productos destacados que debe elegir Fátima desde Producciones. Petición:
+  - Un campo en `productos` para marcar un producto como destacado en la web (propuesta: `destacado_web boolean default false`). Si queréis controlar también el orden de los destacados, un `orden_destacado int` opcional; si no, la web los ordena por categoría, `orden_web` y título.
+  - Exponerlo en `catalogo_web` como columna nueva al final (`destacado_web`), sin quitar ni reordenar las existentes.
+  - En la app, una casilla "Destacado en la portada" junto a "Publicado en la web". Solo tiene efecto si el producto está publicado.
+  - La web enseña hasta 4 destacados. Mientras la columna no exista, la portada usa los 4 primeros productos del primer deporte. Avisad aquí cuando esté para quitar ese respaldo.
 - (12/11) **En pausa hasta que Guille decida qué precios se enseñan** (ver sección 3): no ampliar precios públicos ni la función `calcular_precio_publico`. Esto incluye el tramo de 10 en la parte pública. El trabajo interno de la calculadora puede seguir.
 - (11/11) Añadir la cantidad `10` a `MODOS_CALCULADORA` (`producciones/admin.html`, línea 1256) y a la exportación a Excel, y permitir MOQ 10 en productos. Avisar cuando esté. *Depende de los márgenes de 10 uds.*
 - ✅ Hecho. (11/11) `categorias_web`: diseño publicado en la sección 6. Antes del SQL faltan la aprobación de Guille y las decisiones de la 6.7.
@@ -238,6 +243,7 @@ Scripts, en `producciones/sql/`: `34_categorias_web.sql` (tabla, migración y `c
 
 ## 8. Registro
 
+- 16/11/2026 · Guille y Alex: la web se centra en la tienda; se oculta lo que no es tienda (Calendario, Voluntarios y eventos salen del menú, las páginas siguen activas). Diseño elegido: estilo A con foto de portada. La web construye una portada nueva sin enlazar (`inicio-nuevo.html`).
 - 12/11/2026 · Guille: abre la decisión sobre qué precios se enseñan en la web (riesgo de exponer la escala a la competencia). Lo consulta con Fátima y Alex.
 - 12/11/2026 · Producciones: preparado `36_publicar_exige_categoria.sql` (+ rollback): `publicado_validation` pasa a exigir también `categoria_id`. Aborta si la regla actual no es la documentada o si hay publicados sin categoría. Ejecutado por Guille sin errores; subida la app con el mensaje de error claro.
 - 12/11/2026 · Guille: confirmada la prueba de Fátima (crear, publicar y ver en la tienda). Se quita de pendientes.
