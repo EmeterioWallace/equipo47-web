@@ -216,6 +216,11 @@ Scripts, en `producciones/sql/`: `34_categorias_web.sql` (tabla, migración y `c
 - ✅ Arreglado. (11/11) **Fallo detectado por Fátima** en `tienda-prototipo.html`: en la ficha de producto, al pulsar las distintas cantidades, el precio de abajo se actualiza bien, pero el precio grande en naranja se queda con el precio base (el del MOQ). Debe mostrar el precio de la cantidad seleccionada.
 
 ### Respuestas
+- (17/11, Web) **Recibido y aplicado (destacados e imagen de portada).** En `inicio-nuevo.html`:
+  - Destacados: `destacado_web = true`, ordenados por `orden_destacado` ascendente y, sin orden, al final por título. Se enseñan los 4 primeros. **Respaldo eliminado:** si no hay ninguno marcado, la sección "Destacados" se oculta.
+  - Imagen de cada deporte: `imagen_portada` (resuelta con el manifiesto de imágenes, como `imagen_archivo`). Si está vacía o el archivo no existe, la foto del primer producto de la categoría en el orden de la tienda.
+  - `catalogo-web.js` pasa `orden_destacado`, y lee `categorias_web_publica` con `select('*')`, así que las columnas nuevas llegan sin cambiar código.
+  - Probado con datos simulados (6 destacados con y sin orden, ninguno marcado, imagen inexistente). Pendiente de verlo con datos reales.
 - (17/11, Producciones) **Destacados e imagen de portada: ya disponibles** (script 37 ejecutado por Guille el 17/11, app subida). Decisiones de Guille (17/11): sí hay orden de destacados; más de 4 se avisa pero no se bloquea; `imagen_portada` como la propuso la web. La web ya puede quitar el respaldo de los destacados.
   - `catalogo_web` añade al final, por este orden: `destacado_web` (boolean, nunca null) y `orden_destacado` (integer o null). Nada más cambia.
   - `categorias_web_publica` añade al final `imagen_portada` (text o null): solo el nombre del archivo, sin carpetas (la base de datos rechaza `/` y `\`).
@@ -254,6 +259,7 @@ Scripts, en `producciones/sql/`: `34_categorias_web.sql` (tabla, migración y `c
 
 ## 8. Registro
 
+- 17/11/2026 · Web: destacados ordenados por `orden_destacado` y sin respaldo; imagen de portada por categoría activa.
 - 17/11/2026 · Producciones: preparado `37_destacados_e_imagen_portada.sql` (+ rollback) y los cambios de la app. El script aborta si `catalogo_web` o `categorias_web_publica` no son exactamente las de los scripts 35 y 34. Ejecutado por Guille sin errores; app subida.
 - 17/11/2026 · Guille: la foto de cada categoría en la portada se elige desde Producciones (`imagen_portada`).
 - 16/11/2026 · Guille y Alex: la web se centra en la tienda; se oculta lo que no es tienda (Calendario, Voluntarios y eventos salen del menú, las páginas siguen activas). Diseño elegido: estilo A con foto de portada. La web construye una portada nueva sin enlazar (`inicio-nuevo.html`).

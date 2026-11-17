@@ -7,9 +7,9 @@
 //   Foto de la tarjeta: imagen_portada de la categoría (la elige Fátima) o,
 //   si está vacía, la del primer producto con foto en el orden de la tienda.
 //   Un deporte activo sin productos publicados no se muestra.
-// - Destacados: productos con destacado_web = true (lo marca Fátima).
-//   Mientras esa columna no exista o no haya ninguno marcado, se usan los
-//   primeros productos con foto del primer deporte. Ver INTEGRACION_PRODUCCIONES.md.
+// - Destacados: productos con destacado_web = true, en el orden que pone Fátima
+//   (orden_destacado). Se enseñan los 4 primeros; si no hay ninguno, la sección
+//   se oculta. Ver INTEGRACION_PRODUCCIONES.md (script 37).
 // =========================================================================
 
 const MAX_DESTACADOS = 4;
@@ -106,26 +106,29 @@ function pintarCategorias(arbol, productos) {
     }
 }
 
+// Orden de los destacados (acordado con Producciones, 17/11): orden_destacado
+// ascendente; los que no lo tienen, al final y por título.
+function compararDestacados(a, b) {
+    const oa = a.ordenDestacado === null ? Infinity : a.ordenDestacado;
+    const ob = b.ordenDestacado === null ? Infinity : b.ordenDestacado;
+    if (oa !== ob) return oa - ob;
+    return String(a.title).localeCompare(String(b.title), 'es');
+}
+
 function pintarDestacados(arbol, productos) {
     const contenedor = document.getElementById('n-destacados');
     if (!contenedor) return;
+    const seccion = contenedor.closest('section');
 
-    const orden = compararProductos(arbol);
-    let destacados = productos.filter(p => p.destacado === true).sort(orden);
+    // Producciones avisa si hay más de 4, pero no lo impide: se enseñan los 4 primeros.
+    const destacados = productos.filter(p => p.destacado === true).sort(compararDestacados).slice(0, MAX_DESTACADOS);
 
+    // Sin destacados elegidos, la sección no se muestra (mejor que una fila vacía).
     if (destacados.length === 0) {
-        // Respaldo: primeros productos con foto del primer deporte con productos.
-        const primero = arbol.deportes.find(d => !d.proximamente && productos.some(p => p._ruta[0] === d.id));
-        destacados = productos
-            .filter(p => primero && p._ruta[0] === primero.id && tieneFotoReal(p))
-            .sort(orden);
-    }
-    destacados = destacados.slice(0, MAX_DESTACADOS);
-
-    if (destacados.length === 0) {
-        contenedor.innerHTML = `<p class="n-cargando">Muy pronto. Mientras tanto, <a href="${URL_TIENDA}">ve el catálogo completo</a>.</p>`;
+        if (seccion) seccion.hidden = true;
         return;
     }
+    if (seccion) seccion.hidden = false;
 
     contenedor.innerHTML = destacados.map(p => {
         const categorias = p._ruta.map(id => (arbol.porId.get(id) || {}).nombre).filter(Boolean);
