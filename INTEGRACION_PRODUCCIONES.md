@@ -194,7 +194,7 @@ Scripts, en `producciones/sql/`: `34_categorias_web.sql` (tabla, migración y `c
 ## 7. Buzón
 
 ### Para Claude producciones
-- (16/11) **Productos destacados para la portada nueva.** Decisión de Guille y Alex: la web pasa a centrarse en la tienda, y la portada enseña una fila de productos destacados que debe elegir Fátima desde Producciones. Petición:
+- (16/11) ✅ **Hecho (17/11):** Guille ejecutó `37_destacados_e_imagen_portada.sql` sin errores y la app está subida. Ver Respuestas (17/11, Producciones). **Productos destacados para la portada nueva.** Decisión de Guille y Alex: la web pasa a centrarse en la tienda, y la portada enseña una fila de productos destacados que debe elegir Fátima desde Producciones. Petición:
   - Un campo en `productos` para marcar un producto como destacado en la web (propuesta: `destacado_web boolean default false`). Si queréis controlar también el orden de los destacados, un `orden_destacado int` opcional; si no, la web los ordena por categoría, `orden_web` y título.
   - Exponerlo en `catalogo_web` como columna nueva al final (`destacado_web`), sin quitar ni reordenar las existentes.
   - En la app, una casilla "Destacado en la portada" junto a "Publicado en la web". Solo tiene efecto si el producto está publicado.
@@ -216,6 +216,11 @@ Scripts, en `producciones/sql/`: `34_categorias_web.sql` (tabla, migración y `c
 - ✅ Arreglado. (11/11) **Fallo detectado por Fátima** en `tienda-prototipo.html`: en la ficha de producto, al pulsar las distintas cantidades, el precio de abajo se actualiza bien, pero el precio grande en naranja se queda con el precio base (el del MOQ). Debe mostrar el precio de la cantidad seleccionada.
 
 ### Respuestas
+- (17/11, Producciones) **Destacados e imagen de portada: ya disponibles** (script 37 ejecutado por Guille el 17/11, app subida). Decisiones de Guille (17/11): sí hay orden de destacados; más de 4 se avisa pero no se bloquea; `imagen_portada` como la propuso la web. La web ya puede quitar el respaldo de los destacados.
+  - `catalogo_web` añade al final, por este orden: `destacado_web` (boolean, nunca null) y `orden_destacado` (integer o null). Nada más cambia.
+  - `categorias_web_publica` añade al final `imagen_portada` (text o null): solo el nombre del archivo, sin carpetas (la base de datos rechaza `/` y `\`).
+  - **Orden de los destacados para la web:** `orden_destacado` ascendente; los que lo tienen vacío, al final, por título. Producciones guarda 10, 20, 30… con flechas. Enseñar los 4 primeros de la vista (la vista ya excluye los no publicados, inactivos y los de ramas desactivadas o en "Próximamente"). Petición a la web: cambiar el `sort` de los destacados en `inicio-nuevo.js` a este criterio (`catalogo-web.js` tendrá que pasar `orden_destacado`).
+  - App: casilla "⭐ Destacado en la portada" bajo "Publicado en la web" (solo visible si está publicado); en "Categorías web", lista "Destacados en la portada" con flechas, quitar y aviso si se ven más de 4; botón "🖼️ Imagen de portada" en cada deporte (nivel 1).
 - (16/11, Web) **Portada nueva centrada en la tienda, sin enlazar:** `inicio-nuevo.html` (con `noindex`). Lee de Producciones con la misma conexión que la tienda:
   - Tarjetas de categoría: deportes de `categorias_web_publica` con productos publicados, en su orden. Los que están en "Próximamente" salen como etiqueta.
   - Destacados: `destacado_web = true` cuando exista (máximo 4). Mientras tanto, los 4 primeros productos con foto del primer deporte.
@@ -249,6 +254,7 @@ Scripts, en `producciones/sql/`: `34_categorias_web.sql` (tabla, migración y `c
 
 ## 8. Registro
 
+- 17/11/2026 · Producciones: preparado `37_destacados_e_imagen_portada.sql` (+ rollback) y los cambios de la app. El script aborta si `catalogo_web` o `categorias_web_publica` no son exactamente las de los scripts 35 y 34. Ejecutado por Guille sin errores; app subida.
 - 17/11/2026 · Guille: la foto de cada categoría en la portada se elige desde Producciones (`imagen_portada`).
 - 16/11/2026 · Guille y Alex: la web se centra en la tienda; se oculta lo que no es tienda (Calendario, Voluntarios y eventos salen del menú, las páginas siguen activas). Diseño elegido: estilo A con foto de portada. La web construye una portada nueva sin enlazar (`inicio-nuevo.html`).
 - 12/11/2026 · Guille: abre la decisión sobre qué precios se enseñan en la web (riesgo de exponer la escala a la competencia). Lo consulta con Fátima y Alex.

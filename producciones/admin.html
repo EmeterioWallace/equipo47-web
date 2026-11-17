@@ -449,6 +449,8 @@
     .cat-acciones { display: flex; gap: 6px; flex-wrap: wrap; }
     .orden-fila { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--border); font-size: 13px; }
     .orden-pos { flex: 0 0 28px; color: var(--muted); text-align: right; }
+    .orden-fila.dest-apagado > span:not(.cat-flechas):not(.badge) { color: var(--muted); }
+    .dest-ruta { display: block; font-size: 11px; color: var(--muted); }
     .ocupado { opacity: 0.6; pointer-events: none; }
     @media (max-width: 768px) {
       .cat-nivel-2 { padding-left: 24px; }
@@ -725,7 +727,16 @@
           <strong>Desactivar:</strong> la categoría y sus productos desaparecen de la tienda, pero no se borra nada.
           Solo se puede borrar una categoría vacía (sin productos ni subcategorías).
           El identificador web (en gris) se crea al dar de alta la categoría y no cambia aunque la renombres.
+          <strong>Portada:</strong> la foto de la tarjeta de cada deporte en la página de inicio; si no eliges ninguna, se usa la del primer producto.
         </p>
+      </div>
+      <div class="card" style="margin-bottom:20px;">
+        <h3 style="margin-bottom:4px;">Destacados en la portada</h3>
+        <p style="font-size:12px; color:var(--muted); margin-bottom:8px;">
+          Se marcan en el editor de cada producto ("Destacado en la portada"). La página de inicio enseña los 4 primeros que se vean en la tienda, en este orden. Las flechas lo cambian y se guarda al momento.
+        </p>
+        <p id="destacadosAviso" style="font-size:12px; color:var(--warning); margin-bottom:8px; display:none;"></p>
+        <div id="destacados-lista"></div>
       </div>
       <div id="categorias-arbol" class="loading">Cargando...</div>
     </section>
@@ -878,6 +889,13 @@
           <p style="font-size:12px; color:var(--muted); margin:4px 0 0 26px;">
             La web solo ve lo que se rellena aquí abajo y el precio final calculado — nunca el coste de proveedor ni el margen.
           </p>
+          <div id="bloqueDestacado" style="display:none; margin-top:10px;">
+            <label style="display:flex; align-items:center; gap:8px; text-transform:none; letter-spacing:0; font-size:13px; color:var(--text); cursor:pointer;">
+              <input type="checkbox" id="productoDestacado" style="width:auto;" onchange="actualizarAvisoDestacado()">
+              ⭐ Destacado en la portada (fila de destacados de la página de inicio)
+            </label>
+            <p id="avisoDestacado" style="font-size:12px; color:var(--warning); margin:4px 0 0 26px; display:none;"></p>
+          </div>
         </div>
 
         <div id="bloqueDatosWeb" style="display:none; border:1px solid var(--border); border-radius:6px; padding:16px; margin-bottom:16px; background:var(--card);">
@@ -2025,6 +2043,7 @@
         document.getElementById('productoTransporte').value = p.transporte_unitario || 0;
         document.getElementById('productoActivo').value = String(p.activo);
         document.getElementById('productoPublicado').checked = !!p.publicado;
+        document.getElementById('productoDestacado').checked = !!p.destacado_web;
         document.getElementById('productoTituloPublico').value = p.titulo_publico || '';
         document.getElementById('productoMoq').value = p.moq != null ? p.moq : '';
         document.getElementById('productoDescripcionPublica').value = p.descripcion_publica || '';
@@ -2050,6 +2069,7 @@
         document.getElementById('productoTransporte').value = '';
         document.getElementById('productoActivo').value = 'true';
         document.getElementById('productoPublicado').checked = false;
+        document.getElementById('productoDestacado').checked = false;
         document.getElementById('productoTituloPublico').value = '';
         document.getElementById('productoMoq').value = '';
         document.getElementById('productoDescripcionPublica').value = '';
@@ -2117,8 +2137,26 @@
 
     // ── COLORES DE LA WEB ────────────────────
     function toggleBloqueWeb() {
-      document.getElementById('bloqueDatosWeb').style.display =
-        document.getElementById('productoPublicado').checked ? 'block' : 'none';
+      const publicado = document.getElementById('productoPublicado').checked;
+      document.getElementById('bloqueDatosWeb').style.display = publicado ? 'block' : 'none';
+      // "Destacado" solo tiene efecto si el producto está publicado. Si se
+      // despublica, la marca se conserva (oculta) por si se vuelve a publicar.
+      document.getElementById('bloqueDestacado').style.display = publicado ? 'block' : 'none';
+      actualizarAvisoDestacado();
+    }
+
+    // Aviso (no bloquea): la portada solo enseña 4 destacados.
+    function actualizarAvisoDestacado() {
+      const aviso = document.getElementById('avisoDestacado');
+      const marcado = document.getElementById('productoDestacado').checked;
+      const id = document.getElementById('productoId').value;
+      const yaEstaba = id && productos.some(p => p.id === id && p.destacado_web);
+      const otros = productos.filter(p => p.id !== id && destacadoSeVe(p)).length;
+      const mostrar = marcado && !yaEstaba && otros >= MAX_DESTACADOS_PORTADA;
+      aviso.textContent = mostrar
+        ? `Ya hay ${otros} destacados que se ven en la portada y solo caben ${MAX_DESTACADOS_PORTADA}. Este se añade al final de la lista y no saldrá hasta que quites otro o lo subas en "Categorías web".`
+        : '';
+      aviso.style.display = mostrar ? 'block' : 'none';
     }
 
     function renderColoresWebEditor() {
@@ -2352,6 +2390,18 @@
         datosComunes.categoria_id = null;
       }
 
+      // Destacado en la portada. Al marcarlo, va al final de la lista de
+      // destacados; al desmarcarlo, pierde su posición. Si ya lo estaba,
+      // su posición no se toca (se cambia con las flechas en "Categorías web").
+      const destacado = document.getElementById('productoDestacado').checked;
+      const productoAntes = idStr ? productos.find(x => x.id === idStr) : null;
+      datosComunes.destacado_web = destacado;
+      if (!destacado) {
+        datosComunes.orden_destacado = null;
+      } else if (!productoAntes || !productoAntes.destacado_web || productoAntes.orden_destacado == null) {
+        datosComunes.orden_destacado = siguienteOrdenDestacado(idStr);
+      }
+
       if (idStr) {
         const payload = { ...datosComunes, activo: document.getElementById('productoActivo').value === 'true' };
         const { error } = await sb.from('productos').update(payload).eq('id', idStr);
@@ -2462,6 +2512,10 @@
       cerrarModal('modalProducto');
       toast(idStr ? '✓ Producto actualizado' : '✓ Producto creado');
       await recargarProductos();
+      const destacadosVisibles = productos.filter(destacadoSeVe).length;
+      if (destacado && destacadosVisibles > MAX_DESTACADOS_PORTADA) {
+        toast(`⚠️ Hay ${destacadosVisibles} destacados y la portada solo enseña ${MAX_DESTACADOS_PORTADA}. Ordénalos en "Categorías web".`);
+      }
       poblarFiltrosProductos();
       renderProductosTabla();
     }
@@ -2554,6 +2608,7 @@
     }
 
     function renderCategorias() {
+      renderDestacados();
       const cont = document.getElementById('categorias-arbol');
       cont.classList.remove('loading');
       const deportes = hijasDe(null);
@@ -2586,12 +2641,15 @@
       ].join(' ');
 
       let info = `${visibles} publicado(s) en la tienda · ${enRama.length} producto(s) en total`;
+      if (c.nivel === 1) info += ` · Portada: ${c.imagen_portada ? esc(c.imagen_portada) : 'foto del primer producto'}`;
       if (motivo) info += ` · <span style="color:var(--warning);">no se ve en la tienda: ${esc(motivo)}</span>`;
 
       const acciones = [];
       if (directos) acciones.push(`<button class="btn btn-ghost btn-sm" onclick="abrirOrdenProductos('${c.id}')">↕️ Ordenar productos (${directos})</button>`);
       if (c.nivel < 3) acciones.push(`<button class="btn btn-ghost btn-sm" onclick="crearCategoria('${c.id}')">➕ ${nombreNivelHija}</button>`);
       acciones.push(`<button class="btn btn-ghost btn-sm" onclick="renombrarCategoria('${c.id}')">✏️ Renombrar</button>`);
+      // La portada solo enseña tarjetas de deporte (nivel 1).
+      if (c.nivel === 1) acciones.push(`<button class="btn btn-ghost btn-sm" onclick="cambiarImagenPortada('${c.id}')">🖼️ Imagen de portada</button>`);
       if (c.activa) acciones.push(`<button class="btn btn-ghost btn-sm" onclick="alternarProximamente('${c.id}')">${c.proximamente ? 'Quitar Próximamente' : 'Próximamente'}</button>`);
       acciones.push(c.activa
         ? `<button class="btn btn-ghost btn-sm" onclick="alternarActivaCategoria('${c.id}')">Desactivar</button>`
@@ -2703,6 +2761,163 @@
         toast(c.activa ? '✓ Categoría desactivada' : '✓ Categoría activada');
         await recargarCategorias();
         renderCategorias();
+      });
+    }
+
+    // Foto de la tarjeta del deporte en la portada (categorias_web.imagen_portada).
+    // Se guarda solo el nombre del archivo, como imagen_archivo en productos:
+    // la web lo busca en cualquier carpeta de images/products/. Vacío = la web
+    // usa la foto del primer producto de la categoría.
+    async function cambiarImagenPortada(id) {
+      const c = categoriaPorId(id);
+      const texto = prompt(
+        `Imagen de portada de "${c.nombre}".\n\n` +
+        `Escribe el nombre del archivo (p. ej. MER001_1.jpg). Puede ser cualquier foto de images/products/, aunque no sea de un producto.\n` +
+        `Déjalo vacío para usar la foto del primer producto de la categoría.`,
+        c.imagen_portada || '');
+      if (texto === null) return;
+      // Si se pega una ruta, se queda solo el nombre del archivo.
+      const archivo = texto.trim().split(/[\\/]/).pop().trim() || null;
+      if (archivo === (c.imagen_portada || null)) return;
+      await conBloqueoCategorias('categorias-arbol', async () => {
+        const { error } = await sb.from('categorias_web').update({ imagen_portada: archivo }).eq('id', id);
+        if (error) { alert('❌ Error al guardar la imagen de portada: ' + error.message); return; }
+        toast(archivo ? `✓ Imagen de portada: ${archivo}` : '✓ Sin imagen de portada: se usará la del primer producto');
+        await recargarCategorias();
+        renderCategorias();
+      });
+      if (archivo) avisarSiNoExisteImagen(archivo);
+    }
+
+    // Aviso (no bloquea) si el archivo no está en la web publicada. El
+    // manifiesto se regenera en cada deploy: una foto recién subida puede
+    // tardar unos minutos en aparecer.
+    async function avisarSiNoExisteImagen(archivo) {
+      try {
+        const r = await fetch('/images/products/manifest.json', { cache: 'no-store' });
+        if (!r.ok) return;
+        const manifiesto = await r.json();
+        if (!manifiesto[archivo.toLowerCase()]) {
+          alert(`⚠️ Guardado, pero "${archivo}" no está en images/products/ de la web publicada.\n\n` +
+            `Mientras no exista, la portada usará la foto del primer producto. Si la acabas de subir, aparecerá tras el próximo despliegue.`);
+        }
+      } catch (e) { /* sin manifiesto (p. ej. abriendo el archivo en local): no se comprueba */ }
+    }
+
+    // ── DESTACADOS EN LA PORTADA ──
+    // productos.destacado_web + productos.orden_destacado (10, 20, 30...).
+    // La web enseña los 4 primeros que se ven en la tienda. Más de 4 no se
+    // impide: se avisa, y los que sobran simplemente no salen.
+    const MAX_DESTACADOS_PORTADA = 4;
+
+    // Por qué un destacado no sale en la portada, o null si sale.
+    function motivoNoSaleDestacado(p) {
+      if (!p.publicado) return 'no publicado';
+      if (!p.activo) return 'inactivo';
+      if (!p.categoria_id) return 'sin categoría';
+      const m = motivoOcultaCategoria(p.categoria_id);
+      return m ? `categoría ${m}` : null;
+    }
+
+    const destacadoSeVe = (p) => !!p.destacado_web && !motivoNoSaleDestacado(p);
+
+    function destacadosOrdenados() {
+      const titulo = (p) => (p.titulo_publico || p.nombre || '').toLowerCase();
+      return productos.filter(p => p.destacado_web).sort((a, b) => {
+        const oa = a.orden_destacado == null ? Infinity : a.orden_destacado;
+        const ob = b.orden_destacado == null ? Infinity : b.orden_destacado;
+        return (oa - ob) || titulo(a).localeCompare(titulo(b));
+      });
+    }
+
+    function siguienteOrdenDestacado(excluirId) {
+      const ordenes = productos
+        .filter(p => p.destacado_web && p.id !== excluirId && p.orden_destacado != null)
+        .map(p => p.orden_destacado);
+      return ordenes.length ? Math.max(...ordenes) + 10 : 10;
+    }
+
+    function renderDestacados() {
+      const cont = document.getElementById('destacados-lista');
+      const aviso = document.getElementById('destacadosAviso');
+      const lista = destacadosOrdenados();
+      const visibles = lista.filter(destacadoSeVe).length;
+
+      aviso.textContent = visibles > MAX_DESTACADOS_PORTADA
+        ? `⚠️ Hay ${visibles} destacados que se ven en la tienda, pero la portada solo enseña ${MAX_DESTACADOS_PORTADA}. Los que pasan de ${MAX_DESTACADOS_PORTADA} no salen: quita alguno o cambia el orden.`
+        : '';
+      aviso.style.display = visibles > MAX_DESTACADOS_PORTADA ? 'block' : 'none';
+
+      if (!lista.length) {
+        cont.innerHTML = '<p style="font-size:13px; color:var(--muted);">Ningún producto destacado. Mientras no haya ninguno, la portada enseña los primeros productos del primer deporte.</p>';
+        return;
+      }
+
+      let n = 0; // posición entre los que se ven
+      cont.innerHTML = lista.map((p, i) => {
+        const motivo = motivoNoSaleDestacado(p);
+        let pos = '', badge;
+        if (motivo) {
+          badge = `<span class="badge badge-warning" title="No sale en la portada">No sale: ${esc(motivo)}</span>`;
+        } else {
+          n++;
+          pos = n;
+          badge = n <= MAX_DESTACADOS_PORTADA
+            ? '<span class="badge badge-success">En portada</span>'
+            : `<span class="badge badge-warning" title="Solo caben ${MAX_DESTACADOS_PORTADA}">No cabe</span>`;
+        }
+        const ruta = p.categoria_id && categoriaPorId(p.categoria_id) ? rutaNombresCategoria(p.categoria_id) : '';
+        return `
+        <div class="orden-fila${motivo || n > MAX_DESTACADOS_PORTADA ? ' dest-apagado' : ''}">
+          <span class="orden-pos">${pos}</span>
+          <span class="cat-flechas">
+            <button class="btn btn-ghost btn-flecha" title="Subir" onclick="moverDestacado('${p.id}', -1)" ${i === 0 ? 'disabled' : ''}>▲</button>
+            <button class="btn btn-ghost btn-flecha" title="Bajar" onclick="moverDestacado('${p.id}', 1)" ${i === lista.length - 1 ? 'disabled' : ''}>▼</button>
+          </span>
+          <span style="flex:1;">${esc(p.titulo_publico || p.nombre)}${ruta ? `<span class="dest-ruta">${esc(ruta)}</span>` : ''}</span>
+          ${badge}
+          <button class="btn btn-ghost btn-sm" onclick="quitarDestacado('${p.id}')" title="Deja de estar destacado (sigue publicado)">Quitar</button>
+        </div>`;
+      }).join('');
+    }
+
+    async function moverDestacado(id, dir) {
+      await conBloqueoCategorias('destacados-lista', async () => {
+        const lista = destacadosOrdenados();
+        const i = lista.findIndex(p => p.id === id);
+        const j = i + dir;
+        if (j < 0 || j >= lista.length) return;
+        [lista[i], lista[j]] = [lista[j], lista[i]];
+        const cambios = lista
+          .map((p, k) => ({ p, orden: (k + 1) * 10 }))
+          .filter(x => x.p.orden_destacado !== x.orden);
+        const resultados = await Promise.all(cambios.map(x =>
+          sb.from('productos').update({ orden_destacado: x.orden }).eq('id', x.p.id)));
+        const fallo = resultados.find(r => r.error);
+        if (fallo) {
+          alert('❌ No se pudo guardar el orden: ' + fallo.error.message);
+          await recargarProductos();
+        } else {
+          cambios.forEach(x => { x.p.orden_destacado = x.orden; });
+        }
+        renderDestacados();
+      });
+    }
+
+    async function quitarDestacado(id) {
+      await conBloqueoCategorias('destacados-lista', async () => {
+        const p = productos.find(x => x.id === id);
+        const { error } = await sb.from('productos')
+          .update({ destacado_web: false, orden_destacado: null }).eq('id', id);
+        if (error) {
+          alert('❌ No se pudo quitar de destacados: ' + error.message);
+          await recargarProductos();
+        } else {
+          p.destacado_web = false;
+          p.orden_destacado = null;
+          toast(`✓ "${p.titulo_publico || p.nombre}" ya no está destacado`);
+        }
+        renderDestacados();
       });
     }
 
