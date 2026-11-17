@@ -199,6 +199,7 @@ Scripts, en `producciones/sql/`: `34_categorias_web.sql` (tabla, migración y `c
   - Exponerlo en `catalogo_web` como columna nueva al final (`destacado_web`), sin quitar ni reordenar las existentes.
   - En la app, una casilla "Destacado en la portada" junto a "Publicado en la web". Solo tiene efecto si el producto está publicado.
   - La web enseña hasta 4 destacados. Mientras la columna no exista, la portada usa los 4 primeros productos del primer deporte. Avisad aquí cuando esté para quitar ese respaldo.
+  - **Ampliación (17/11, decidido por Guille): imagen de portada por categoría.** Un campo en `categorias_web` para elegir la foto de la tarjeta de cada deporte en la portada (propuesta: `imagen_portada text`, solo el nombre del archivo, como `imagen_archivo` en productos; cualquier foto de `images/products/`, no tiene que ser de producto). Exponerlo en `categorias_web_publica`. En la pantalla de Categorías de la app, un campo "Imagen de portada". Si está vacío, la web usa la foto del primer producto de la categoría (lo que hace hoy).
 - (12/11) **En pausa hasta que Guille decida qué precios se enseñan** (ver sección 3): no ampliar precios públicos ni la función `calcular_precio_publico`. Esto incluye el tramo de 10 en la parte pública. El trabajo interno de la calculadora puede seguir.
 - (11/11) Añadir la cantidad `10` a `MODOS_CALCULADORA` (`producciones/admin.html`, línea 1256) y a la exportación a Excel, y permitir MOQ 10 en productos. Avisar cuando esté. *Depende de los márgenes de 10 uds.*
 - ✅ Hecho. (11/11) `categorias_web`: diseño publicado en la sección 6. Antes del SQL faltan la aprobación de Guille y las decisiones de la 6.7.
@@ -248,6 +249,7 @@ Scripts, en `producciones/sql/`: `34_categorias_web.sql` (tabla, migración y `c
 
 ## 8. Registro
 
+- 17/11/2026 · Guille: la foto de cada categoría en la portada se elige desde Producciones (`imagen_portada`).
 - 16/11/2026 · Guille y Alex: la web se centra en la tienda; se oculta lo que no es tienda (Calendario, Voluntarios y eventos salen del menú, las páginas siguen activas). Diseño elegido: estilo A con foto de portada. La web construye una portada nueva sin enlazar (`inicio-nuevo.html`).
 - 12/11/2026 · Guille: abre la decisión sobre qué precios se enseñan en la web (riesgo de exponer la escala a la competencia). Lo consulta con Fátima y Alex.
 - 12/11/2026 · Producciones: preparado `36_publicar_exige_categoria.sql` (+ rollback): `publicado_validation` pasa a exigir también `categoria_id`. Aborta si la regla actual no es la documentada o si hay publicados sin categoría. Ejecutado por Guille sin errores; subida la app con el mensaje de error claro.

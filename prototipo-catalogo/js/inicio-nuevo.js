@@ -4,6 +4,8 @@
 //
 // - Categorías: deportes de categorias_web_publica (nivel 1) en el orden de
 //   Producciones. Con productos → tarjeta; en "Próximamente" → etiqueta.
+//   Foto de la tarjeta: imagen_portada de la categoría (la elige Fátima) o,
+//   si está vacía, la del primer producto con foto en el orden de la tienda.
 //   Un deporte activo sin productos publicados no se muestra.
 // - Destacados: productos con destacado_web = true (lo marca Fátima).
 //   Mientras esa columna no exista o no haya ninguno marcado, se usan los
@@ -81,7 +83,12 @@ function pintarCategorias(arbol, productos) {
         if (d.proximamente) { etiquetas.push(d); return; }
         const suyos = productos.filter(p => p._ruta[0] === d.id);
         if (suyos.length === 0) return;
-        tarjetas.push({ deporte: d, total: suyos.length, foto: suyos.find(tieneFotoReal) });
+        // Foto elegida por Fátima en Producciones (imagen_portada); si no hay, la del primer producto con foto.
+        const elegida = d.imagen_portada ? resolverRutaImagen(d.imagen_portada) : null;
+        const foto = (elegida && !elegida.includes('placeholder-proximamente'))
+            ? { image: elegida }
+            : suyos.slice().sort(compararProductos(arbol)).find(tieneFotoReal);
+        tarjetas.push({ deporte: d, total: suyos.length, foto });
     });
 
     contenedor.innerHTML = tarjetas.map(({ deporte, total, foto }) => `

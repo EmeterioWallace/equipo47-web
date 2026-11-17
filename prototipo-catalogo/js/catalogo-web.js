@@ -165,7 +165,7 @@ function clienteSupabase() {
 // ===== CATEGORÍAS (vista categorias_web_publica) =====
 // Fátima las crea, renombra, ordena y marca como "Próximamente" en Producciones.
 // La vista solo devuelve categorías activas cuyos padres también lo están.
-// Forma: { id, slug, nombre, padre_id, nivel, orden, proximamente }
+// Forma: { id, slug, nombre, padre_id, nivel, orden, proximamente, imagen_portada? }
 // Si no se pueden leer, devuelve [] y la tienda reconstruye un árbol
 // mínimo a partir de los propios productos (ver tienda-prototipo.js).
 async function cargarCategoriasWeb() {
@@ -173,7 +173,7 @@ async function cargarCategoriasWeb() {
     try {
         const { data, error } = await clienteSupabase()
             .from('categorias_web_publica')
-            .select('id, slug, nombre, padre_id, nivel, orden, proximamente')
+            .select('*') // incluye columnas nuevas como imagen_portada en cuanto existan
             .order('nivel', { ascending: true })
             .order('orden', { ascending: true })
             .order('nombre', { ascending: true });
