@@ -301,6 +301,84 @@ body.n-tienda .modal-info h2,
 body.n-tienda #modal-title { font-family: var(--n-display); font-weight: 400; letter-spacing: 0.01em; }
 body.n-tienda .price-amount { font-family: var(--n-display); font-weight: 400; letter-spacing: 0.01em; }
 
+/* Muestras de color (tarjeta y ficha): círculos que nunca se aplastan,
+   anillo negro en el elegido y el nombre del color escrito al lado. */
+body.n-tienda .product-colors {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 14px;
+}
+body.n-tienda .colors-label {
+    margin: 0;
+    font-size: 13px;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--n-texto-3);
+}
+body.n-tienda .colors-label strong,
+body.n-tienda .modal-color-nombre { color: var(--n-texto); font-weight: 600; }
+body.n-tienda .color-swatches,
+body.n-tienda .modal-color-options {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+body.n-tienda .color-dot,
+body.n-tienda .modal-color-dot {
+    position: relative;
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 0, 0, 0.18); /* se ve el blanco sobre blanco */
+    background: var(--muestra, #9e9e9e);
+    box-shadow: none;
+    transform: none;
+    cursor: pointer;
+    transition: box-shadow 0.15s ease;
+}
+body.n-tienda .modal-color-dot { width: 32px; height: 32px; }
+/* Zona de toque más grande que el círculo (móvil) */
+body.n-tienda .color-dot::before,
+body.n-tienda .modal-color-dot::before { content: ""; position: absolute; inset: -6px; }
+body.n-tienda .color-dot::after,
+body.n-tienda .modal-color-dot::after { display: none; }
+body.n-tienda .color-dot:hover,
+body.n-tienda .modal-color-dot:hover { transform: none; border-color: rgba(0, 0, 0, 0.45); box-shadow: none; }
+body.n-tienda .color-dot.active,
+body.n-tienda .modal-color-dot.active {
+    border-width: 1px;
+    border-color: rgba(0, 0, 0, 0.18);
+    box-shadow: 0 0 0 2px #FFFFFF, 0 0 0 4px var(--n-negro);
+}
+body.n-tienda .color-mas {
+    height: 22px;
+    padding: 0 9px;
+    border: 1px solid var(--n-linea);
+    border-radius: 11px;
+    background: #FFFFFF;
+    font: 600 12px/20px var(--n-cuerpo);
+    color: var(--n-texto-2);
+    cursor: pointer;
+}
+body.n-tienda .color-mas:hover { border-color: var(--n-negro); color: var(--n-negro); }
+body.n-tienda .modal-colors h4 {
+    margin-bottom: 14px;
+    font-size: 14px;
+    letter-spacing: 0;
+    text-transform: none;
+    font-weight: 500;
+    color: var(--n-texto-3);
+}
+@media (max-width: 720px) {
+    body.n-tienda .color-dot { width: 24px; height: 24px; }
+    body.n-tienda .modal-color-dot { width: 32px; height: 32px; }
+}
+
 /* ---------- Pantallas medianas y móvil ---------- */
 @media (max-width: 1024px) {
     .n-productos { grid-template-columns: repeat(2, minmax(0, 1fr)); }

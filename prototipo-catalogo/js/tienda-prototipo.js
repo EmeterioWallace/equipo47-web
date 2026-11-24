@@ -417,6 +417,12 @@ function pintarResultadoTramo(card, resultadoEl, resultado, cantidad) {
     resultadoEl.innerHTML = `<span style="color:#666;">Precio para <strong>${cantidad} uds</strong></span>`;
 }
 
+const MAX_COLORES_TARJETA = 6;
+
+function escaparTexto(texto) {
+    return String(texto ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
 function createProductCard(product) {
     const card = document.createElement('div');
     card.className = 'product-card';
@@ -426,22 +432,28 @@ function createProductCard(product) {
     // Badge HTML
     const badgeHTML = product.badge ? `<span class="product-badge">${product.badge}</span>` : '';
     
-    // Color dots HTML (según el CSS original)
+    // Muestras de color: como mucho MAX_COLORES_TARJETA en la tarjeta; el resto, "+N" que abre la ficha.
     let colorDotsHTML = '';
     if (product.colors && product.colors.length > 0) {
+        const visibles = product.colors.slice(0, MAX_COLORES_TARJETA);
+        const resto = product.colors.length - visibles.length;
         colorDotsHTML = `
             <div class="product-colors">
-                <span class="colors-label">COLORES:</span>
-                ${product.colors.map((color, index) => `
-                    <div 
-                        class="color-dot ${index === 0 ? 'active' : ''}" 
-                        style="background-color: ${color.hex}"
-                        data-product-id="${product.id}"
-                        data-color-index="${index}"
-                        data-color-name="${color.name}"
-                        title="${color.name}">
-                    </div>
-                `).join('')}
+                <span class="colors-label">Color: <strong class="color-nombre">${escaparTexto(product.colors[0].name)}</strong></span>
+                <div class="color-swatches" role="group" aria-label="Colores de ${escaparTexto(product.title)}">
+                    ${visibles.map((color, index) => `
+                        <button type="button"
+                            class="color-dot ${index === 0 ? 'active' : ''}"
+                            style="--muestra: ${color.hex}"
+                            data-product-id="${product.id}"
+                            data-color-index="${index}"
+                            data-color-name="${escaparTexto(color.name)}"
+                            aria-label="${escaparTexto(color.name)}"
+                            aria-pressed="${index === 0}"
+                            title="${escaparTexto(color.name)}"></button>
+                    `).join('')}
+                    ${resto > 0 ? `<button type="button" class="color-mas" onclick="openProductModal('${product.id}')" aria-label="Ver los ${product.colors.length} colores">+${resto}</button>` : ''}
+                </div>
             </div>
         `;
     }
@@ -604,11 +616,14 @@ function changeProductColor(productId, colorIndex) {
             img.src = newColor.image;
         }
         
-        // Update active color dot
+        // Muestra activa y nombre del color elegido
         const dots = card.querySelectorAll('.color-dot');
         dots.forEach((d, i) => {
             d.classList.toggle('active', i === colorIndex);
+            d.setAttribute('aria-pressed', String(i === colorIndex));
         });
+        const nombre = card.querySelector('.color-nombre');
+        if (nombre) nombre.textContent = newColor.name;
     }
 }
 
@@ -708,17 +723,19 @@ function updateModalContent() {
     // Create color selector if product has colors
     let colorSelectorHTML = '';
     if (product.colors && product.colors.length > 0) {
+        const elegido = product.colors[currentModalColor] || product.colors[0];
         colorSelectorHTML = `
             <div class="modal-colors">
-                <h4>Colores disponibles:</h4>
-                <div class="modal-color-options">
+                <h4>Color: <span class="modal-color-nombre">${escaparTexto(elegido.name)}</span></h4>
+                <div class="modal-color-options" role="group" aria-label="Colores disponibles">
                     ${product.colors.map((color, index) => `
-                        <div 
-                            class="modal-color-dot ${index === currentModalColor ? 'active' : ''}" 
-                            style="background-color: ${color.hex}"
+                        <button type="button"
+                            class="modal-color-dot ${index === currentModalColor ? 'active' : ''}"
+                            style="--muestra: ${color.hex}"
                             onclick="changeModalColor(${index})"
-                            title="${color.name}">
-                        </div>
+                            aria-label="${escaparTexto(color.name)}"
+                            aria-pressed="${index === currentModalColor}"
+                            title="${escaparTexto(color.name)}"></button>
                     `).join('')}
                 </div>
             </div>
