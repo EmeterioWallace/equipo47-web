@@ -807,6 +807,17 @@
         </div>
       </div>
 
+      <div class="card" style="margin-top:20px;">
+        <h3>🏷️ Revisión de precios</h3>
+        <p style="margin:10px 0 16px;">
+          La web enseña "Precios revisados en &lt;mes año&gt;" con esta fecha. Se actualiza sola cuando
+          cambia un coste, un transporte, un margen, el pedido mínimo o el modo de cálculo de un producto.
+          Si revisáis los precios y no hace falta cambiar nada, pulsad el botón para dejar constancia.
+        </p>
+        <p style="margin-bottom:12px;">Última revisión: <strong id="cfgPreciosRevisados">—</strong></p>
+        <button class="btn btn-primary" id="btnMarcarPreciosRevisados" onclick="marcarPreciosRevisados()">Marcar precios como revisados hoy</button>
+      </div>
+
       <div class="card" style="margin-top:20px; border-color: var(--e47-blue);">
         <h3>🛟 Copia de seguridad</h3>
         <p style="margin:10px 0 16px;">
@@ -3592,6 +3603,44 @@
       document.getElementById('cfgEmpresaEmail').value = config.empresa_email || '';
       document.getElementById('cfgEmpresaWeb').value = config.empresa_web || '';
       document.getElementById('cfgValidezDias').value = config.validez_dias || 15;
+      pintarPreciosRevisados();
+      refrescarPreciosRevisados();
+    }
+
+    // ── Revisión de precios (script 40) ──
+    // La fecha la mueven también los triggers de la base al cambiar un coste o
+    // un margen, así que al abrir Configuración se pide fresca a Supabase.
+    function pintarPreciosRevisados() {
+      const el = document.getElementById('cfgPreciosRevisados');
+      if (el) el.textContent = formatoFecha(config.precios_revisados);
+    }
+
+    async function refrescarPreciosRevisados() {
+      const { data, error } = await sb.from('configuracion').select('precios_revisados').eq('id', 1).single();
+      if (error || !data) return; // sin el script 40 la columna no existe: se queda lo que hubiera
+      config.precios_revisados = data.precios_revisados;
+      pintarPreciosRevisados();
+    }
+
+    function fechaHoyLocal() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    async function marcarPreciosRevisados() {
+      const btn = document.getElementById('btnMarcarPreciosRevisados');
+      if (btn.disabled) return; // ya hay un guardado en marcha
+      btn.disabled = true;
+      try {
+        const hoy = fechaHoyLocal();
+        const { error } = await sb.from('configuracion').update({ precios_revisados: hoy }).eq('id', 1);
+        if (error) { alert('❌ Error al guardar la fecha de revisión: ' + error.message); return; }
+        config.precios_revisados = hoy;
+        pintarPreciosRevisados();
+        toast('✓ Precios marcados como revisados hoy');
+      } finally {
+        btn.disabled = false;
+      }
     }
 
     async function guardarConfiguracion() {
