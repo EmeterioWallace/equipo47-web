@@ -60,10 +60,10 @@ begin
     n := n + 1;
 
     if r.devuelve = 'trigger' then
-      select string_agg(t.tgname || ' en ' || t.tgrelid::regclass, ', ') into usos
+      select string_agg(format('%s en %s', t.tgname::text, t.tgrelid::regclass::text), ', ') into usos
       from pg_trigger t where t.tgfoid = r.oid and not t.tgisinternal;
     elsif r.devuelve = 'event_trigger' then
-      select string_agg(e.evtname || ' (' || e.evtevent || ')', ', ') into usos
+      select string_agg(format('%s (%s)', e.evtname::text, e.evtevent::text), ', ') into usos
       from pg_event_trigger e where e.evtfoid = r.oid;
     else
       raise exception E'% devuelve % (no es de trigger): se podría llamar desde la API y no sabemos qué hace. No se cambia nada. Definición:\n%',
@@ -95,13 +95,13 @@ reset role;
 -- 0.2 Triggers que usan las dos funciones (deben seguir igual al final).
 select set_config('e47_39.triggers_antes',
   coalesce((select string_agg(x, ',' order by x) from (
-     select t.tgname || '/' || t.tgrelid::regclass || '/' || t.tgenabled as x
+     select format('%s/%s/%s', t.tgname::text, t.tgrelid::regclass::text, t.tgenabled::text) as x
      from pg_trigger t
      where t.tgfoid in (to_regprocedure('public.categorias_web_antes_guardar()'),
                         to_regprocedure('public.rls_auto_enable()'))
        and not t.tgisinternal
      union all
-     select e.evtname || '/' || e.evtevent || '/' || e.evtenabled
+     select format('%s/%s/%s', e.evtname::text, e.evtevent::text, e.evtenabled::text)
      from pg_event_trigger e
      where e.evtfoid in (to_regprocedure('public.categorias_web_antes_guardar()'),
                          to_regprocedure('public.rls_auto_enable()'))
@@ -211,13 +211,13 @@ begin
 
   -- 3.3 Los triggers siguen como estaban.
   if coalesce((select string_agg(x, ',' order by x) from (
-       select t.tgname || '/' || t.tgrelid::regclass || '/' || t.tgenabled as x
+       select format('%s/%s/%s', t.tgname::text, t.tgrelid::regclass::text, t.tgenabled::text) as x
        from pg_trigger t
        where t.tgfoid in (to_regprocedure('public.categorias_web_antes_guardar()'),
                           to_regprocedure('public.rls_auto_enable()'))
          and not t.tgisinternal
        union all
-       select e.evtname || '/' || e.evtevent || '/' || e.evtenabled
+       select format('%s/%s/%s', e.evtname::text, e.evtevent::text, e.evtenabled::text)
        from pg_event_trigger e
        where e.evtfoid in (to_regprocedure('public.categorias_web_antes_guardar()'),
                            to_regprocedure('public.rls_auto_enable()'))

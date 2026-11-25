@@ -45,7 +45,7 @@ from (
   union all
   select 6, 'funcion: objetos que dependen de ella (vistas, etc.)',
          coalesce((select string_agg(distinct coalesce(rw.ev_class::regclass::text,
-                                                       d.classid::regclass::text || ' ' || d.objid), ', ')
+                                                       format('%s %s', d.classid::regclass::text, d.objid::text)), ', ')
                    from f
                    join pg_depend d on d.refclassid = 'pg_proc'::regclass and d.refobjid = f.oid and d.deptype = 'n'
                    left join pg_rewrite rw on d.classid = 'pg_rewrite'::regclass and rw.oid = d.objid),
@@ -88,7 +88,7 @@ from (
                   '(ninguna)')
   union all
   select 21, 'public: tablas y vistas en las que anon puede leer alguna columna',
-         coalesce((select string_agg(c.relname || ' (' || c.relkind || ')', ', ' order by c.relname)
+         coalesce((select string_agg(format('%s (%s)', c.relname::text, c.relkind::text), ', ' order by c.relname)
                    from pg_class c join pg_namespace n on n.oid = c.relnamespace
                    where n.nspname = 'public' and c.relkind in ('r', 'v', 'm', 'p', 'f')
                      and has_any_column_privilege('anon', c.oid, 'SELECT')),
