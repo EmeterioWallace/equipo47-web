@@ -413,6 +413,8 @@ body.n-tienda .btn-quick-view {
 body.n-tienda .btn-quick-view:hover { background: var(--n-naranja); color: var(--n-negro); }
 @media (hover: none) { body.n-tienda .product-overlay { display: none; } }
 body.n-tienda .product-info { padding: 0; }
+/* La tarjeta no recorta: el anillo del color elegido sobresale unos píxeles (la foto ya recorta por su cuenta) */
+body.n-tienda .product-card { overflow: visible; }
 body.n-tienda .product-cat { margin: 0 0 4px; font-family: var(--n-mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--n-texto-3); }
 body.n-tienda .product-name { margin: 0 0 8px; font-size: 16px; line-height: 1.3; letter-spacing: 0; text-transform: none; }
 .product-name-btn {
