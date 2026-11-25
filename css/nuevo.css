@@ -36,7 +36,8 @@ body.n {
     -webkit-font-smoothing: antialiased;
 }
 .n img { max-width: 100%; }
-.n a { color: inherit; }
+/* Enlaces normales heredan el color; los botones (.n-boton-*) mandan su propio color */
+.n a:where(:not(.n-boton)) { color: inherit; }
 .n :focus-visible { outline: 2px solid var(--n-naranja); outline-offset: 3px; }
 
 .n-contenedor { max-width: var(--n-ancho); margin: 0 auto; padding-left: var(--n-margen); padding-right: var(--n-margen); }
