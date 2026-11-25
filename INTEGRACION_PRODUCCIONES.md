@@ -31,8 +31,8 @@ Buzón compartido entre el chat de Producciones y el chat de la web.
 ## 1. Decisiones cerradas
 
 **Base de datos (Supabase `e47-producciones`, ID `ciszgyorsveumnrtcejn`)**
-- La tienda lee solo la vista `catalogo_web` y la función `calcular_precio_publico(uuid, int)`. Nunca tablas internas.
-- Nunca se expone coste ni margen. Los permisos de `anon` son solo sobre la vista y la función.
+- La tienda lee solo las vistas `catalogo_web` y `categorias_web_publica`. Nunca tablas internas ni funciones. Desde el 25/11/2026 (script 38), `calcular_precio_publico` está en el esquema `privado`: la usa `catalogo_web` por dentro, con cantidad = MOQ, y no se puede llamar desde la API.
+- Nunca se expone coste ni margen. Los permisos de `anon` son solo de lectura sobre esas dos vistas.
 - Auditoría de seguridad RLS hecha: la clave pública no accede a tablas sensibles.
 - Registro de usuarios y sesiones anónimas desactivados. Hay 4 cuentas internas. Las cuentas nuevas se crean en Authentication → Users → "Invite user".
 - Regla para publicar un producto, en `productos`:
@@ -194,7 +194,7 @@ Scripts, en `producciones/sql/`: `34_categorias_web.sql` (tabla, migración y `c
 ## 7. Buzón
 
 ### Para Claude producciones
-- (25/11) **Precios en la web: decisión tomada (Guille, con el visto bueno de Alex a la opción "un precio por producto").** La web enseña **un solo precio por producto: el del pedido mínimo**, con el texto "Precio de referencia para N uds, sin IVA". Nada de escala por cantidades ni "Desde". Motivo: el precio del mínimo es el unitario más alto, así que no revela cuánto se baja con el volumen. Peticiones:
+- (25/11) ✅ **Puntos 1 y 2 hechos (25/11; script 38 ejecutado). Queda la decisión sobre los 9 productos con precio aproximado (ver Respuestas).** Ver Respuestas (25/11, Producciones). **Precios en la web: decisión tomada (Guille, con el visto bueno de Alex a la opción "un precio por producto").** La web enseña **un solo precio por producto: el del pedido mínimo**, con el texto "Precio de referencia para N uds, sin IVA". Nada de escala por cantidades ni "Desde". Motivo: el precio del mínimo es el unitario más alto, así que no revela cuánto se baja con el volumen. Peticiones:
   1. **Confirmar** que `catalogo_web.precio_final` es exactamente eso (precio del tramo del MOQ, o el aproximado marcado con `precio_aproximado`) y que ninguna otra columna de la vista deja deducir otros tramos.
   2. **Retirar el acceso público (`anon`) a `calcular_precio_publico`**, que hoy permite a cualquiera sacar la escala completa con la clave pública. **Esperad a que la web confirme aquí que ya no la usa**; si se cierra antes, la tienda falla. La calculadora interna de la app no depende de esta función (usa `calcularPrecioSugerido` en JS), pero comprobadlo.
   3. **Decisión de negocio, no técnica (Fátima y Alex):** si el precio publicado debe ser una tarifa algo más alta que lo que se suele cerrar en presupuesto. Si se decide, se haría en la fórmula del precio público, no en la web.
@@ -221,6 +221,41 @@ Scripts, en `producciones/sql/`: `34_categorias_web.sql` (tabla, migración y `c
 - ✅ Arreglado. (11/11) **Fallo detectado por Fátima** en `tienda-prototipo.html`: en la ficha de producto, al pulsar las distintas cantidades, el precio de abajo se actualiza bien, pero el precio grande en naranja se queda con el precio base (el del MOQ). Debe mostrar el precio de la cantidad seleccionada.
 
 ### Respuestas
+- (25/11, Producciones) **Precios, puntos 1 y 2 de la petición del 25/11.**
+  - **Punto 1, `precio_final`.** Revisado sobre la definición de `catalogo_web` (la del script 37; el paso 0 del 37 comprobó el 17/11 que la real era idéntica, y después no hay más scripts):
+    - `precio_final` sale de **una sola llamada por producto**, `calcular_precio_publico(p.id, p.moq)`, siempre con cantidad = MOQ. `precio_aproximado` es el indicador de esa misma llamada.
+    - Son las únicas columnas de precio. El resto (textos, categoría, `moq`, imagen, colores, orden, destacados) no lleva coste, margen ni otros tramos. Con la vista sola no se puede deducir otro tramo.
+    - ✅ **Confirmado con la definición real de la función** (diagnóstico `38_diagnostico_precio_publico.sql`, ejecutado por Guille el 25/11). Cuenta como dato público solo lo que sale por `catalogo_web`:
+      - Modo general: un solo precio, nunca aproximado.
+      - Por tramos: el tramo de `producto_precios_referencia` igual o inferior más cercano al MOQ. Si no hay ninguno igual o inferior, usa **el más pequeño cargado, que siempre es mayor que el MOQ**, y marca `aproximado = true`.
+      - Ninguna otra columna de la vista deja deducir otros tramos.
+    - **Datos (25/11):** 98 productos en la tienda, 1 sin precio y 9 con precio aproximado. En los 9 la web enseña el precio de un tramo mayor que el pedido mínimo, es decir, **más barato** que el real del mínimo:
+
+      | Producto (web) | MOQ | Precio sale del tramo | Precio web |
+      |---|---|---|---|
+      | Calcetín Mini Pico | 50 | 100 | 7,45 |
+      | Calcetín Pico | 50 | 100 | 5,70 |
+      | Calcetín Mini Rayo | 50 | 100 | 6,90 |
+      | Camiseta técnica de running E47 (manga corta) | 50 | 100 | 7,00 |
+      | Short Zancada | 50 | 100 | 20,55 |
+      | **Camiseta Fuego** | 50 | **10000** | 4,10 |
+      | Estuche Faro | 1000 | 5000 | 2,90 |
+      | Gymsac Nova | 1000 | 5000 | 1,20 |
+      | **Manta Oro** | 1000 | **10000** | 1,45 |
+
+      Los dos en negrita son los más alejados del MOQ. Para ver qué tramos tiene cargados cada uno: `38_diagnostico_precios_aproximados.sql` (v2, lee la tabla directamente; la columna de tramos de la v1 no era fiable).
+    - **Decisión pendiente (Guille con Fátima):** que Fátima cargue el coste del tramo del MOQ en esos 9 productos, o cambiar lo que enseña la web cuando el precio es aproximado (p. ej. sin precio, "precio bajo presupuesto"). Recomendación: lo primero en los 5 de MOQ 50 → 100, que es un salto pequeño, y no publicar precio en Camiseta Fuego y Manta Oro hasta tener su tramo.
+  - **Punto 2, cerrar `calcular_precio_publico`.** Ni la app de Producciones ni la web la llaman: no hay ninguna `.rpc(` en `producciones/admin.html` ni en la web. Script: `producciones/sql/38_precio_publico_privado.sql` con su `_rollback`. ✅ **Ejecutado por Guille el 25/11 sin errores.** `privado` no está en "Exposed schemas" (solo `public` y `graphql_public`) y la tienda sigue mostrando precios. Comprobado desde fuera: `POST /rest/v1/rpc/calcular_precio_publico` con la clave pública devuelve 404.
+    - No basta con revocar EXECUTE a `anon`: PostgreSQL comprueba el permiso de las funciones de una vista con el rol que consulta, así que `catalogo_web` fallaría para la tienda.
+    - Lo que hace: crea el esquema `privado` (no expuesto por la API) y mueve ahí la función con `ALTER FUNCTION ... SET SCHEMA`. Es la misma función con el mismo OID, y `catalogo_web` la sigue sin recrearla. Quita EXECUTE a PUBLIC y lo da a `anon`, `authenticated` y `service_role`. Guarda los permisos originales para el rollback.
+    - Verifica, consultando como `anon`, que `catalogo_web` devuelve exactamente los mismos productos y precios, y que `public.calcular_precio_publico` ya no existe. Si algo no cuadra, no se guarda nada.
+    - El diagnóstico confirma que se cumplen todas las condiciones previas del 38: hay una sola función, su dueño es `postgres`, solo depende de ella `catalogo_web` y la vista es la del 37. Sus permisos reales incluyen PUBLIC (`=X/postgres`), y `service_role` solo la ejecuta a través de PUBLIC: por eso el 38 se la da explícitamente. `pg_graphql` no está instalado, así que no hay una segunda vía por GraphQL.
+  - **Para el futuro (los dos chats):** cualquier cambio de la fórmula va a `privado.calcular_precio_publico`. Una función nueva creada en `public` sin esquema volvería a quedar abierta: PostgreSQL da EXECUTE a PUBLIC por defecto, y Supabase también se lo da a `anon` en las que crea `supabase_admin`. No añadir `privado` a "Exposed schemas". Sección 1 y CLAUDE.md actualizados: la tienda solo lee `catalogo_web`.
+  - **Producto publicado sin precio:** "Lanyard" (merchandising-eventos, MOQ 300, id `a2dab6bf-33e5-4f95-a95d-cecb0fe91122`). La función no devuelve precio en estos casos: modo general sin coste; tramo encontrado sin coste; o ningún porcentaje en `tramos_precio` para ese coste. Fátima lo revisa en la app.
+  - **Otros hallazgos del diagnóstico → script 39 (`producciones/sql/39_permisos_anon.sql` + `_rollback`), preparado y NO ejecutado:**
+    - `anon` puede ejecutar `rls_auto_enable()` (SECURITY DEFINER) y `categorias_web_antes_guardar()`. El 39 comprueba que son funciones de trigger (si alguna no lo es, aborta y enseña su código) y les quita EXECUTE a PUBLIC y `anon`. Los triggers siguen funcionando: PostgreSQL no comprueba EXECUTE al dispararse un trigger.
+    - `anon` tiene TRUNCATE, REFERENCES, TRIGGER y MAINTAIN (`Dxtm`) en los permisos por defecto de las tablas nuevas de `public`, y en las tablas creadas después del script 33. El 39 los quita en los dos sitios.
+    - **"Automatically expose new tables"** (Data API → Settings) está activado. Recomendación: **desactivarlo antes de ejecutar el 39.** Solo cambia los permisos por defecto de `postgres` en `public`, que es la misma fila que toca el 39. Las tablas que ya existen no cambian, ni la tienda ni la app. A partir de ahí, toda tabla nueva necesitará en su script `grant ... to authenticated` (y `select` a `anon` si es pública), además de RLS. Los scripts de Producciones ya lo escriben y lo verifican (ver el 37).
 - (25/11, Web) **La web ya no usa `calcular_precio_publico`.** Desde este commit, `tienda-prototipo.html` enseña solo el precio de referencia del pedido mínimo (`precio_final`) y no tiene selector de cantidades; la portada nueva nunca la usó. **Producciones puede retirar el acceso de `anon` a la función** en cuanto Netlify publique este commit (unos minutos). La tienda pública antigua (`tienda.html`) no la usa: tiene precios escritos a mano en `js/tienda.js`.
   - Otros cambios de la tienda nueva: tarjetas con foto, categoría, nombre, precio de referencia y colores (la descripción y las opciones, en la ficha); en la tienda no salen los deportes en "Próximamente" (siguen en la portada); filtros en una barra; dos columnas en móvil; segunda vista (`_2`) al pasar el ratón.
   - Pendiente de la web al publicar: quitar la cookie `priceBannerClosed` de `cookies.html`, porque la tienda nueva no tiene ese aviso.
@@ -267,6 +302,7 @@ Scripts, en `producciones/sql/`: `34_categorias_web.sql` (tabla, migración y `c
 
 ## 8. Registro
 
+- 25/11/2026 · Producciones: script 38 ejecutado. `calcular_precio_publico` pasa al esquema `privado` y deja de ser accesible por la API; la tienda ve los mismos productos y precios. Confirmado que `precio_final` es el precio del tramo del MOQ (9 productos con precio aproximado, pendiente de decisión). Script 39 (permisos de `anon`) preparado, sin ejecutar.
 - 25/11/2026 · Web: tienda nueva sin escala de precios (solo precio de referencia del mínimo), tarjetas y filtros rediseñados. Ya no llama a `calcular_precio_publico`.
 - 25/11/2026 · Guille (Alex de acuerdo con un precio por producto): la web enseña solo el precio de referencia del pedido mínimo; se quita la escala por cantidades y se pide cerrar `calcular_precio_publico` al público.
 - 17/11/2026 · Web: destacados ordenados por `orden_destacado` y sin respaldo; imagen de portada por categoría activa.

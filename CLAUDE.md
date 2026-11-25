@@ -11,7 +11,7 @@ Sitio estático en Netlify + GitHub. Usuario: Guille (coordina). Idioma de traba
 
 ## Reglas
 - Supabase proyecto `e47-producciones` (`ciszgyorsveumnrtcejn`). La clave anon va embebida en el HTML y es pública; la seguridad está en RLS. No cambiar URL ni claves sin coordinarlo en el buzón.
-- La tienda lee solo la vista `catalogo_web` y la función `calcular_precio_publico`. Nunca se expone coste ni margen.
+- La tienda lee solo las vistas `catalogo_web` y `categorias_web_publica`. Nunca se expone coste ni margen. `calcular_precio_publico` vive en el esquema `privado` (script 38): no se puede llamar desde la API, y cualquier cambio de la fórmula va a `privado.calcular_precio_publico`, nunca a `public`.
 - Regla para publicar un producto (`publicado_validation`): título público, `moq > 0` y categoría (`categoria_id`, desde el script 36). La imagen NO es obligatoria.
 - El script SQL `24_tienda_catalogo_completo.sql` está desactualizado: no ejecutarlo.
 - La fórmula de precio en SQL debe copiar fielmente la de `calcularPrecioSugerido` en JS (margen por tramo + redondeo a ,95 / ,99 / múltiplo de 5 céntimos).
