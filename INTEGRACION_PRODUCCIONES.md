@@ -194,6 +194,7 @@ Scripts, en `producciones/sql/`: `34_categorias_web.sql` (tabla, migración y `c
 ## 7. Buzón
 
 ### Para Claude producciones
+- (25/11) **Fecha de revisión de precios para la web.** Para no comprometerse con precios antiguos, la tienda enseña "Precios revisados en <mes año>". Petición: exponer en `catalogo_web` una columna nueva al final, `precio_actualizado` (timestamptz), con la fecha del último cambio que afecte al precio de ese producto (coste del tramo del MOQ, margen o MOQ). La web toma la más reciente de todas. Si es complicado de calcular, vale una fecha manual en `configuracion` expuesta por otra vista pública. Mientras no exista, la web no enseña nada.
 - (25/11) ✅ **Puntos 1 y 2 hechos (25/11; script 38 ejecutado). Queda la decisión sobre los 9 productos con precio aproximado (ver Respuestas).** Ver Respuestas (25/11, Producciones). **Precios en la web: decisión tomada (Guille, con el visto bueno de Alex a la opción "un precio por producto").** La web enseña **un solo precio por producto: el del pedido mínimo**, con el texto "Precio de referencia para N uds, sin IVA". Nada de escala por cantidades ni "Desde". Motivo: el precio del mínimo es el unitario más alto, así que no revela cuánto se baja con el volumen. Peticiones:
   1. **Confirmar** que `catalogo_web.precio_final` es exactamente eso (precio del tramo del MOQ, o el aproximado marcado con `precio_aproximado`) y que ninguna otra columna de la vista deja deducir otros tramos.
   2. **Retirar el acceso público (`anon`) a `calcular_precio_publico`**, que hoy permite a cualquiera sacar la escala completa con la clave pública. **Esperad a que la web confirme aquí que ya no la usa**; si se cierra antes, la tienda falla. La calculadora interna de la app no depende de esta función (usa `calcularPrecioSugerido` en JS), pero comprobadlo.
@@ -221,6 +222,8 @@ Scripts, en `producciones/sql/`: `34_categorias_web.sql` (tabla, migración y `c
 - ✅ Arreglado. (11/11) **Fallo detectado por Fátima** en `tienda-prototipo.html`: en la ficha de producto, al pulsar las distintas cantidades, el precio de abajo se actualiza bien, pero el precio grande en naranja se queda con el precio base (el del MOQ). Debe mostrar el precio de la cantidad seleccionada.
 
 ### Respuestas
+- (25/11, Web) **Recibido (precios cerrados, scripts 38 y 39). Decisión sobre los 9 precios aproximados: la web ya no enseña número cuando `precio_aproximado = true`**, sino "Precio en presupuesto", porque ese número sale de un tramo mayor y es más barato que el real del mínimo. Cuando Fátima cargue el tramo del MOQ, el precio aparece solo. Lo mismo para el Lanyard sin precio.
+  - Además (pedido por Guille para no comprometerse con precios): la tienda dice que es para empresas, clubes y organizadores; los precios son orientativos, sin IVA y sin valor de oferta; el precio definitivo es el del presupuesto aceptado, **válido 15 días**. `terminos.html` (sección 3.4) actualizado igual, y quitados los mínimos de 20 y 30 uds que contradecían a la tienda.
 - (25/11, Producciones) **Precios, puntos 1 y 2 de la petición del 25/11.**
   - **Punto 1, `precio_final`.** Revisado sobre la definición de `catalogo_web` (la del script 37; el paso 0 del 37 comprobó el 17/11 que la real era idéntica, y después no hay más scripts):
     - `precio_final` sale de **una sola llamada por producto**, `calcular_precio_publico(p.id, p.moq)`, siempre con cantidad = MOQ. `precio_aproximado` es el indicador de esa misma llamada.
@@ -302,6 +305,7 @@ Scripts, en `producciones/sql/`: `34_categorias_web.sql` (tabla, migración y `c
 
 ## 8. Registro
 
+- 25/11/2026 · Web: precios orientativos sin valor de oferta, presupuestos válidos 15 días, tienda para empresas; precios aproximados sin número; términos actualizados. Pedida a Producciones la fecha de revisión de precios.
 - 25/11/2026 · Producciones: script 38 ejecutado. `calcular_precio_publico` pasa al esquema `privado` y deja de ser accesible por la API; la tienda ve los mismos productos y precios. Confirmado que `precio_final` es el precio del tramo del MOQ (9 productos con precio aproximado, pendiente de decisión). Script 39 ejecutado: `anon` ya no puede ejecutar ninguna función propia de `public` y pierde TRUNCATE/REFERENCES/TRIGGER/MAINTAIN en las tablas de `public` y en los permisos por defecto de las nuevas.
 - 25/11/2026 · Web: tienda nueva sin escala de precios (solo precio de referencia del mínimo), tarjetas y filtros rediseñados. Ya no llama a `calcular_precio_publico`.
 - 25/11/2026 · Guille (Alex de acuerdo con un precio por producto): la web enseña solo el precio de referencia del pedido mínimo; se quita la escala por cantidades y se pide cerrar `calcular_precio_publico` al público.

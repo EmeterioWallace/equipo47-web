@@ -270,6 +270,18 @@ function seleccionarCategoria(ruta) {
     renderProducts();
 }
 
+// "Precios revisados en <mes año>": la fecha más reciente de precio_actualizado
+// (columna pedida a Producciones el 25/11). Si no existe, no se muestra nada.
+function pintarFechaPrecios(lista) {
+    const el = document.getElementById('n-fecha-precios');
+    if (!el) return;
+    const fechas = lista.map(p => p.precioActualizado).filter(Boolean).map(f => new Date(f)).filter(d => !isNaN(d));
+    if (fechas.length === 0) { el.hidden = true; return; }
+    const ultima = new Date(Math.max(...fechas));
+    el.textContent = `Precios revisados en ${ultima.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}.`;
+    el.hidden = false;
+}
+
 // Enlaces desde la portada: ?categoria=<slug> abre esa categoría;
 // ?producto=<id> abre su categoría y su ficha.
 function aplicarParametrosDeUrl() {
@@ -310,22 +322,30 @@ function deportePorDefecto() {
     return deporte ? deporte.id : null;
 }
 
-// ===== PRECIO DE REFERENCIA =====
+// ===== PRECIO ORIENTATIVO =====
 // Decisión 25/11 (Guille y Alex): un solo precio por producto, el del pedido
-// mínimo (precio_final de catalogo_web). Sin escala por cantidades en la web:
-// el descuento por volumen va en el presupuesto. Ver INTEGRACION_PRODUCCIONES.md.
+// mínimo (precio_final de catalogo_web), orientativo y sin valor de oferta.
+// Sin escala por cantidades: el descuento por volumen va en el presupuesto.
+// Si el precio es aproximado (Producciones no tiene el tramo del mínimo y usa
+// uno mayor, más barato), NO se enseña número: así nunca se anuncia un precio
+// por debajo del real. Ver INTEGRACION_PRODUCCIONES.md (25/11).
+const VALIDEZ_PRESUPUESTO_DIAS = 15;
+
 function formatoUnidades(n) {
     return Number(n).toLocaleString('es-ES');
 }
 
+function precioPublicable(product) {
+    return !!product.price && product.price !== 'Consultar' && product.approxPrice !== true;
+}
+
 function precioReferenciaHTML(product) {
-    const hayPrecio = product.price && product.price !== 'Consultar';
-    if (!hayPrecio) {
-        return `<p class="product-price"><span class="price-amount price-consultar">Precio a consultar</span></p>`;
+    if (!precioPublicable(product)) {
+        return `<p class="product-price"><span class="price-amount price-consultar">Precio en presupuesto</span></p>`;
     }
     const nota = product.moq
-        ? `${product.approxPrice ? 'orientativo · ' : ''}ref. ${formatoUnidades(product.moq)} uds · sin IVA`
-        : (product.approxPrice ? 'orientativo · sin IVA' : 'sin IVA');
+        ? `orientativo · mín. ${formatoUnidades(product.moq)} uds · sin IVA`
+        : 'orientativo · sin IVA';
     return `<p class="product-price"><span class="price-amount">${product.price}</span><span class="price-ref">${nota}</span></p>`;
 }
 
@@ -593,17 +613,18 @@ function updateModalContent() {
     document.getElementById('modal-description').textContent = product.description;
 
     // Update price (antes era texto fijo que nunca se actualizaba)
-    const hayPrecio = product.price && product.price !== 'Consultar';
-    const priceLabel = !hayPrecio ? 'Precio' : (product.approxPrice ? 'Precio orientativo' : 'Precio de referencia');
-    const priceValue = hayPrecio ? product.price : 'A consultar';
+    const hayPrecio = precioPublicable(product);
+    const priceLabel = hayPrecio ? 'Precio orientativo' : 'Precio';
+    const priceValue = hayPrecio ? product.price : 'En presupuesto';
     document.getElementById('modal-price-label').textContent = priceLabel;
     document.getElementById('modal-price').textContent = priceValue;
 
     const moqEl = document.getElementById('modal-moq');
     if (moqEl) {
+        const aviso = `Sin valor de oferta: el precio definitivo es el del presupuesto aceptado (válido ${VALIDEZ_PRESUPUESTO_DIAS} días) y depende de la cantidad y la personalización. Puede variar sin previo aviso.`;
         moqEl.textContent = product.moq
-            ? `Pedido mínimo: ${formatoUnidades(product.moq)} uds. ${hayPrecio ? 'Precio por unidad para el pedido mínimo, sin IVA. ' : ''}El precio final depende de la cantidad y la personalización: te lo damos en el presupuesto.`
-            : '';
+            ? `Pedido mínimo: ${formatoUnidades(product.moq)} uds. ${hayPrecio ? 'Precio por unidad para el pedido mínimo, sin IVA. ' : ''}${aviso}`
+            : aviso;
     }
     
     // Create color selector if product has colors
@@ -926,6 +947,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const inicial = deportePorDefecto();
     seleccionarCategoria(inicial ? [inicial] : []);
     aplicarParametrosDeUrl();
+
+    pintarFechaPrecios(catalogo);
 
     const sinCategoria = products.filter(p => p._ruta.length === 0);
     console.log('✅ Equipo 47 - Tienda (prototipo catalogo_web) cargada');

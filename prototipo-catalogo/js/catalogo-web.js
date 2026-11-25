@@ -145,7 +145,9 @@ function adaptarProductoDesdeCatalogoWeb(fila) {
         // Destacado en la portada y su posición (los marca y ordena Fátima en Producciones,
         // script 37). orden_destacado vacío = al final, por título.
         destacado: fila.destacado_web === true,
-        ordenDestacado: (fila.orden_destacado === null || fila.orden_destacado === undefined) ? null : Number(fila.orden_destacado)
+        ordenDestacado: (fila.orden_destacado === null || fila.orden_destacado === undefined) ? null : Number(fila.orden_destacado),
+        // Fecha del último cambio de precio (pedida a Producciones el 25/11; si no existe, undefined)
+        precioActualizado: fila.precio_actualizado || null
     };
 }
 
