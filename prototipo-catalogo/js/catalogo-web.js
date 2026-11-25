@@ -145,9 +145,7 @@ function adaptarProductoDesdeCatalogoWeb(fila) {
         // Destacado en la portada y su posición (los marca y ordena Fátima en Producciones,
         // script 37). orden_destacado vacío = al final, por título.
         destacado: fila.destacado_web === true,
-        ordenDestacado: (fila.orden_destacado === null || fila.orden_destacado === undefined) ? null : Number(fila.orden_destacado),
-        // Fecha del último cambio de precio (pedida a Producciones el 25/11; si no existe, undefined)
-        precioActualizado: fila.precio_actualizado || null
+        ordenDestacado: (fila.orden_destacado === null || fila.orden_destacado === undefined) ? null : Number(fila.orden_destacado)
     };
 }
 
@@ -158,6 +156,25 @@ function clienteSupabase() {
         clienteSupabaseCache = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     }
     return clienteSupabaseCache;
+}
+
+// ===== FECHA DE REVISIÓN DE PRECIOS (vista configuracion_web_publica) =====
+// Una sola fecha global (script 40 de Producciones): se mueve sola cuando cambia
+// algo que afecta a un precio, o con "Marcar precios como revisados hoy" en la app.
+// Devuelve "AAAA-MM-DD" o null. Si falla, la web no enseña ninguna fecha.
+async function cargarFechaPreciosRevisados() {
+    if (!SUPABASE_CATALOGO_ACTIVO) return null;
+    try {
+        const { data, error } = await clienteSupabase()
+            .from('configuracion_web_publica')
+            .select('precios_revisados')
+            .maybeSingle();
+        if (error) throw error;
+        return (data && data.precios_revisados) || null;
+    } catch (err) {
+        console.warn('⚠️ No se pudo leer la fecha de revisión de precios; no se mostrará:', err);
+        return null;
+    }
 }
 
 // ===== CATEGORÍAS (vista categorias_web_publica) =====

@@ -270,15 +270,16 @@ function seleccionarCategoria(ruta) {
     renderProducts();
 }
 
-// "Precios revisados en <mes año>": la fecha más reciente de precio_actualizado
-// (columna pedida a Producciones el 25/11). Si no existe, no se muestra nada.
-function pintarFechaPrecios(lista) {
+// "Precios revisados en <mes año>": fecha global de Producciones
+// (configuracion_web_publica.precios_revisados, "AAAA-MM-DD"). Sin fecha, no se muestra nada.
+function pintarFechaPrecios(fecha) {
     const el = document.getElementById('n-fecha-precios');
     if (!el) return;
-    const fechas = lista.map(p => p.precioActualizado).filter(Boolean).map(f => new Date(f)).filter(d => !isNaN(d));
-    if (fechas.length === 0) { el.hidden = true; return; }
-    const ultima = new Date(Math.max(...fechas));
-    el.textContent = `Precios revisados en ${ultima.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}.`;
+    const partes = /^(\d{4})-(\d{2})-(\d{2})/.exec(fecha || '');
+    if (!partes) { el.hidden = true; return; }
+    // Fecha local (sin zona horaria) para que no cambie de mes al convertirla
+    const dia = new Date(Number(partes[1]), Number(partes[2]) - 1, Number(partes[3]));
+    el.textContent = `Precios revisados en ${dia.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}.`;
     el.hidden = false;
 }
 
@@ -931,7 +932,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const grid = document.querySelector('.products-grid');
     if (grid) grid.innerHTML = '<p style="text-align:center; padding:60px 20px; color:#999;">Cargando catálogo...</p>';
 
-    const [catalogo, listaCategorias] = await Promise.all([cargarCatalogoWeb(), cargarCategoriasWeb()]);
+    const [catalogo, listaCategorias, fechaPrecios] = await Promise.all([cargarCatalogoWeb(), cargarCategoriasWeb(), cargarFechaPreciosRevisados()]);
     products = catalogo;
 
     if (products.length === 0) {
@@ -948,7 +949,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     seleccionarCategoria(inicial ? [inicial] : []);
     aplicarParametrosDeUrl();
 
-    pintarFechaPrecios(catalogo);
+    pintarFechaPrecios(fechaPrecios);
 
     const sinCategoria = products.filter(p => p._ruta.length === 0);
     console.log('✅ Equipo 47 - Tienda (prototipo catalogo_web) cargada');
