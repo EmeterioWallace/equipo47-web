@@ -194,6 +194,11 @@ Scripts, en `producciones/sql/`: `34_categorias_web.sql` (tabla, migración y `c
 ## 7. Buzón
 
 ### Para Claude producciones
+- (25/11) **Precios en la web: decisión tomada (Guille, con el visto bueno de Alex a la opción "un precio por producto").** La web enseña **un solo precio por producto: el del pedido mínimo**, con el texto "Precio de referencia para N uds, sin IVA". Nada de escala por cantidades ni "Desde". Motivo: el precio del mínimo es el unitario más alto, así que no revela cuánto se baja con el volumen. Peticiones:
+  1. **Confirmar** que `catalogo_web.precio_final` es exactamente eso (precio del tramo del MOQ, o el aproximado marcado con `precio_aproximado`) y que ninguna otra columna de la vista deja deducir otros tramos.
+  2. **Retirar el acceso público (`anon`) a `calcular_precio_publico`**, que hoy permite a cualquiera sacar la escala completa con la clave pública. **Esperad a que la web confirme aquí que ya no la usa**; si se cierra antes, la tienda falla. La calculadora interna de la app no depende de esta función (usa `calcularPrecioSugerido` en JS), pero comprobadlo.
+  3. **Decisión de negocio, no técnica (Fátima y Alex):** si el precio publicado debe ser una tarifa algo más alta que lo que se suele cerrar en presupuesto. Si se decide, se haría en la fórmula del precio público, no en la web.
+  - Cuando exista el MOQ de 10 uds, el precio de referencia pasará a ser el de 10 uds sin tocar nada en la web.
 - (16/11) ✅ **Hecho (17/11):** Guille ejecutó `37_destacados_e_imagen_portada.sql` sin errores y la app está subida. Ver Respuestas (17/11, Producciones). **Productos destacados para la portada nueva.** Decisión de Guille y Alex: la web pasa a centrarse en la tienda, y la portada enseña una fila de productos destacados que debe elegir Fátima desde Producciones. Petición:
   - Un campo en `productos` para marcar un producto como destacado en la web (propuesta: `destacado_web boolean default false`). Si queréis controlar también el orden de los destacados, un `orden_destacado int` opcional; si no, la web los ordena por categoría, `orden_web` y título.
   - Exponerlo en `catalogo_web` como columna nueva al final (`destacado_web`), sin quitar ni reordenar las existentes.
@@ -216,6 +221,9 @@ Scripts, en `producciones/sql/`: `34_categorias_web.sql` (tabla, migración y `c
 - ✅ Arreglado. (11/11) **Fallo detectado por Fátima** en `tienda-prototipo.html`: en la ficha de producto, al pulsar las distintas cantidades, el precio de abajo se actualiza bien, pero el precio grande en naranja se queda con el precio base (el del MOQ). Debe mostrar el precio de la cantidad seleccionada.
 
 ### Respuestas
+- (25/11, Web) **La web ya no usa `calcular_precio_publico`.** Desde este commit, `tienda-prototipo.html` enseña solo el precio de referencia del pedido mínimo (`precio_final`) y no tiene selector de cantidades; la portada nueva nunca la usó. **Producciones puede retirar el acceso de `anon` a la función** en cuanto Netlify publique este commit (unos minutos). La tienda pública antigua (`tienda.html`) no la usa: tiene precios escritos a mano en `js/tienda.js`.
+  - Otros cambios de la tienda nueva: tarjetas con foto, categoría, nombre, precio de referencia y colores (la descripción y las opciones, en la ficha); en la tienda no salen los deportes en "Próximamente" (siguen en la portada); filtros en una barra; dos columnas en móvil; segunda vista (`_2`) al pasar el ratón.
+  - Pendiente de la web al publicar: quitar la cookie `priceBannerClosed` de `cookies.html`, porque la tienda nueva no tiene ese aviso.
 - (17/11, Web) **Recibido y aplicado (destacados e imagen de portada).** En `inicio-nuevo.html`:
   - Destacados: `destacado_web = true`, ordenados por `orden_destacado` ascendente y, sin orden, al final por título. Se enseñan los 4 primeros. **Respaldo eliminado:** si no hay ninguno marcado, la sección "Destacados" se oculta.
   - Imagen de cada deporte: `imagen_portada` (resuelta con el manifiesto de imágenes, como `imagen_archivo`). Si está vacía o el archivo no existe, la foto del primer producto de la categoría en el orden de la tienda.
@@ -259,6 +267,8 @@ Scripts, en `producciones/sql/`: `34_categorias_web.sql` (tabla, migración y `c
 
 ## 8. Registro
 
+- 25/11/2026 · Web: tienda nueva sin escala de precios (solo precio de referencia del mínimo), tarjetas y filtros rediseñados. Ya no llama a `calcular_precio_publico`.
+- 25/11/2026 · Guille (Alex de acuerdo con un precio por producto): la web enseña solo el precio de referencia del pedido mínimo; se quita la escala por cantidades y se pide cerrar `calcular_precio_publico` al público.
 - 17/11/2026 · Web: destacados ordenados por `orden_destacado` y sin respaldo; imagen de portada por categoría activa.
 - 17/11/2026 · Producciones: preparado `37_destacados_e_imagen_portada.sql` (+ rollback) y los cambios de la app. El script aborta si `catalogo_web` o `categorias_web_publica` no son exactamente las de los scripts 35 y 34. Ejecutado por Guille sin errores; app subida.
 - 17/11/2026 · Guille: la foto de cada categoría en la portada se elige desde Producciones (`imagen_portada`).

@@ -197,36 +197,23 @@ function compararProductos(a, b) {
     return String(a.title).localeCompare(String(b.title), 'es');
 }
 
-const ESTILO_DEPORTE = 'padding: 12px 28px; border: none; border-radius: 25px; font-size: 0.95rem; font-weight: 600; transition: all 0.3s ease;';
-const ESTILO_SUBCATEGORIA = 'padding: 10px 22px; border: none; border-radius: 20px; font-size: 0.9rem; font-weight: 500; cursor: pointer; transition: all 0.3s ease;';
 
 // Botones de deporte (nivel 1), en el orden de Producciones.
 function renderSportFilters() {
     if (!sportFiltersContainer) return;
     sportFiltersContainer.innerHTML = '';
 
-    (hijosPorId.get('raiz') || []).filter(categoriaVisible).forEach(deporte => {
+    // En la tienda solo deportes con productos; los "Próximamente" ya salen en la portada.
+    (hijosPorId.get('raiz') || []).filter(c => !c.proximamente && productosDeCategoria(c.id).length > 0).forEach(deporte => {
         const button = document.createElement('button');
-        button.className = 'sport-filter';
+        button.type = 'button';
+        const activo = rutaSeleccionada[0] === deporte.id;
+        button.className = 'sport-filter n-chip' + (activo ? ' active' : '');
+        button.setAttribute('aria-pressed', String(activo));
         button.dataset.categoriaId = deporte.id;
         button.dataset.sport = deporte.slug;
-
-        if (deporte.proximamente) {
-            button.disabled = true;
-            button.classList.add('coming-soon');
-            button.style.cssText = ESTILO_DEPORTE + 'background: #e0e0e0; color: #999; cursor: not-allowed; opacity: 0.6;';
-            button.textContent = deporte.nombre + ' ';
-            const aviso = document.createElement('span');
-            aviso.style.fontSize = '0.8rem';
-            aviso.textContent = '(Próximamente)';
-            button.appendChild(aviso);
-        } else {
-            const activo = rutaSeleccionada[0] === deporte.id;
-            button.classList.toggle('active', activo);
-            button.style.cssText = ESTILO_DEPORTE + `cursor: pointer; background: ${activo ? '#FF4B1F' : '#f0f0f0'}; color: ${activo ? 'white' : '#333'};`;
-            button.textContent = deporte.nombre;
-            button.addEventListener('click', () => seleccionarCategoria([deporte.id]));
-        }
+        button.textContent = deporte.nombre;
+        button.addEventListener('click', () => seleccionarCategoria([deporte.id]));
         sportFiltersContainer.appendChild(button);
     });
 }
@@ -237,8 +224,6 @@ function renderSubcategoryFilters() {
     if (!subcategoryFiltersSection) return;
     const contenedor = subcategoryFiltersSection.querySelector('.filters');
     contenedor.innerHTML = '';
-    contenedor.style.flexDirection = 'column';
-    contenedor.style.alignItems = 'center';
 
     let hayFilas = false;
     for (let nivel = 0; nivel < rutaSeleccionada.length && nivel < 2; nivel++) {
@@ -248,18 +233,18 @@ function renderSubcategoryFilters() {
 
         hayFilas = true;
         const fila = document.createElement('div');
-        fila.style.cssText = 'display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;';
+        fila.className = 'n-fila-chips';
         const seleccionadoEnFila = rutaSeleccionada[nivel + 1];
 
         const crearBoton = (texto, activo, onClick, deshabilitado) => {
             const b = document.createElement('button');
-            b.className = 'subcategory-filter' + (activo ? ' active' : '');
+            b.type = 'button';
+            b.className = 'subcategory-filter n-chip n-chip-sub' + (activo ? ' active' : '');
+            b.setAttribute('aria-pressed', String(!!activo));
             b.textContent = texto;
             if (deshabilitado) {
                 b.disabled = true;
-                b.style.cssText = ESTILO_SUBCATEGORIA + 'background: #eee; color: #aaa; cursor: not-allowed;';
             } else {
-                b.style.cssText = ESTILO_SUBCATEGORIA + `background: ${activo ? '#FF4B1F' : '#f5f5f5'}; color: ${activo ? 'white' : '#666'};`;
                 b.addEventListener('click', onClick);
             }
             return b;
@@ -325,96 +310,23 @@ function deportePorDefecto() {
     return deporte ? deporte.id : null;
 }
 
-// ===== SELECTOR DE CANTIDADES (precio por tramo, bajo demanda) =====
-// Mismos 6 tramos fijos que usa Fátima en Producciones. No se precargan
-// los precios de todos los tramos (evitaría 6 consultas por producto solo
-// con cargar la página) — se consulta calcular_precio_publico() solo del
-// tramo que el visitante pulse, y se guarda en caché en memoria para no
-// volver a pedirlo si lo pulsa otra vez.
-const TRAMOS_CANTIDAD = [50, 100, 500, 1000, 5000, 10000];
-const cachePreciosPorTramo = {}; // "productId:cantidad" -> {precio, aproximado} | null
-
-function crearSelectorCantidadesHTML(product) {
-    // Nunca ofrecer una cantidad por debajo del pedido mínimo real del
-    // producto (si el MOQ es 100, no tiene sentido mostrar un botón de 50
-    // como si fuera pedible).
-    const tramosValidos = TRAMOS_CANTIDAD.filter(cantidad => cantidad >= (product.moq || 0));
-    if (tramosValidos.length === 0) return '';
-
-    const botones = tramosValidos.map(cantidad => `
-        <button
-            type="button"
-            class="tramo-cantidad-btn"
-            data-product-id="${product.id}"
-            data-cantidad="${cantidad}"
-            onclick="consultarPrecioPorCantidad('${product.id}', ${cantidad}, this)"
-            style="padding: 4px 10px; margin: 3px 4px 0 0; border: 1px solid #ddd; border-radius: 14px; background: #f8f8f8; color: #555; font-size: 0.75rem; cursor: pointer;"
-        >${cantidad} uds</button>
-    `).join('');
-
-    return `
-        <div class="selector-cantidades" style="margin-top: 10px;">
-            <div style="font-size: 0.7rem; color: #999; margin-bottom: 2px;">Ver precio para otras cantidades:</div>
-            <div style="display: flex; flex-wrap: wrap;">${botones}</div>
-            <div class="resultado-tramo" data-product-id="${product.id}" style="font-size: 0.8rem; margin-top: 6px; min-height: 18px;"></div>
-        </div>
-    `;
+// ===== PRECIO DE REFERENCIA =====
+// Decisión 25/11 (Guille y Alex): un solo precio por producto, el del pedido
+// mínimo (precio_final de catalogo_web). Sin escala por cantidades en la web:
+// el descuento por volumen va en el presupuesto. Ver INTEGRACION_PRODUCCIONES.md.
+function formatoUnidades(n) {
+    return Number(n).toLocaleString('es-ES');
 }
 
-async function consultarPrecioPorCantidad(productId, cantidad, botonEl) {
-    const card = botonEl.closest('.product-card');
-    const resultadoEl = card ? card.querySelector('.resultado-tramo') : null;
-    if (!resultadoEl) return;
-
-    // Marcar visualmente el botón activo
-    card.querySelectorAll('.tramo-cantidad-btn').forEach(b => {
-        b.style.background = '#f8f8f8';
-        b.style.color = '#555';
-        b.style.borderColor = '#ddd';
-    });
-    botonEl.style.background = '#FF4B1F';
-    botonEl.style.color = '#fff';
-    botonEl.style.borderColor = '#FF4B1F';
-
-    const claveCache = `${productId}:${cantidad}`;
-    if (cachePreciosPorTramo[claveCache] !== undefined) {
-        pintarResultadoTramo(card, resultadoEl, cachePreciosPorTramo[claveCache], cantidad);
-        return;
+function precioReferenciaHTML(product) {
+    const hayPrecio = product.price && product.price !== 'Consultar';
+    if (!hayPrecio) {
+        return `<p class="product-price"><span class="price-amount price-consultar">Precio a consultar</span></p>`;
     }
-
-    resultadoEl.textContent = 'Calculando...';
-
-    try {
-        const { data, error } = await clienteSupabase().rpc('calcular_precio_publico', {
-            p_producto_id: productId,
-            p_cantidad: cantidad
-        });
-        if (error) throw error;
-        const resultado = (data && data[0]) ? data[0] : null; // {precio, aproximado} | null
-        cachePreciosPorTramo[claveCache] = resultado;
-        pintarResultadoTramo(card, resultadoEl, resultado, cantidad);
-    } catch (err) {
-        console.error('❌ Error consultando precio por cantidad:', err);
-        resultadoEl.textContent = 'No se pudo calcular el precio ahora mismo.';
-    }
-}
-
-// El precio grande de la tarjeta pasa a ser el de la cantidad elegida.
-// La línea de debajo solo indica a qué cantidad corresponde.
-function pintarResultadoTramo(card, resultadoEl, resultado, cantidad) {
-    const etiquetaEl = card.querySelector('.product-price .price-from');
-    const precioEl = card.querySelector('.product-price .price-amount');
-
-    if (!resultado || resultado.precio === null || resultado.precio === undefined) {
-        if (etiquetaEl) etiquetaEl.textContent = 'Precio:';
-        if (precioEl) precioEl.textContent = 'A CONSULTAR';
-        resultadoEl.innerHTML = `<span style="color:#999;">Consultar disponibilidad para ${cantidad} uds</span>`;
-        return;
-    }
-    const precioTexto = Number(resultado.precio).toFixed(2).replace('.', ',') + ' €';
-    if (etiquetaEl) etiquetaEl.textContent = resultado.aproximado ? 'Precio orientativo:' : 'Precio:';
-    if (precioEl) precioEl.textContent = precioTexto;
-    resultadoEl.innerHTML = `<span style="color:#666;">Precio para <strong>${cantidad} uds</strong></span>`;
+    const nota = product.moq
+        ? `${product.approxPrice ? 'orientativo · ' : ''}ref. ${formatoUnidades(product.moq)} uds · sin IVA`
+        : (product.approxPrice ? 'orientativo · sin IVA' : 'sin IVA');
+    return `<p class="product-price"><span class="price-amount">${product.price}</span><span class="price-ref">${nota}</span></p>`;
 }
 
 const MAX_COLORES_TARJETA = 6;
@@ -458,64 +370,32 @@ function createProductCard(product) {
         `;
     }
     
-    // Options HTML
-    let optionsHTML = '';
-    if (product.options && product.options.length > 0) {
-        optionsHTML = `
-            <div class="product-options">
-                ${product.options.map(option => `
-                    <span class="option">${option}</span>
-                `).join('')}
-            </div>
-        `;
-    }
-    
-    // Precio y MOQ HTML
-    let priceHTML = '';
-    if (product.price) {
-        const priceAmount = product.price === 'Consultar' ? 'A CONSULTAR' : product.price;
-        // De cara al cliente: cuando el precio es aproximado (viene del tramo
-        // más bajo disponible, no del tramo real del MOQ publicado), la
-        // etiqueta cambia a "Precio orientativo" — sin mencionar el tramo
-        // ni ningún detalle interno de cómo se calculó.
-        const priceLabel = product.approxPrice ? 'Precio orientativo:' : 'Precio:';
-        // Misma aclaración que en el modal de detalle: dejar claro que el
-        // precio mostrado es por unidad y sin IVA, no el total del pedido.
-        const unitNote = product.price !== 'Consultar'
-            ? `<span style="font-size: 0.75rem; color: #999; font-weight: 400;"> / unidad, sin IVA</span>`
-            : '';
-        priceHTML = `
-            <div class="product-price">
-                <span class="price-from">${priceLabel}</span>
-                <span class="price-amount">${priceAmount}</span>${unitNote}
-            </div>
-            ${crearSelectorCantidadesHTML(product)}
-        `;
-    } else {
-        priceHTML = `
-            <div class="product-price">
-                <span class="price-from">Precio:</span>
-                <span class="price-amount">A CONSULTAR</span>
-            </div>
-        `;
-    }
-    
+    // Categoría visible (deporte · subcategoría) en el orden de Producciones
+    const nombresCategorias = (product._ruta || []).map(id => (categoriaPorId.get(id) || {}).nombre).filter(Boolean);
+    const etiquetaCategoria = nombresCategorias.slice(-2).join(' · ');
+
+    // Segunda vista (MER001_2…) al pasar el ratón, si existe
+    const segundaVista = product.views && product.views.length > 1 ? product.views[1] : null;
+    const sinFoto = !product.image || product.image.includes('placeholder-proximamente');
+
     card.innerHTML = `
         ${badgeHTML}
-        <div class="product-image">
-            <img src="${product.image}" alt="${product.title}" loading="lazy">
+        <div class="product-image${sinFoto ? ' sin-foto' : ''}${segundaVista ? ' con-segunda-vista' : ''}">
+            ${sinFoto
+                ? `<span class="product-sin-foto">Foto próximamente</span>`
+                : `<img class="foto-principal" src="${product.image}" alt="${escaparTexto(product.title)}" loading="lazy">`}
+            ${segundaVista && !sinFoto ? `<img class="foto-segunda" src="${segundaVista}" alt="" aria-hidden="true" loading="lazy">` : ''}
             <div class="product-overlay">
-                <button class="btn-quick-view" onclick="openProductModal('${product.id}')">
+                <button class="btn-quick-view" type="button" onclick="openProductModal('${product.id}')">
                     Ver detalles
                 </button>
             </div>
         </div>
         <div class="product-info">
-            <h3 class="product-name">${product.title}</h3>
-            <p class="product-desc">${product.description}</p>
-            ${priceHTML}
+            ${etiquetaCategoria ? `<p class="product-cat">${escaparTexto(etiquetaCategoria)}</p>` : ''}
+            <h3 class="product-name"><button type="button" class="product-name-btn" onclick="openProductModal('${product.id}')">${escaparTexto(product.title)}</button></h3>
+            ${precioReferenciaHTML(product)}
             ${colorDotsHTML}
-            ${optionsHTML}
         </div>
     `;
     
@@ -574,9 +454,12 @@ function renderProducts() {
         });
     }
     
+    const contador = document.getElementById('n-contador');
+    if (contador) contador.textContent = filteredProducts.length === 1 ? '1 producto' : `${filteredProducts.length} productos`;
+
     // Si no hay productos, mostrar mensaje
     if (filteredProducts.length === 0) {
-        productsGrid.innerHTML = '<p class="no-products">Próximamente en esta categoría...</p>';
+        productsGrid.innerHTML = '<p class="no-products">No hay productos con estos filtros. Prueba con otra categoría o borra la búsqueda.</p>';
         return;
     }
     
@@ -611,10 +494,12 @@ function changeProductColor(productId, colorIndex) {
     
     if (card) {
         // Update image
-        const img = card.querySelector('.product-image img');
+        const img = card.querySelector('.product-image img.foto-principal');
         if (img && newColor.image) {
             img.src = newColor.image;
         }
+        const zona = card.querySelector('.product-image');
+        if (zona) zona.classList.toggle('con-segunda-vista', colorIndex === 0 && !!card.querySelector('.foto-segunda'));
         
         // Muestra activa y nombre del color elegido
         const dots = card.querySelectorAll('.color-dot');
@@ -634,13 +519,11 @@ if (genderFilters.length > 0) {
         button.addEventListener('click', () => {
             // Actualizar estilos de botones
             genderFilters.forEach(btn => {
-                btn.style.color = '#666';
-                btn.style.borderBottom = '3px solid transparent';
                 btn.classList.remove('active');
+                btn.setAttribute('aria-pressed', 'false');
             });
-            button.style.color = '#2C3E50';
-            button.style.borderBottom = '3px solid #FF4B1F';
             button.classList.add('active');
+            button.setAttribute('aria-pressed', 'true');
             
             currentGender = button.dataset.gender;
             renderProducts();
@@ -710,14 +593,17 @@ function updateModalContent() {
     document.getElementById('modal-description').textContent = product.description;
 
     // Update price (antes era texto fijo que nunca se actualizaba)
-    const priceLabel = product.approxPrice ? 'Precio orientativo' : 'Precio';
-    const priceValue = product.price === 'Consultar' ? 'A CONSULTAR' : (product.price || 'Consultar');
+    const hayPrecio = product.price && product.price !== 'Consultar';
+    const priceLabel = !hayPrecio ? 'Precio' : (product.approxPrice ? 'Precio orientativo' : 'Precio de referencia');
+    const priceValue = hayPrecio ? product.price : 'A consultar';
     document.getElementById('modal-price-label').textContent = priceLabel;
     document.getElementById('modal-price').textContent = priceValue;
 
     const moqEl = document.getElementById('modal-moq');
     if (moqEl) {
-        moqEl.textContent = product.moq ? `Pedido mínimo: ${product.moq} unidades · precio por unidad, sin IVA` : '';
+        moqEl.textContent = product.moq
+            ? `Pedido mínimo: ${formatoUnidades(product.moq)} uds. ${hayPrecio ? 'Precio por unidad para el pedido mínimo, sin IVA. ' : ''}El precio final depende de la cantidad y la personalización: te lo damos en el presupuesto.`
+            : '';
     }
     
     // Create color selector if product has colors

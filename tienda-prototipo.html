@@ -64,45 +64,41 @@
 
     <!-- Catalog Section -->
     <section id="catalog" class="catalog">
-        <div class="catalog-header">
-            <h2 class="section-title">Catálogo de Productos</h2>
-            <p class="section-subtitle">Ropa técnica de alta calidad lista para personalizar con tu diseño</p>
+        <div class="n-contenedor n-catalogo-cabeza">
+            <div>
+                <h1 class="n-titulo">Catálogo</h1>
+                <p class="n-catalogo-nota">Precios de referencia por unidad para el pedido mínimo, sin IVA. El precio final depende de la cantidad y la personalización.</p>
+            </div>
+            <p class="n-contador" id="n-contador" aria-live="polite"></p>
         </div>
 
-        <!-- Gender Filters + Search Bar -->
-        <div class="gender-search-section" style="max-width: 1200px; margin: 0 auto 30px; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
-            <!-- Gender Filters -->
-            <div class="gender-filters" style="display: flex; gap: 30px;">
-                <button class="gender-filter active" data-gender="todos" style="background: none; border: none; font-size: 1.1rem; font-weight: 600; color: #2C3E50; cursor: pointer; padding: 10px 0; border-bottom: 3px solid #FF4B1F; transition: all 0.3s ease;">Todos</button>
-                <button class="gender-filter" data-gender="hombre" style="background: none; border: none; font-size: 1.1rem; font-weight: 600; color: #666; cursor: pointer; padding: 10px 0; border-bottom: 3px solid transparent; transition: all 0.3s ease;">Hombre</button>
-                <button class="gender-filter" data-gender="mujer" style="background: none; border: none; font-size: 1.1rem; font-weight: 600; color: #666; cursor: pointer; padding: 10px 0; border-bottom: 3px solid transparent; transition: all 0.3s ease;">Mujer</button>
-                <button class="gender-filter" data-gender="unisex" style="background: none; border: none; font-size: 1.1rem; font-weight: 600; color: #666; cursor: pointer; padding: 10px 0; border-bottom: 3px solid transparent; transition: all 0.3s ease;">Unisex</button>
+        <!-- Filtros en una sola barra: deportes (desde Producciones), buscador y género -->
+        <div class="n-contenedor n-barra-filtros">
+            <div class="n-barra-fila">
+                <div class="sport-filters-section" aria-label="Deportes">
+                    <div class="filters n-fila-chips n-desliza">
+                        <span class="n-cargando-chips">Cargando categorías…</span>
+                    </div>
+                </div>
+                <div class="search-bar n-buscador">
+                    <label for="product-search" class="n-oculto">Buscar productos</label>
+                    <input type="search" id="product-search" placeholder="Buscar productos" autocomplete="off">
+                    <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+                </div>
             </div>
-
-            <!-- Search Bar -->
-            <div class="search-bar" style="position: relative;">
-                <input type="text" id="product-search" placeholder="Buscar productos..." style="padding: 12px 45px 12px 20px; border: 2px solid #e0e0e0; border-radius: 25px; font-size: 0.95rem; width: 280px; outline: none; transition: all 0.3s ease;">
-                <span style="position: absolute; right: 18px; top: 50%; transform: translateY(-50%); color: #999; pointer-events: none;">🔍</span>
+            <div class="subcategory-filters-section" id="subcategory-filters" style="display: none;">
+                <div class="filters"></div>
             </div>
-        </div>
-
-        <!-- Sport Filters -->
-        <div class="sport-filters-section" style="max-width: 1200px; margin: 0 auto 40px; padding: 0 20px;">
-            <div class="filters" style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
-                <!-- Los botones de deporte se pintan desde categorias_web_publica (Producciones). Ver prototipo-catalogo/js/tienda-prototipo.js -->
-                <span style="color: #999; font-size: 0.9rem;">Cargando categorías...</span>
-            </div>
-        </div>
-
-        <!-- Subcategory Filters (hidden by default) -->
-        <div class="subcategory-filters-section" id="subcategory-filters" style="max-width: 1200px; margin: 0 auto 40px; padding: 0 20px; display: none;">
-            <div class="filters" style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
-                <!-- Subcategory buttons will be added by JavaScript -->
+            <div class="gender-filters n-genero" role="group" aria-label="Género">
+                <button type="button" class="gender-filter active" data-gender="todos" aria-pressed="true">Todos</button>
+                <button type="button" class="gender-filter" data-gender="hombre" aria-pressed="false">Hombre</button>
+                <button type="button" class="gender-filter" data-gender="mujer" aria-pressed="false">Mujer</button>
+                <button type="button" class="gender-filter" data-gender="unisex" aria-pressed="false">Unisex</button>
             </div>
         </div>
 
         <!-- Products Grid -->
-        <div class="products-grid" id="products-container">
+        <div class="products-grid n-contenedor" id="products-container">
             <!-- Products will be loaded by JavaScript -->
         </div>
 
@@ -166,140 +162,7 @@
         </div>
     </footer>
 
-    <!-- Fixed Price Info Banner -->
-    <div id="price-info-banner" class="price-info-banner" style="display: none;">
-        <div class="banner-content">
-            <span class="banner-icon">ℹ️</span>
-            <span class="banner-text">Precios orientativos sin IVA · MOQ aplicable · Pedidos personalizados</span>
-            <button class="banner-close" onclick="closePriceBanner()" aria-label="Cerrar">✕</button>
-        </div>
-    </div>
 
-    <style>
-        .price-info-banner {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: #f8f9fa;
-            border-top: 3px solid #FF4B1F;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-            z-index: 9999;
-            animation: slideUp 0.4s ease-out;
-        }
-
-        @keyframes slideUp {
-            from {
-                transform: translateY(100%);
-            }
-            to {
-                transform: translateY(0);
-            }
-        }
-
-        .banner-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 15px 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            position: relative;
-        }
-
-        .banner-icon {
-            font-size: 1.2rem;
-        }
-
-        .banner-text {
-            font-size: 0.95rem;
-            color: #333;
-            font-weight: 500;
-        }
-
-        .banner-close {
-            position: absolute;
-            right: 20px;
-            background: none;
-            border: none;
-            font-size: 1.4rem;
-            color: #666;
-            cursor: pointer;
-            padding: 0;
-            width: 30px;
-            height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            transition: all 0.3s ease;
-        }
-
-        .banner-close:hover {
-            background: rgba(0,0,0,0.05);
-            color: #FF4B1F;
-        }
-
-        @media (max-width: 768px) {
-            .banner-content {
-                padding: 12px 15px;
-                gap: 8px;
-            }
-
-            .banner-text {
-                font-size: 0.85rem;
-            }
-
-            .banner-close {
-                right: 10px;
-                width: 25px;
-                height: 25px;
-                font-size: 1.2rem;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .banner-text {
-                font-size: 0.8rem;
-                line-height: 1.3;
-            }
-        }
-    </style>
-
-    <script>
-        // Mostrar banner si no se ha cerrado antes
-        window.addEventListener('DOMContentLoaded', function() {
-            const bannerClosed = localStorage.getItem('priceBannerClosed');
-            if (!bannerClosed) {
-                document.getElementById('price-info-banner').style.display = 'block';
-            }
-        });
-
-        // Cerrar banner y guardar en localStorage
-        function closePriceBanner() {
-            const banner = document.getElementById('price-info-banner');
-            banner.style.animation = 'slideDown 0.3s ease-out';
-            setTimeout(() => {
-                banner.style.display = 'none';
-                localStorage.setItem('priceBannerClosed', 'true');
-            }, 300);
-        }
-
-        // Animación de cierre
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes slideDown {
-                from {
-                    transform: translateY(0);
-                }
-                to {
-                    transform: translateY(100%);
-                }
-            }
-        `;
-        document.head.appendChild(style);
-    </script>
 
     <!-- Scripts -->
     <!-- PROTOTIPO: catálogo cargado desde catalogo_web (o mock local), no desde js/tienda.js -->
@@ -307,9 +170,7 @@
     <script data-cfasync="false" src="prototipo-catalogo/js/color-hex-map.js"></script>
     <script data-cfasync="false" src="prototipo-catalogo/js/catalogo-web.js"></script>
     <script data-cfasync="false" src="prototipo-catalogo/js/tienda-prototipo.js"></script>
-    <div style="position:fixed; bottom:0; left:0; right:0; background:#2C3E50; color:#fff; text-align:center; padding:6px; font-size:12px; z-index:9999;">
-        BORRADOR · Tienda nueva con datos reales de Producciones · todavía no enlazada desde la web pública
-    </div>
+    <div class="n-aviso-borrador" role="note">Borrador · no enlazada desde la web pública</div>
 </body>
 </html>
 

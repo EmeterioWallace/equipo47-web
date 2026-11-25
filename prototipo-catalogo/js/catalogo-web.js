@@ -1,14 +1,9 @@
 // ===== CARGA DEL CATÁLOGO DESDE catalogo_web (Supabase) =====
 //
-// NOTA sobre el futuro selector de cantidad (todavía no construido):
-// la función RPC calcular_precio_publico(p_producto_id, p_cantidad) NO
-// devuelve un número suelto. Devuelve un array con un solo objeto:
-//   [{ precio: 5.5, aproximado: false }]
-// Hay que desestructurar así:
-//   const { data } = await sb.rpc('calcular_precio_publico', {...});
-//   const { precio, aproximado } = data[0] || {};
-// Si `aproximado` es true, aplicar la misma regla que en las tarjetas:
-// mostrar "Precio orientativo" sin mencionar el tramo.
+// PRECIOS (decisión 25/11): la web enseña solo el precio de referencia del
+// pedido mínimo (precio_final). NO usar calcular_precio_publico desde la web:
+// se pidió a Producciones cerrarla al público para que no se pueda sacar la
+// escala de precios por cantidad. Ver INTEGRACION_PRODUCCIONES.md.
 //
 // Este módulo sustituye al array `products` escrito a mano en tienda.js.
 // Mientras Producciones no tenga el script ejecutado en Supabase real,
